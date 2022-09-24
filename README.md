@@ -1,2 +1,2 @@
 # USupport-provider
-USupport Node.js API provider service 
+USupport provider Node.js API service
