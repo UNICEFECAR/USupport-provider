@@ -18,8 +18,7 @@ app.use(helmet());
 
 /*------------- Provider Service Endpoints -------------*/
 
-// Example router
-app.use("/user/v1/provider", v1.UserRouter);
+app.use("/provider/v1/provider", v1.ProviderRouter);
 
 /*------------- Error middleware -------------*/
 

@@ -1,1 +1,1 @@
-export { router as UserRouter } from "./UserRouter.js";
+export { router as ProviderRouter } from "./ProviderRouter.js";
