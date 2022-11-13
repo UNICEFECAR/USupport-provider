@@ -14,7 +14,7 @@ import {
   deleteProviderImageQuery,
 } from "#queries/providers";
 
-import { userNotFound, incorrectPassword, emailUsed } from "#utils/errors";
+import { providerNotFound, incorrectPassword, emailUsed } from "#utils/errors";
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
@@ -80,19 +80,19 @@ export const updateProviderData = async ({
   })
     .then((res) => {
       if (res.rowCount === 0) {
-        throw userNotFound(language);
+        throw providerNotFound(language);
       } else {
         // Compare workWithIds and currentWorkWithIds arrays
         // and delete or insert new workWithIds
-        const workWithIdsToDelete = currentWorkWithIds.filter(
+        const workWithIdsToDelete = currentWorkWithIds?.filter(
           (id) => !workWithIds.includes(id) // id is not in workWithIds array
         );
-        const workWithIdsToInsert = workWithIds.filter(
+        const workWithIdsToInsert = workWithIds?.filter(
           (id) => !currentWorkWithIds.includes(id) // id is not in currentWorkWithIds array
         );
 
         // For each workWithId to insert, insert it
-        workWithIdsToInsert.forEach(async (id) => {
+        workWithIdsToInsert?.forEach(async (id) => {
           await createProviderDetailWorkWithLinkQuery({
             poolCountry: country,
             provider_id,
@@ -103,7 +103,7 @@ export const updateProviderData = async ({
         });
 
         // For each workWithId to delete, delete it
-        workWithIdsToDelete.forEach(async (id) => {
+        workWithIdsToDelete?.forEach(async (id) => {
           await deleteProviderDetailWorkWithLinkQuery({
             poolCountry: country,
             provider_id,
@@ -115,15 +115,15 @@ export const updateProviderData = async ({
 
         // Compare languageIds and currentLanguageIds arrays
         // and delete or insert new languageIds
-        const languageIdsToDelete = currentLanguageIds.filter(
+        const languageIdsToDelete = currentLanguageIds?.filter(
           (id) => !languageIds.includes(id) // id is not in languageIds array
         );
-        const languageIdsToInsert = languageIds.filter(
+        const languageIdsToInsert = languageIds?.filter(
           (id) => !currentLanguageIds.includes(id) // id is not in currentLanguageIds array
         );
 
         // For each languageId to insert, insert it
-        languageIdsToInsert.forEach(async (id) => {
+        languageIdsToInsert?.forEach(async (id) => {
           await createProviderDetailLanguageLinkQuery({
             poolCountry: country,
             provider_id,
@@ -134,7 +134,7 @@ export const updateProviderData = async ({
         });
 
         // For each languageId to delete, delete it
-        languageIdsToDelete.forEach(async (id) => {
+        languageIdsToDelete?.forEach(async (id) => {
           await deleteProviderDetailLanguageLinkQuery({
             poolCountry: country,
             provider_id,
@@ -174,7 +174,7 @@ export const deleteProviderData = async ({
   })
     .then(async (res) => {
       if (res.rowCount === 0) {
-        throw userNotFound(language);
+        throw providerNotFound(language);
       } else {
         if (image !== "default") {
           try {
@@ -229,7 +229,7 @@ export const updateProviderImage = async ({
   })
     .then((res) => {
       if (res.rowCount === 0) {
-        throw userNotFound(language);
+        throw providerNotFound(language);
       } else {
         return res.rows[0];
       }
@@ -250,7 +250,7 @@ export const deleteProviderImage = async ({
   })
     .then((res) => {
       if (res.rowCount === 0) {
-        throw userNotFound(language);
+        throw providerNotFound(language);
       } else {
         return res.rows[0];
       }

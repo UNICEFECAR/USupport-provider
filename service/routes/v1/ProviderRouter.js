@@ -1,6 +1,9 @@
 import express from "express";
 
-import { securedRoute } from "#middlewares/auth";
+import {
+  populateProvider,
+  populateUser,
+} from "#middlewares/populateMiddleware";
 
 import {
   updateProviderDataSchema,
@@ -18,7 +21,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", securedRoute, async (req, res) => {
+router.get("/", populateProvider, async (req, res) => {
   /**
    * #route   GET /provider/v1/provider
    * #desc    Get current provider data
@@ -28,7 +31,7 @@ router.get("/", securedRoute, async (req, res) => {
   res.status(200).send(providerData);
 });
 
-router.put("/", securedRoute, async (req, res, next) => {
+router.put("/", populateProvider, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/provider
    * #desc    Update current provider data
@@ -38,10 +41,10 @@ router.put("/", securedRoute, async (req, res, next) => {
 
   const provider_id = req.provider.provider_detail_id;
   const currentEmail = req.provider.email;
-  const currentLanguageIds = req.provider.languages.map(
+  const currentLanguageIds = req.provider.languages?.map(
     (language) => language.language_id
   );
-  const currentWorkWithIds = req.provider.work_with.map(
+  const currentWorkWithIds = req.provider.work_with?.map(
     (workWith) => workWith.work_with_id
   );
 
@@ -64,7 +67,7 @@ router.put("/", securedRoute, async (req, res, next) => {
     .catch(next);
 });
 
-router.delete("/", securedRoute, async (req, res, next) => {
+router.delete("/", populateProvider, populateUser, async (req, res, next) => {
   /**
    * #route   DELETE /provider/v1/provider
    * #desc    Delete current provider data
@@ -97,7 +100,7 @@ router.delete("/", securedRoute, async (req, res, next) => {
     .catch(next);
 });
 
-router.put("/image", securedRoute, async (req, res, next) => {
+router.put("/image", populateProvider, populateUser, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/provider/image
    * #desc    Update the provider image
@@ -117,7 +120,7 @@ router.put("/image", securedRoute, async (req, res, next) => {
     .catch(next);
 });
 
-router.delete("/image", securedRoute, async (req, res, next) => {
+router.delete("/image", populateProvider, async (req, res, next) => {
   /**
    * #route   DELETE /provider/v1/provider/image
    * #desc    Delete the provider image

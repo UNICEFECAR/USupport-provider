@@ -1,4 +1,4 @@
 import * as errorMiddleware from "./errorMiddleware.js";
-import * as authMiddleware from "./auth.js";
+import * as populateMiddleware from "./populateMiddleware.js";
 
-export default { errorMiddleware, authMiddleware };
+export default { errorMiddleware, populateMiddleware };
