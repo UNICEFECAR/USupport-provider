@@ -79,8 +79,8 @@ passport.use(
           work_with: providerWorkWith,
         };
 
-        if (provider.type?.length > 0) {
-          provider.type = provider.type
+        if (provider.specializations?.length > 0) {
+          provider.specializations = provider.specializations
             .replace("{", "")
             .replace("}", "")
             .split(", ");

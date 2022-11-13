@@ -13,7 +13,7 @@ export const getProviderByUserID = async (poolCountry, user_id) =>
 
     ), providerData AS (
 
-        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, type, address, education, sex, consultation_price, description
+        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, address, education, sex, consultation_price, description
         FROM provider_detail
           JOIN userData ON userData.provider_detail_id = provider_detail.provider_detail_id
         ORDER BY provider_detail.created_at DESC
@@ -92,7 +92,7 @@ export const updateProviderDataQuery = async ({
   email,
   phonePrefix,
   phone,
-  type,
+  specializations,
   address,
   education,
   sex,
@@ -109,7 +109,7 @@ export const updateProviderDataQuery = async ({
           email = $5,
           phone_prefix = $6,
           phone = $7,
-          type = $8,
+          specializations = $8,
           address = $9,
           education = $10,
           sex = $11,
@@ -126,7 +126,7 @@ export const updateProviderDataQuery = async ({
       email,
       phonePrefix,
       phone,
-      type,
+      specializations,
       address,
       education,
       sex,
@@ -213,7 +213,7 @@ export const deleteProviderDataQuery = async ({
               image = 'default',
               phone_prefix = 'DELETED',
               phone = 'DELETED',
-              type = NULL,
+              specializations = NULL,
               address = 'DELETED',
               education = NULL,
               sex = NULL,
