@@ -229,7 +229,7 @@ export const deleteProviderDataQuery = async ({
     await piiPool.query(
       `
           UPDATE "user"
-          SET is_deleted = true
+          SET deleted_at = NOW()
           WHERE user_id = $1
       `,
       [user_id]
