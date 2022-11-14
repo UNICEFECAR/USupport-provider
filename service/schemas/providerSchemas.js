@@ -28,7 +28,7 @@ export const updateProviderDataSchema = yup.object().shape({
   address: yup.string().notRequired(),
   education: yup.array().of(yup.string()).notRequired(),
   sex: sexTypeSchema.notRequired(),
-  consultationPrice: yup.number().positive().notRequired(),
+  consultationPrice: yup.number().min(0).notRequired(),
   description: yup.string().notRequired(),
   workWithIds: yup.array().of(yup.string().uuid()).notRequired(),
   currentWorkWithIds: yup.array().of(yup.string().uuid()).notRequired(),
