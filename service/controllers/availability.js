@@ -5,26 +5,46 @@ import {
   deleteAvailabilitySingleWeekQuery,
 } from "#queries/availability";
 
+import { getSlotsForSingleWeek } from "#utils/helperFunctions";
+
 export const getAvailabilitySingleWeek = async ({
   country,
   provider_id,
   startDate,
 }) => {
-  return await getAvailabilitySingleWeekQuery({
-    poolCountry: country,
+  const previousWeekDate = new Date(Number(startDate));
+  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+  const previousWeekDateTimestamp = previousWeekDate.getTime() / 1000;
+
+  const previousWeek = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate: previousWeekDateTimestamp,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const currentWeek = await getSlotsForSingleWeek({
+    country,
     provider_id,
     startDate,
-  })
-    .then((res) => {
-      if (res.rowCount === 0) {
-        return [];
-      } else {
-        return res.rows[0];
-      }
-    })
-    .catch((err) => {
-      throw err;
-    });
+  }).catch((err) => {
+    throw err;
+  });
+
+  const nextWeekDate = new Date(Number(startDate));
+  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+  const nextWeekDateTimestamp = nextWeekDate.getTime() / 1000;
+
+  const nextWeek = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate: nextWeekDateTimestamp,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [...previousWeek, ...currentWeek, ...nextWeek];
 };
 
 export const updateAvailabilitySingleWeek = async ({
