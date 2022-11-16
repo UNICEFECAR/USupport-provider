@@ -19,6 +19,7 @@ app.use(helmet());
 /*------------- Provider Service Endpoints -------------*/
 
 app.use("/provider/v1/provider", v1.ProviderRouter);
+app.use("/provider/v1/availability", v1.AvailabilityRouter);
 
 /*------------- Error middleware -------------*/
 
