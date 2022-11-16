@@ -53,14 +53,14 @@ export const updateAvailabilitySingleWeek = async ({
 }) => {
   // Check if start date already exists in the database
   // If it does, update the slot
-  // If it doesn't, create a new row
-  await getAvailabilitySingleWeekQuery({
-    poolCountry: country,
+  // If it doesn't, create a new row and add the slot
+  await getSlotsForSingleWeek({
+    country,
     provider_id,
     startDate,
   })
     .then(async (res) => {
-      if (res.rowCount === 0) {
+      if (res.length === 0) {
         await addAvailabilitySingleWeekQuery({
           poolCountry: country,
           provider_id,
