@@ -12,14 +12,13 @@ export const getAvailabilitySingleWeek = async ({
   provider_id,
   startDate,
 }) => {
-  const previousWeekDate = new Date(Number(startDate));
-  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
-  const previousWeekDateTimestamp = previousWeekDate.getTime() / 1000;
+  const previousWeekTimestamp = new Date(Number(startDate) * 1000);
+  previousWeekTimestamp.setDate(previousWeekTimestamp.getDate() - 7);
 
   const previousWeek = await getSlotsForSingleWeek({
     country,
     provider_id,
-    startDate: previousWeekDateTimestamp,
+    startDate: previousWeekTimestamp / 1000,
   }).catch((err) => {
     throw err;
   });
@@ -32,14 +31,13 @@ export const getAvailabilitySingleWeek = async ({
     throw err;
   });
 
-  const nextWeekDate = new Date(Number(startDate));
-  nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-  const nextWeekDateTimestamp = nextWeekDate.getTime() / 1000;
+  const nextWeekTimestamp = new Date(Number(startDate) * 1000);
+  nextWeekTimestamp.setDate(nextWeekTimestamp.getDate() + 7);
 
   const nextWeek = await getSlotsForSingleWeek({
     country,
     provider_id,
-    startDate: nextWeekDateTimestamp,
+    startDate: nextWeekTimestamp / 1000,
   }).catch((err) => {
     throw err;
   });
