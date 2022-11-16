@@ -3,6 +3,8 @@ import AWS from "aws-sdk";
 import bcrypt from "bcryptjs";
 
 import {
+  getAllProvidersQuery,
+  getProviderByIdQuery,
   updateProviderDataQuery,
   checkIfEmailIsUsedQuery,
   createProviderDetailWorkWithLinkQuery,
@@ -16,10 +18,75 @@ import {
 
 import { providerNotFound, incorrectPassword, emailUsed } from "#utils/errors";
 
+import {
+  formatSpecializations,
+  getProviderLanguagesAndWorkWith,
+} from "#utils/helperFunctions";
+
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_REGION = process.env.AWS_REGION;
 const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME;
+
+export const getAllProviders = async ({ country }) => {
+  return await getAllProvidersQuery({ poolCountry: country })
+    .then(async (res) => {
+      let providers = res.rows;
+
+      for (let i = 0; i < providers.length; i++) {
+        const { languages, workWith } = await getProviderLanguagesAndWorkWith({
+          country,
+          provider_detail_id: providers[i].provider_detail_id,
+        });
+
+        providers[i].specializations = formatSpecializations(
+          providers[i].specializations
+        );
+
+        providers[i] = {
+          ...providers[i],
+          languages: languages,
+          work_with: workWith,
+        };
+      }
+
+      return providers;
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getProviderById = async ({ country, language, provider_id }) => {
+  return await getProviderByIdQuery({ countryPool: country, provider_id })
+    .then(async (res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      }
+
+      let provider = res.rows[0];
+
+      const { languages, workWith } = await getProviderLanguagesAndWorkWith({
+        country,
+        provider_detail_id: provider.provider_detail_id,
+      });
+
+      provider.specializations = formatSpecializations(
+        provider.specializations
+      );
+
+      provider = {
+        ...provider,
+        languages: languages,
+        work_with: workWith,
+      };
+
+      return provider;
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
 
 export const updateProviderData = async ({
   country,

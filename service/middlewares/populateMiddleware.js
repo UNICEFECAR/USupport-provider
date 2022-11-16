@@ -1,13 +1,13 @@
-import {
-  getProviderByUserID,
-  getProviderLanguageIdsQuery,
-  getProviderLanguagesQuery,
-  getProviderWorkWithQuery,
-} from "#queries/providers";
+import { getProviderByUserID } from "#queries/providers";
 
 import { getUserByID } from "#queries/users";
 
 import { providerNotFound } from "#utils/errors";
+
+import {
+  formatSpecializations,
+  getProviderLanguagesAndWorkWith,
+} from "#utils/helperFunctions";
 
 export const populateProvider = async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
@@ -23,45 +23,18 @@ export const populateProvider = async (req, res, next) => {
     return next(providerNotFound(country));
   }
 
-  const providerLanguageIds = await getProviderLanguageIdsQuery(
+  const { languages, workWith } = await getProviderLanguagesAndWorkWith({
     country,
-    provider.provider_detail_id
-  )
-    .then((res) => res.rows)
-    .catch((err) => {
-      throw err;
-    });
+    provider_detail_id: provider.provider_detail_id,
+  });
 
-  const providerLanguages = await getProviderLanguagesQuery(
-    providerLanguageIds.map((language) => language.language_id)
-  )
-    .then((res) => res.rows)
-    .catch((err) => {
-      throw err;
-    });
-
-  // Get the work with areas of the provider from the provider_detail_work_with_links table
-  const providerWorkWith = await getProviderWorkWithQuery(
-    country,
-    provider.provider_detail_id
-  )
-    .then((res) => res.rows)
-    .catch((err) => {
-      throw err;
-    });
+  provider.specializations = formatSpecializations(provider.specializations);
 
   provider = {
     ...provider,
-    languages: providerLanguages,
-    work_with: providerWorkWith,
+    languages: languages,
+    work_with: workWith,
   };
-
-  if (provider.specializations?.length > 0) {
-    provider.specializations = provider.specializations
-      .replace("{", "")
-      .replace("}", "")
-      .split(",");
-  }
 
   req.provider = provider;
 

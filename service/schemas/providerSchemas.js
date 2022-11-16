@@ -12,6 +12,16 @@ const specializationsTypeSchema = yup
       .oneOf(["psychologist", "psychotherapist", "psychiatrist", "coach"])
   );
 
+export const getAllProvidersSchema = yup.object().shape({
+  country: yup.string().required(),
+});
+
+export const getProviderByIdSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  provider_id: yup.string().uuid().required(),
+});
+
 export const updateProviderDataSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),
   country: yup.string().required(),

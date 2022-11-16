@@ -6,6 +6,8 @@ import {
 } from "#middlewares/populateMiddleware";
 
 import {
+  getAllProvidersSchema,
+  getProviderByIdSchema,
   updateProviderDataSchema,
   deleteProviderDataSchema,
   updateProviderImageSchema,
@@ -13,6 +15,8 @@ import {
 } from "#schemas/providerSchemas";
 
 import {
+  getAllProviders,
+  getProviderById,
   updateProviderData,
   deleteProviderData,
   updateProviderImage,
@@ -29,6 +33,49 @@ router.get("/", populateProvider, async (req, res) => {
   const providerData = req.provider;
 
   res.status(200).send(providerData);
+});
+
+router.get("/by-id", async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/by-id
+   * #desc    Get providers data by id
+   */
+
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const provider_id = req.query.providerId;
+
+  return await getProviderByIdSchema
+    .noUnknown(true)
+    .strict()
+    .validate({
+      country,
+      language,
+      provider_id,
+    })
+    .then(getProviderById)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/all", async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/all
+   * #desc    Get all providers' data
+   */
+
+  const country = req.header("x-country-alpha-2");
+
+  return await getAllProvidersSchema
+    .noUnknown(true)
+    .strict()
+    .validate({
+      country,
+    })
+    .then(getAllProviders)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
 });
 
 router.put("/", populateProvider, async (req, res, next) => {
