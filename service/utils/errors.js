@@ -23,3 +23,11 @@ export const providerNotFound = (language) => {
   error.status = 404;
   return error;
 };
+
+export const slotsNotWithinWeek = (language) => {
+  const error = new Error();
+  error.message = t("slots_not_within_week_error", language);
+  error.name = "SLOTS NOT WITHIN WEEK";
+  error.status = 404;
+  return error;
+};

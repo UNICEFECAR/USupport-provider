@@ -1,10 +1,15 @@
 import {
-  addAvailabilitySingleWeekQuery,
-  updateAvailabilitySingleWeekQuery,
+  addAvailabilityRowQuery,
+  updateAvailabilitySingleSlotQuery,
+  updateAvailabilityMultipleSlotsQuery,
   deleteAvailabilitySingleWeekQuery,
 } from "#queries/availability";
+import { slotsNotWithinWeek } from "#utils/errors";
 
-import { getSlotsForSingleWeek } from "#utils/helperFunctions";
+import {
+  getSlotsForSingleWeek,
+  checkSlotsWithinWeek,
+} from "#utils/helperFunctions";
 
 export const getAvailabilitySingleWeek = async ({
   country,
@@ -46,10 +51,14 @@ export const getAvailabilitySingleWeek = async ({
 
 export const updateAvailabilitySingleWeek = async ({
   country,
+  language,
   provider_id,
   startDate,
   slot,
 }) => {
+  if (!checkSlotsWithinWeek(startDate, [slot]))
+    throw slotsNotWithinWeek(language);
+
   // Check if start date already exists in the database
   // If it does, update the slot
   // If it doesn't, create a new row and add the slot
@@ -60,7 +69,7 @@ export const updateAvailabilitySingleWeek = async ({
   })
     .then(async (res) => {
       if (res.length === 0) {
-        await addAvailabilitySingleWeekQuery({
+        await addAvailabilityRowQuery({
           poolCountry: country,
           provider_id,
           startDate,
@@ -69,7 +78,7 @@ export const updateAvailabilitySingleWeek = async ({
         });
       }
 
-      return await updateAvailabilitySingleWeekQuery({
+      return await updateAvailabilitySingleSlotQuery({
         poolCountry: country,
         provider_id,
         startDate,
@@ -99,6 +108,56 @@ export const deleteAvailabilitySingleWeek = async ({
   }).catch((err) => {
     throw err;
   });
+
+  return { success: true };
+};
+
+export const updateAvailabilityByTemplate = async ({
+  country,
+  language,
+  provider_id,
+  template,
+}) => {
+  for (const { startDate, slots } of template) {
+    if (!checkSlotsWithinWeek(startDate, slots))
+      throw slotsNotWithinWeek(language);
+
+    // Check if start date already exists in the database
+    // If it does, update the slots
+    // If it doesn't, create a new row and add the slots
+    await getSlotsForSingleWeek({
+      country,
+      provider_id,
+      startDate,
+    })
+      .then(async (res) => {
+        if (res.length === 0) {
+          await addAvailabilityRowQuery({
+            poolCountry: country,
+            provider_id,
+            startDate,
+          }).catch((err) => {
+            throw err;
+          });
+        }
+
+        slots.forEach((element, index) => {
+          slots[index] = new Date(element * 1000);
+        });
+
+        return await updateAvailabilityMultipleSlotsQuery({
+          poolCountry: country,
+          provider_id,
+          startDate,
+          slots,
+        }).catch((err) => {
+          throw err;
+        });
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
 
   return { success: true };
 };

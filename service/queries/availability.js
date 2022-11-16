@@ -18,7 +18,7 @@ export const getAvailabilitySingleWeekQuery = async ({
     [provider_id, startDate]
   );
 
-export const addAvailabilitySingleWeekQuery = async ({
+export const addAvailabilityRowQuery = async ({
   poolCountry,
   provider_id,
   startDate,
@@ -26,14 +26,14 @@ export const addAvailabilitySingleWeekQuery = async ({
   await getDBPool("piiDb", poolCountry).query(
     `
 
-        INSERT INTO availability (provider_detail_id, start_date)
-        VALUES ($1, to_timestamp($2));
+      INSERT INTO availability (provider_detail_id, start_date)
+      VALUES ($1, to_timestamp($2));
 
-      `,
+    `,
     [provider_id, startDate]
   );
 
-export const updateAvailabilitySingleWeekQuery = async ({
+export const updateAvailabilitySingleSlotQuery = async ({
   poolCountry,
   provider_id,
   startDate,
@@ -42,12 +42,29 @@ export const updateAvailabilitySingleWeekQuery = async ({
   await getDBPool("piiDb", poolCountry).query(
     `
 
-        UPDATE availability
-        SET slots = (SELECT array_agg(distinct e) FROM UNNEST(slots || to_timestamp($3)) e)
-        WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+      UPDATE availability
+      SET slots = (SELECT array_agg(distinct e) FROM UNNEST(slots || to_timestamp($3)) e)
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
 
-      `,
+    `,
     [provider_id, startDate, slot]
+  );
+
+export const updateAvailabilityMultipleSlotsQuery = async ({
+  poolCountry,
+  provider_id,
+  startDate,
+  slots,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+  
+      UPDATE availability
+      SET slots = (SELECT array_agg(distinct e) FROM UNNEST(slots || $3::timestamptz[]) e)
+    WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+  
+    `,
+    [provider_id, startDate, slots]
   );
 
 export const deleteAvailabilitySingleWeekQuery = async ({
@@ -59,10 +76,10 @@ export const deleteAvailabilitySingleWeekQuery = async ({
   await getDBPool("piiDb", poolCountry).query(
     `
 
-          UPDATE availability
-          SET slots = array_remove(slots, to_timestamp($3))
-          WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+      UPDATE availability
+      SET slots = array_remove(slots, to_timestamp($3))
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
 
-        `,
+    `,
     [provider_id, startDate, slot]
   );

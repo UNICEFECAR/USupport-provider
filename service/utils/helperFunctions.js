@@ -70,3 +70,26 @@ export const getSlotsForSingleWeek = async ({
       throw err;
     });
 };
+
+export const getXDaysInSeconds = (x) => {
+  const minute = 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  return x * day;
+};
+
+export const checkSlotsWithinWeek = (startDate, slots) => {
+  const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
+
+  const invalidSlots = slots.filter(
+    (slot) =>
+      Number(slot) < Number(startDate) || Number(slot) >= Number(nextStartDate)
+  );
+
+  if (invalidSlots.length > 0) {
+    return false;
+  }
+
+  return true;
+};

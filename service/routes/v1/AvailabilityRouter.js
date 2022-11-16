@@ -6,12 +6,14 @@ import {
   getAvailabilitySingleWeekSchema,
   updateAvailabilitySingleWeekSchema,
   deleteAvailabilitySingleWeekSchema,
+  updateAvailabilityByTemplateSchema,
 } from "#schemas/availabilitySchemas";
 
 import {
   getAvailabilitySingleWeek,
   updateAvailabilitySingleWeek,
   deleteAvailabilitySingleWeek,
+  updateAvailabilityByTemplate,
 } from "#controllers/availability";
 
 const router = express.Router();
@@ -43,6 +45,7 @@ router
      * #desc    Add a slot to the provider availability for a single week
      */
     const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
 
     const provider_id = req.user.provider_detail_id;
 
@@ -51,7 +54,7 @@ router
     return await updateAvailabilitySingleWeekSchema
       .noUnknown(true)
       .strict()
-      .validate({ country, provider_id, ...payload })
+      .validate({ country, language, provider_id, ...payload })
       .then(updateAvailabilitySingleWeek)
       .then((result) => res.status(200).send(result))
       .catch(next);
@@ -75,5 +78,26 @@ router
       .then((result) => res.status(200).send(result))
       .catch(next);
   });
+
+router.route("/template").put(populateUser, async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/availability/template
+   * #desc    Add multiple slots to the provider availability for multiple weeks
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const provider_id = req.user.provider_detail_id;
+
+  const payload = req.body;
+
+  return await updateAvailabilityByTemplateSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, provider_id, ...payload })
+    .then(updateAvailabilityByTemplate)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
 
 export { router };
