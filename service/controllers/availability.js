@@ -1,5 +1,4 @@
 import {
-  getAvailabilitySingleWeekQuery,
   addAvailabilitySingleWeekQuery,
   updateAvailabilitySingleWeekQuery,
   deleteAvailabilitySingleWeekQuery,
