@@ -176,7 +176,7 @@ export const getAvailabilitySingleDay = async ({
 
   const singleWeekSlots = await getSlotsForSingleWeek({
     country,
-    providerId,
+    provider_id: providerId,
     startDate,
   }).catch((err) => {
     throw err;
