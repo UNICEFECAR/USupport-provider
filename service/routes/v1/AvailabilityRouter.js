@@ -110,7 +110,7 @@ router.route("/single-day").get(async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
 
-  const providerId = req.query.provider_id;
+  const providerId = req.query.providerId;
   const startDate = req.query.startDate;
   const day = req.query.day;
 
