@@ -7,6 +7,7 @@ import {
   updateAvailabilitySingleWeekSchema,
   deleteAvailabilitySingleWeekSchema,
   updateAvailabilityByTemplateSchema,
+  getAvailabilitySingleDaySchema,
 } from "#schemas/availabilitySchemas";
 
 import {
@@ -14,6 +15,7 @@ import {
   updateAvailabilitySingleWeek,
   deleteAvailabilitySingleWeek,
   updateAvailabilityByTemplate,
+  getAvailabilitySingleDay,
 } from "#controllers/availability";
 
 const router = express.Router();
@@ -96,6 +98,27 @@ router.route("/template").put(populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, provider_id, ...payload })
     .then(updateAvailabilityByTemplate)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/single-day").get(async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/availability/single-day
+   * #desc    Get current provider availability for a single day,
+   *          excluding any slots that are in the past or are already booked.
+   */
+  const country = req.header("x-country-alpha-2");
+
+  const provider_id = req.query.provider_id;
+  const startDate = req.query.startDate;
+  const day = req.query.day;
+
+  return await getAvailabilitySingleDaySchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, provider_id, startDate, day })
+    .then(getAvailabilitySingleDay)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

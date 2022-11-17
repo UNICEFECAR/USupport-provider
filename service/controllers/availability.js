@@ -9,6 +9,7 @@ import { slotsNotWithinWeek } from "#utils/errors";
 import {
   getSlotsForSingleWeek,
   checkSlotsWithinWeek,
+  getXDaysInSeconds,
 } from "#utils/helperFunctions";
 
 export const getAvailabilitySingleWeek = async ({
@@ -131,7 +132,7 @@ export const updateAvailabilityByTemplate = async ({
       startDate,
     })
       .then(async (res) => {
-        if (res.length === 0) {
+        if (res?.length === 0) {
           await addAvailabilityRowQuery({
             poolCountry: country,
             provider_id,
@@ -160,4 +161,43 @@ export const updateAvailabilityByTemplate = async ({
   }
 
   return { success: true };
+};
+
+export const getAvailabilitySingleDay = async ({
+  country,
+  provider_id,
+  startDate,
+  day,
+}) => {
+  const now = new Date();
+  const nowTimestamp = now.getTime() / 1000;
+
+  let slots = [];
+
+  const singleWeekSlots = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // TODO: Get all consultations for the day
+
+  // Get slots for the day
+  // Exclude slots that are in the past
+  // TODO: Exclude slots that are already booked
+  singleWeekSlots.forEach((slot) => {
+    const slotTimestamp = new Date(slot).getTime() / 1000;
+
+    if (
+      slotTimestamp > nowTimestamp &&
+      slotTimestamp >= Number(day) &&
+      slotTimestamp < Number(day) + getXDaysInSeconds(1)
+    ) {
+      slots.push(slot);
+    }
+  });
+
+  return slots;
 };
