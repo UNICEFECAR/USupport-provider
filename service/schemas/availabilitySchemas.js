@@ -35,7 +35,7 @@ export const deleteAvailabilitySingleWeekSchema = yup.object().shape({
 
 export const getAvailabilitySingleDaySchema = yup.object().shape({
   country: yup.string().required(),
-  provider_id: yup.string().uuid().required(),
+  providerId: yup.string().uuid().required(),
   startDate: yup.string().required(),
   day: yup.string().required(),
 });

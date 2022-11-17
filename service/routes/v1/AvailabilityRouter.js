@@ -110,14 +110,14 @@ router.route("/single-day").get(async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
 
-  const provider_id = req.query.provider_id;
+  const providerId = req.query.provider_id;
   const startDate = req.query.startDate;
   const day = req.query.day;
 
   return await getAvailabilitySingleDaySchema
     .noUnknown(true)
     .strict(true)
-    .validate({ country, provider_id, startDate, day })
+    .validate({ country, providerId, startDate, day })
     .then(getAvailabilitySingleDay)
     .then((result) => res.status(200).send(result))
     .catch(next);
