@@ -6,6 +6,23 @@ import {
   getProviderWorkWithQuery,
 } from "#queries/providers";
 
+import { getConsultationByTimeAndProviderIdQuery } from "#queries/consultation";
+
+export const getXDaysInSeconds = (x) => {
+  const minute = 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  return x * day;
+};
+
+function getMonday(timestamp) {
+  const d = new Date(timestamp * 1000);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  return new Date(d.setDate(diff)).setHours(0, 0, 0, 0) / 1000;
+}
+
 export const formatSpecializations = (specializations) => {
   if (specializations?.length > 0) {
     return specializations.replace("{", "").replace("}", "").split(",");
@@ -71,14 +88,6 @@ export const getSlotsForSingleWeek = async ({
     });
 };
 
-export const getXDaysInSeconds = (x) => {
-  const minute = 60;
-  const hour = minute * 60;
-  const day = hour * 24;
-
-  return x * day;
-};
-
 export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
@@ -90,6 +99,38 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
   if (invalidSlots.length > 0) {
     return false;
   }
+
+  return true;
+};
+
+export const checkIsSlotAvailable = async (country, providerId, time) => {
+  // Check if provider is available at the time
+  const startDate = getMonday(time);
+
+  const slots = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const slot = slots.find((slot) => {
+    const slotTimestamp = new Date(slot).getTime() / 1000;
+    return slotTimestamp === Number(time);
+  });
+  if (!slot) return false;
+
+  // Check if there is not already a consultation at the time
+  const consultation = await getConsultationByTimeAndProviderIdQuery({
+    poolCountry: country,
+    providerId,
+    time,
+  }).catch((err) => {
+    throw err;
+  });
+
+  if (consultation.rowCount > 0) return false;
 
   return true;
 };

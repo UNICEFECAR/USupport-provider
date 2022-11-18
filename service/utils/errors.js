@@ -28,6 +28,22 @@ export const slotsNotWithinWeek = (language) => {
   const error = new Error();
   error.message = t("slots_not_within_week_error", language);
   error.name = "SLOTS NOT WITHIN WEEK";
+  error.status = 400;
+  return error;
+};
+
+export const slotNotAvailable = (language) => {
+  const error = new Error();
+  error.message = t("slot_not_available_error", language);
+  error.name = "SLOT IS NOT AVAILABLE";
+  error.status = 400;
+  return error;
+};
+
+export const consultationNotFound = (language) => {
+  const error = new Error();
+  error.message = t("consultation_not_found_error", language);
+  error.name = "CONSULTATION NOT FOUND";
   error.status = 404;
   return error;
 };
