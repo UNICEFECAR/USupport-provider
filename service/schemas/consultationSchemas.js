@@ -26,3 +26,9 @@ export const scheduleConsultationSchema = yup.object().shape({
   client_id: yup.string().uuid().required(),
   consultationId: yup.string().uuid().required(),
 });
+
+export const cancelConsultationSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  consultationId: yup.string().uuid().required(),
+});

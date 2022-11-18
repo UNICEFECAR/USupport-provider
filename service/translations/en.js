@@ -3,6 +3,6 @@ export default {
   incorrect_password_error: "The provided password is incorrect",
   email_already_used_error: "This email is already used",
   slots_not_within_week_error: "Slots are not within the week",
-  slot_is_not_available_error: "Slot is not available",
+  slot_not_available_error: "Slot is not available",
   consultation_not_found_error: "Consultation not found",
 };

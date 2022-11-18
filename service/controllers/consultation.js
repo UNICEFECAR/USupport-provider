@@ -3,6 +3,7 @@ import {
   addConsultationAsScheduledQuery,
   getConsultationByIdAndClientIdQuery,
   updateConsultationStatusAsScheduledQuery,
+  cancelConsultationQuery,
 } from "#queries/consultation";
 
 import { checkIsSlotAvailable } from "#utils/helperFunctions";
@@ -96,5 +97,28 @@ export const scheduleConsultation = async ({
     });
   }
 
+  // TODO: Send notification to client and provider to confirm consultation
   return { success: true };
+};
+
+export const cancelConsultation = async ({
+  country,
+  language,
+  consultationId,
+}) => {
+  return await cancelConsultationQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then((raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        // TODO: Send notification to client and provider for canceled consultation
+        return { success: true };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 };

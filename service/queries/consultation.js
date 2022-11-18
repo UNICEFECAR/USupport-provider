@@ -28,8 +28,9 @@ export const addConsultationAsPendingQuery = async ({
     `
 
       INSERT INTO consultation (client_detail_id, provider_detail_id, time, status)
-      VALUES ($1, $2, to_timestamp($3), 'pending');
+      VALUES ($1, $2, to_timestamp($3), 'pending')
       RETURNING *;
+
     `,
     [client_id, providerId, time]
   );
@@ -42,11 +43,17 @@ export const addConsultationAsScheduledQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-    
-          INSERT INTO consultation (client_detail_id, provider_detail_id, time, status)
-          VALUES ($1, $2, to_timestamp($3), 'scheduled');
-    
-        `,
+      WITH chatData AS (
+
+        INSERT INTO chat (client_detail_id, provider_detail_id, date)
+        VALUES ($1, $2, to_timestamp($3))
+        RETURNING chat_id
+      )
+
+      INSERT INTO consultation (client_detail_id, provider_detail_id, chat_id, time, status)
+      VALUES ($1, $2, (SELECT chat_id FROM chatData), to_timestamp($3), 'scheduled');
+
+    `,
     [client_id, provider_id, time]
   );
 
@@ -58,13 +65,13 @@ export const getConsultationByIdAndClientIdQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-        SELECT * 
-        FROM consultation
-        WHERE client_detail_id = $1 AND consultation_id = $2
-        ORDER BY created_at DESC
-        LIMIT 1;
+      SELECT * 
+      FROM consultation
+      WHERE client_detail_id = $1 AND consultation_id = $2
+      ORDER BY created_at DESC
+      LIMIT 1;
 
-      `,
+    `,
     [client_id, consultationId]
   );
 
@@ -74,11 +81,35 @@ export const updateConsultationStatusAsScheduledQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
+      WITH chatData AS (
 
-        UPDATE consultation
-        SET status = 'scheduled'
-        WHERE consultation_id = $1;
+        INSERT INTO chat (client_detail_id, provider_detail_id, date)
+          SELECT client_detail_id, provider_detail_id, time
+          FROM consultation
+          WHERE consultation_id = $1
+        RETURNING chat_id
+      )
 
-      `,
+      UPDATE consultation
+      SET status = 'scheduled', chat_id = (SELECT chat_id FROM chatData)
+      WHERE consultation_id = $1;
+
+    `,
+    [consultationId]
+  );
+
+export const cancelConsultationQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      UPDATE consultation
+      SET status = 'canceled'
+      WHERE consultation_id = $1
+      RETURNING *;
+
+    `,
     [consultationId]
   );
