@@ -4,6 +4,7 @@ import {
   updateAvailabilityMultipleSlotsQuery,
   deleteAvailabilitySingleWeekQuery,
 } from "#queries/availability";
+
 import { slotsNotWithinWeek } from "#utils/errors";
 
 import {
@@ -186,7 +187,7 @@ export const getAvailabilitySingleDay = async ({
 
   // Get slots for the day
   // Exclude slots that are in the past
-  // TODO: Exclude slots that are already booked
+  // TODO: Exclude slots that are pending, scheduled, or suggested
   singleWeekSlots.forEach((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
 
@@ -198,6 +199,9 @@ export const getAvailabilitySingleDay = async ({
       slots.push(slot);
     }
   });
+
+  // Sort slots in ascending order
+  slots.sort((a, b) => a - b);
 
   return slots;
 };
