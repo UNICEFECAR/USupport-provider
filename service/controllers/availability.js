@@ -11,6 +11,7 @@ import {
   getSlotsForSingleWeek,
   checkSlotsWithinWeek,
   getXDaysInSeconds,
+  getSlotsForThreeWeeks,
 } from "#utils/helperFunctions";
 
 export const getAvailabilitySingleWeek = async ({
@@ -18,37 +19,13 @@ export const getAvailabilitySingleWeek = async ({
   provider_id,
   startDate,
 }) => {
-  const previousWeekTimestamp = new Date(Number(startDate) * 1000);
-  previousWeekTimestamp.setDate(previousWeekTimestamp.getDate() - 7);
-
-  const previousWeek = await getSlotsForSingleWeek({
-    country,
-    provider_id,
-    startDate: previousWeekTimestamp / 1000,
-  }).catch((err) => {
-    throw err;
-  });
-
-  const currentWeek = await getSlotsForSingleWeek({
+  return await getSlotsForThreeWeeks({
     country,
     provider_id,
     startDate,
   }).catch((err) => {
     throw err;
   });
-
-  const nextWeekTimestamp = new Date(Number(startDate) * 1000);
-  nextWeekTimestamp.setDate(nextWeekTimestamp.getDate() + 7);
-
-  const nextWeek = await getSlotsForSingleWeek({
-    country,
-    provider_id,
-    startDate: nextWeekTimestamp / 1000,
-  }).catch((err) => {
-    throw err;
-  });
-
-  return [...previousWeek, ...currentWeek, ...nextWeek];
 };
 
 export const updateAvailabilitySingleWeek = async ({
@@ -175,7 +152,7 @@ export const getAvailabilitySingleDay = async ({
 
   let slots = [];
 
-  const singleWeekSlots = await getSlotsForSingleWeek({
+  const threeWeeksSlots = await getSlotsForThreeWeeks({
     country,
     provider_id: providerId,
     startDate,
@@ -185,16 +162,16 @@ export const getAvailabilitySingleDay = async ({
 
   // TODO: Get all consultations for the day
 
-  // Get slots for the day
+  // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
   // TODO: Exclude slots that are pending, scheduled, or suggested
-  singleWeekSlots.forEach((slot) => {
+  threeWeeksSlots.forEach((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
 
     if (
       slotTimestamp > nowTimestamp &&
-      slotTimestamp >= Number(day) &&
-      slotTimestamp < Number(day) + getXDaysInSeconds(1)
+      slotTimestamp >= Number(day) - getXDaysInSeconds(1) &&
+      slotTimestamp < Number(day) + getXDaysInSeconds(2)
     ) {
       slots.push(slot);
     }

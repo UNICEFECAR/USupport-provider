@@ -88,6 +88,44 @@ export const getSlotsForSingleWeek = async ({
     });
 };
 
+export const getSlotsForThreeWeeks = async ({
+  country,
+  provider_id,
+  startDate,
+}) => {
+  const previousWeekTimestamp = new Date(Number(startDate) * 1000);
+  previousWeekTimestamp.setDate(previousWeekTimestamp.getDate() - 7);
+
+  const previousWeek = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate: previousWeekTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const currentWeek = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const nextWeekTimestamp = new Date(Number(startDate) * 1000);
+  nextWeekTimestamp.setDate(nextWeekTimestamp.getDate() + 7);
+
+  const nextWeek = await getSlotsForSingleWeek({
+    country,
+    provider_id,
+    startDate: nextWeekTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [...previousWeek, ...currentWeek, ...nextWeek];
+};
+
 export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
