@@ -5,6 +5,8 @@ import {
   deleteAvailabilitySingleWeekQuery,
 } from "#queries/availability";
 
+import { getConsultationsForDayQuery } from "#queries/consultation";
+
 import { slotsNotWithinWeek } from "#utils/errors";
 
 import {
@@ -160,18 +162,35 @@ export const getAvailabilitySingleDay = async ({
     throw err;
   });
 
-  // TODO: Get all consultations for the day
+  const previousDayTimestamp = Number(day) - getXDaysInSeconds(1);
+  const nextDayTimestamp = Number(day) + getXDaysInSeconds(2);
+
+  const allConsultationsForDay = await getConsultationsForDayQuery({
+    poolCountry: country,
+    providerId,
+    previousDayTimestamp,
+    nextDayTimestamp,
+  })
+    .then((res) => {
+      return res.rows;
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
-  // TODO: Exclude slots that are pending, scheduled, or suggested
+  // Exclude slots that are pending, scheduled, or suggested
   threeWeeksSlots.forEach((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
 
     if (
       slotTimestamp > nowTimestamp &&
-      slotTimestamp >= Number(day) - getXDaysInSeconds(1) &&
-      slotTimestamp < Number(day) + getXDaysInSeconds(2)
+      slotTimestamp >= previousDayTimestamp &&
+      slotTimestamp < nextDayTimestamp &&
+      !allConsultationsForDay.some(
+        (consultation) => new Date(consultation.time) / 1000 === slotTimestamp
+      )
     ) {
       slots.push(slot);
     }

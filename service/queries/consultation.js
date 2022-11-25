@@ -112,3 +112,21 @@ export const cancelConsultationQuery = async ({
     `,
     [consultationId]
   );
+
+export const getConsultationsForDayQuery = async ({
+  poolCountry,
+  providerId,
+  previousDayTimestamp,
+  nextDayTimestamp,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      SELECT * 
+      FROM consultation
+      WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($3) AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+      ORDER BY created_at DESC;
+
+    `,
+    [providerId, previousDayTimestamp, nextDayTimestamp]
+  );
