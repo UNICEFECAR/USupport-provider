@@ -3,6 +3,7 @@ import {
   addConsultationAsScheduledQuery,
   getConsultationByIdQuery,
   updateConsultationStatusAsScheduledQuery,
+  rescheduleConsultationQuery,
   cancelConsultationQuery,
 } from "#queries/consultation";
 
@@ -124,12 +125,15 @@ export const rescheduleConsultation = async ({
   const providerId = consultation.provider_detail_id;
 
   // Cancel the current consultation
-  await cancelConsultation({
+  await rescheduleConsultationQuery({
     country,
-    language,
     consultationId,
   })
-    .then(async () => {
+    .then(async (raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      }
+
       // Block the new consultation time
       await addConsultationAsPending({
         country,

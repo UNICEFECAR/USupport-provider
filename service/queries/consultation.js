@@ -97,6 +97,22 @@ export const updateConsultationStatusAsScheduledQuery = async ({
     [consultationId]
   );
 
+export const rescheduleConsultationQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+  
+        UPDATE consultation
+        SET status = 'rescheduled'
+        WHERE consultation_id = $1
+        RETURNING *;
+  
+      `,
+    [consultationId]
+  );
+
 export const cancelConsultationQuery = async ({
   poolCountry,
   consultationId,
