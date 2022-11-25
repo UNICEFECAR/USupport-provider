@@ -102,7 +102,7 @@ router.route("/template").put(populateUser, async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/single-day").get(async (req, res, next) => {
+router.route("/single-day").get(populateUser, async (req, res, next) => {
   /**
    * #route   GET /provider/v1/availability/single-day
    * #desc    Get current provider availability for a single day,
@@ -110,7 +110,13 @@ router.route("/single-day").get(async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
 
-  const providerId = req.query.providerId;
+  let providerId = "";
+  if (req.user.provider_detail_id) {
+    providerId = req.user.provider_detail_id;
+  } else {
+    providerId = req.query.providerId;
+  }
+
   const startDate = req.query.startDate;
   const day = req.query.day;
 
