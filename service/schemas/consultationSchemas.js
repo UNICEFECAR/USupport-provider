@@ -31,7 +31,7 @@ export const rescheduleConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
-  newTime: yup.string().required(),
+  newConsultationId: yup.string().uuid().required(),
 });
 
 export const cancelConsultationSchema = yup.object().shape({

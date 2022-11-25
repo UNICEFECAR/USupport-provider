@@ -70,7 +70,7 @@ router.route("/schedule").put(async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/reschedule").post(populateUser, async (req, res, next) => {
+router.route("/reschedule").post(async (req, res, next) => {
   /**
    * #route   POST /provider/v1/consultation/reschedule
    * #desc    Reschedule a consultation
