@@ -5,12 +5,14 @@ import { populateUser } from "#middlewares/populateMiddleware";
 import {
   addConsultationAsPendingSchema,
   scheduleConsultationSchema,
+  rescheduleConsultationSchema,
   cancelConsultationSchema,
 } from "#schemas/consultationSchemas";
 
 import {
   addConsultationAsPending,
   scheduleConsultation,
+  rescheduleConsultation,
   cancelConsultation,
 } from "#controllers/consultation";
 
@@ -76,14 +78,12 @@ router.route("/reschedule").post(populateUser, async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
-  const client_id = req.user.client_detail_id;
-
   const payload = req.body;
 
   return await rescheduleConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, client_id, ...payload })
+    .validate({ country, language, ...payload })
     .then(rescheduleConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);

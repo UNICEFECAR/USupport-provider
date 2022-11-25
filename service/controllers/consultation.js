@@ -99,6 +99,67 @@ export const scheduleConsultation = async ({
   return { success: true };
 };
 
+export const rescheduleConsultation = async ({
+  country,
+  language,
+  consultationId,
+  newTime,
+}) => {
+  const consultation = await getConsultationByIdQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then((raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        return raw.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const clientId = consultation.client_detail_id;
+  const providerId = consultation.provider_detail_id;
+
+  // Cancel the current consultation
+  await cancelConsultation({
+    country,
+    language,
+    consultationId,
+  })
+    .then(async () => {
+      // Block the new consultation time
+      await addConsultationAsPending({
+        country,
+        language,
+        clientId,
+        providerId,
+        time: newTime,
+      })
+        .then(
+          async ({ consultation_id }) =>
+            // Schedule the new consultation
+            await scheduleConsultation({
+              country,
+              language,
+              consultationId: consultation_id,
+            }).catch((err) => {
+              throw err;
+            })
+
+          // TODO: Send notification to client and provider to confirm consultation recchedule
+        )
+        .catch((err) => {
+          throw err;
+        });
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
 export const cancelConsultation = async ({
   country,
   language,
