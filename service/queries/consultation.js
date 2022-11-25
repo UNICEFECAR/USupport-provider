@@ -66,7 +66,7 @@ export const getConsultationByIdQuery = async ({
 
       SELECT * 
       FROM consultation
-      WHERE consultation_id = $2
+      WHERE consultation_id = $1
       ORDER BY created_at DESC
       LIMIT 1;
 
