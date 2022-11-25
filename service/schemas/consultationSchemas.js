@@ -24,7 +24,6 @@ export const addConsultationAsPendingSchema = yup.object().shape({
 export const scheduleConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
-  client_id: yup.string().uuid().required(),
   consultationId: yup.string().uuid().required(),
 });
 

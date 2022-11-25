@@ -1,7 +1,7 @@
 import {
   addConsultationAsPendingQuery,
   addConsultationAsScheduledQuery,
-  getConsultationByIdAndClientIdQuery,
+  getConsultationByIdQuery,
   updateConsultationStatusAsScheduledQuery,
   cancelConsultationQuery,
 } from "#queries/consultation";
@@ -45,12 +45,10 @@ export const addConsultationAsPending = async ({
 export const scheduleConsultation = async ({
   country,
   language,
-  client_id,
   consultationId,
 }) => {
-  const consultation = await getConsultationByIdAndClientIdQuery({
+  const consultation = await getConsultationByIdQuery({
     poolCountry: country,
-    client_id,
     consultationId,
   })
     .then((raw) => {
@@ -89,7 +87,7 @@ export const scheduleConsultation = async ({
     // Add consultation as scheduled
     await addConsultationAsScheduledQuery({
       poolCountry: country,
-      client_id,
+      client_id: consultation.client_detail_id,
       provider_id: consultation.provider_detail_id,
       time: consultationTime,
     }).catch((err) => {

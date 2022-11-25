@@ -49,7 +49,7 @@ router.route("/block").post(populateUser, async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/schedule").put(populateUser, async (req, res, next) => {
+router.route("/schedule").put(async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/consultation/schedule
    * #desc    Schedule a consultation
@@ -57,14 +57,12 @@ router.route("/schedule").put(populateUser, async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
-  const client_id = req.user.client_detail_id;
-
   const payload = req.body;
 
   return await scheduleConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, client_id, ...payload })
+    .validate({ country, language, ...payload })
     .then(scheduleConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
