@@ -28,14 +28,14 @@ router.route("/block").post(populateUser, async (req, res, next) => {
   if (req.user.provider_detail_id) {
     providerId = req.user.provider_detail_id;
   } else {
-    providerId = req.query.providerId;
+    providerId = req.body.providerId;
   }
 
   let clientId = req.user.client_detail_id;
   if (req.user.client_detail_id) {
     clientId = req.user.client_detail_id;
   } else {
-    clientId = req.query.clientId;
+    clientId = req.body.clientId;
   }
 
   const { time } = req.body;
