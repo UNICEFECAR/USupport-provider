@@ -13,7 +13,7 @@ import { slotNotAvailable, consultationNotFound } from "#utils/errors";
 export const addConsultationAsPending = async ({
   country,
   language,
-  client_id,
+  clientId,
   providerId,
   time,
 }) => {
@@ -24,7 +24,7 @@ export const addConsultationAsPending = async ({
   // Add consultation as pending
   const consultation = await addConsultationAsPendingQuery({
     poolCountry: country,
-    client_id,
+    clientId,
     providerId,
     time,
   })

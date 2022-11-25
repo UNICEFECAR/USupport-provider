@@ -20,7 +20,7 @@ export const getConsultationByTimeAndProviderIdQuery = async ({
 
 export const addConsultationAsPendingQuery = async ({
   poolCountry,
-  client_id,
+  clientId,
   providerId,
   time,
 }) =>
@@ -32,7 +32,7 @@ export const addConsultationAsPendingQuery = async ({
       RETURNING *;
 
     `,
-    [client_id, providerId, time]
+    [clientId, providerId, time]
   );
 
 export const addConsultationAsScheduledQuery = async ({

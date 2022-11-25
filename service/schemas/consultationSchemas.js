@@ -10,12 +10,13 @@ const statusTypeSchema = yup
     "finished",
     "rescheduled",
     "cancelled",
+    "rejected",
   ]);
 
 export const addConsultationAsPendingSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
-  client_id: yup.string().uuid().required(),
+  clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
   time: yup.string().required(),
 });
