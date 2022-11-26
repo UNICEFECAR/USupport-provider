@@ -106,8 +106,8 @@ export const rescheduleConsultation = async ({
   consultationId,
   newConsultationId,
 }) => {
-  await rescheduleConsultationQuery({
-    country,
+  return await rescheduleConsultationQuery({
+    poolCountry: country,
     consultationId,
   })
     .then(async (raw) => {
@@ -124,6 +124,7 @@ export const rescheduleConsultation = async ({
         throw err;
       });
 
+      return { success: true };
       // TODO: Send notification to client and provider to confirm consultation recchedule
     })
     .catch((err) => {
