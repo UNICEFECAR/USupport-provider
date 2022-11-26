@@ -38,6 +38,7 @@ export const cancelConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
+  canceledBy: yup.string().oneOf(["client", "provider"]).required(),
 });
 
 export const getAllPastConsultationsByClientIdSchema = yup.object().shape({
@@ -56,5 +57,10 @@ export const getAllPastConsultationsSchema = yup.object().shape({
 export const getAllUpcomingConsultationsSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+});
+
+export const getAllConsultationsCountSchema = yup.object().shape({
+  country: yup.string().required(),
   providerId: yup.string().uuid().required(),
 });

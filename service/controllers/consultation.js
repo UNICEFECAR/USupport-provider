@@ -6,6 +6,7 @@ import {
   rescheduleConsultationQuery,
   cancelConsultationQuery,
   getAllConsultationsByProviderIdAndClientIdQuery,
+  getAllConsultationsCountQuery,
 } from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
@@ -19,6 +20,19 @@ import {
   consultationNotFound,
   clientNotFound,
 } from "#utils/errors";
+
+export const getAllConsultationsCount = async ({ country, providerId }) => {
+  return await getAllConsultationsCountQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      return JSON.stringify(res.rows[0].count);
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
 
 export const getAllPastConsultationsByClientId = async ({
   country,
@@ -355,6 +369,7 @@ export const cancelConsultation = async ({
   country,
   language,
   consultationId,
+  canceledBy,
 }) => {
   return await cancelConsultationQuery({
     poolCountry: country,
@@ -364,7 +379,11 @@ export const cancelConsultation = async ({
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       } else {
-        // TODO: Send notification to client and provider for canceled consultation
+        if (canceledBy === "client") {
+          // TODO: Send notification to client and provider for canceled consultation
+        } else if (canceledBy === "provider") {
+          // TODO: Send notification to client and provider for canceled consultation
+        }
         return { success: true };
       }
     })

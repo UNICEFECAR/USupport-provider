@@ -177,3 +177,16 @@ export const getAllConsultationsByProviderIdQuery = async ({
     `,
     [providerId]
   );
+
+export const getAllConsultationsCountQuery = async ({
+  poolCountry,
+  providerId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+      SELECT COUNT(*) 
+      FROM consultation
+      WHERE provider_detail_id = $1 AND (status = 'scheduled' OR status = 'finished') AND time < now();
+    `,
+    [providerId]
+  );

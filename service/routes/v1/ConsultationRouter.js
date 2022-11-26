@@ -7,6 +7,7 @@ import {
   scheduleConsultationSchema,
   rescheduleConsultationSchema,
   cancelConsultationSchema,
+  getAllConsultationsCountSchema,
   getAllPastConsultationsByClientIdSchema,
   getAllPastConsultationsSchema,
   getAllUpcomingConsultationsSchema,
@@ -17,12 +18,31 @@ import {
   scheduleConsultation,
   rescheduleConsultation,
   cancelConsultation,
+  getAllConsultationsCount,
   getAllPastConsultationsByClientId,
   getAllPastConsultations,
   getAllUpcomingConsultations,
 } from "#controllers/consultation";
 
 const router = express.Router();
+
+router.route("/count").get(populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/consultation/count
+   * #desc    Get the count of all past and future consultations for the current provider
+   */
+  const country = req.header("x-country-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  return await getAllConsultationsCountSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, providerId })
+    .then(getAllConsultationsCount)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
 
 router.route("/all/past/by-id").get(populateUser, async (req, res, next) => {
   /**
@@ -154,7 +174,7 @@ router.route("/reschedule").post(async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/cancel").put(async (req, res, next) => {
+router.route("/cancel").put(populateUser, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/consultation/cancel
    * #desc    Cancel a consultation
@@ -162,12 +182,14 @@ router.route("/cancel").put(async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
+  const canceledBy = req.user.type;
+
   const payload = req.body;
 
   return await cancelConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ country, language, canceledBy, ...payload })
     .then(cancelConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
