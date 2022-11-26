@@ -29,7 +29,7 @@ export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
       SELECT *
       FROM consultation
       WHERE provider_detail_id = $1 AND client_detail_id = $2 AND (status = 'scheduled' OR status = 'finished')
-      ORDER BY created_at DESC;
+      ORDER BY time DESC;
 
     `,
     [providerId, clientId]
@@ -158,7 +158,7 @@ export const getConsultationsForDayQuery = async ({
       SELECT * 
       FROM consultation
       WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($3) AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled' OR status = 'finished')
-      ORDER BY created_at DESC;
+      ORDER BY time DESC;
 
     `,
     [providerId, previousDayTimestamp, nextDayTimestamp]
@@ -173,7 +173,7 @@ export const getAllConsultationsByProviderIdQuery = async ({
       SELECT * 
       FROM consultation
       WHERE provider_detail_id = $1 AND (status = 'scheduled' OR status = 'finished')
-      ORDER BY created_at DESC;
+      ORDER BY time DESC;
     `,
     [providerId]
   );
