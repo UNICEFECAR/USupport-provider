@@ -16,7 +16,16 @@ import {
   deleteProviderImageQuery,
 } from "#queries/providers";
 
-import { providerNotFound, incorrectPassword, emailUsed } from "#utils/errors";
+import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
+
+import { getClientByIdQuery } from "#queries/clients";
+
+import {
+  providerNotFound,
+  clientNotFound,
+  incorrectPassword,
+  emailUsed,
+} from "#utils/errors";
 
 import {
   formatSpecializations,
@@ -58,7 +67,7 @@ export const getAllProviders = async ({ country }) => {
 };
 
 export const getProviderById = async ({ country, language, provider_id }) => {
-  return await getProviderByIdQuery({ countryPool: country, provider_id })
+  return await getProviderByIdQuery({ poolCountry: country, provider_id })
     .then(async (res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
@@ -321,6 +330,89 @@ export const deleteProviderImage = async ({
       } else {
         return res.rows[0];
       }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getAllClients = async ({ country, language, providerId }) => {
+  return await getAllConsultationsByProviderIdQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then(async (res) => {
+      let consultations = res.rows;
+
+      // Get all clients ids
+      const clientsToFetch = Array.from(
+        new Set(
+          consultations.map((consultation) => consultation.client_detail_id)
+        )
+      );
+
+      let clientsDetails = {};
+
+      // For each client to fetch, fetch it
+      for (let i = 0; i < clientsToFetch.length; i++) {
+        const clientId = clientsToFetch[i];
+
+        clientsDetails[clientId] = await getClientByIdQuery({
+          poolCountry: country,
+          clientId,
+        })
+          .then((res) => {
+            if (res.rowCount === 0) {
+              throw clientNotFound(language);
+            } else {
+              return res.rows[0];
+            }
+          })
+          .catch((err) => {
+            throw err;
+          });
+      }
+
+      // Initialise the clients array
+      let clients = [];
+
+      for (let i = 0; i < clientsToFetch.length; i++) {
+        const client = clientsDetails[clientsToFetch[i]];
+        const clientName = client.name;
+        const clientSurname = client.surname;
+        const clientNickname = client.nickname;
+
+        clients.push({
+          client_detail_id: client.client_detail_id,
+          client_name: clientName
+            ? `${clientName} ${clientSurname}`
+            : clientNickname,
+          client_image: client.image,
+          next_consultation: null,
+          past_consultations: 0,
+        });
+      }
+
+      // For each consultation, add it to the clients array in the right place
+      for (let i = 0; i < consultations.length; i++) {
+        const consultation = consultations[i];
+        const consultationTime = consultation.time;
+        const clientDetailId = consultation.client_detail_id;
+
+        const clientIndex = clients.findIndex(
+          (client) => client.client_detail_id === clientDetailId
+        );
+
+        if (clientIndex !== -1) {
+          if (consultationTime > new Date()) {
+            clients[clientIndex].next_consultation = consultationTime;
+          } else {
+            clients[clientIndex].past_consultations += 1;
+          }
+        }
+      }
+
+      return clients;
     })
     .catch((err) => {
       throw err;

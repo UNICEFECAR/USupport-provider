@@ -68,3 +68,9 @@ export const deleteProviderImageSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
 });
+
+export const getAllClientsSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+});

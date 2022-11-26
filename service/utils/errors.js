@@ -24,6 +24,14 @@ export const providerNotFound = (language) => {
   return error;
 };
 
+export const clientNotFound = (language) => {
+  const error = new Error();
+  error.message = t("client_not_found_error", language);
+  error.name = "CLIENT NOT FOUND";
+  error.status = 404;
+  return error;
+};
+
 export const slotsNotWithinWeek = (language) => {
   const error = new Error();
   error.message = t("slots_not_within_week_error", language);

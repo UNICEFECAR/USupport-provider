@@ -12,6 +12,7 @@ import {
   deleteProviderDataSchema,
   updateProviderImageSchema,
   deleteProviderImageSchema,
+  getAllClientsSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -21,6 +22,7 @@ import {
   deleteProviderData,
   updateProviderImage,
   deleteProviderImage,
+  getAllClients,
 } from "#controllers/providers";
 
 const router = express.Router();
@@ -182,6 +184,26 @@ router.delete("/image", populateProvider, async (req, res, next) => {
     .strict()
     .validate({ country, language, provider_id })
     .then(deleteProviderImage)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/clients", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/clients
+   * #desc    Get all clients' data for the current provider
+   */
+
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  return await getAllClientsSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerId })
+    .then(getAllClients)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
