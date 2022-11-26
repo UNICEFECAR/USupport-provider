@@ -5,11 +5,80 @@ import {
   updateConsultationStatusAsScheduledQuery,
   rescheduleConsultationQuery,
   cancelConsultationQuery,
+  getAllConsultationsByProviderIdAndClientIdQuery,
 } from "#queries/consultation";
+
+import { getClientByIdQuery } from "#queries/clients";
 
 import { checkIsSlotAvailable } from "#utils/helperFunctions";
 
-import { slotNotAvailable, consultationNotFound } from "#utils/errors";
+import {
+  slotNotAvailable,
+  consultationNotFound,
+  clientNotFound,
+} from "#utils/errors";
+
+export const getAllPastConsultationsByClientId = async ({
+  country,
+  language,
+  providerId,
+  clientId,
+}) => {
+  const consultations = await getAllConsultationsByProviderIdAndClientIdQuery({
+    poolCountry: country,
+    providerId,
+    clientId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  let clientDetails = await getClientByIdQuery({
+    poolCountry: country,
+    clientId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw clientNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  let response = [];
+
+  for (let i = 0; i < consultations.length; i++) {
+    const consultation = consultations[i];
+    const clientName = clientDetails.name;
+    const clientSurname = clientDetails.surname;
+    const clientNickname = clientDetails.nickname;
+
+    if (consultation.time < Date.now()) {
+      response.push({
+        consultation_id: consultation.consultation_id,
+        client_detail_id: clientId,
+        client_name: clientName
+          ? `${clientName} ${clientSurname}`
+          : clientNickname,
+        client_image: clientDetails.image,
+        time: consultation.time,
+        status: consultation.status,
+      });
+    }
+  }
+
+  return response;
+};
 
 export const addConsultationAsPending = async ({
   country,

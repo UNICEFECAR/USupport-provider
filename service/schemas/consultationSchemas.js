@@ -39,3 +39,10 @@ export const cancelConsultationSchema = yup.object().shape({
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
 });
+
+export const getAllPastConsultationsByClientIdSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+  clientId: yup.string().uuid().required(),
+});

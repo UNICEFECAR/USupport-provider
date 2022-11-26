@@ -7,6 +7,7 @@ import {
   scheduleConsultationSchema,
   rescheduleConsultationSchema,
   cancelConsultationSchema,
+  getAllPastConsultationsByClientIdSchema,
 } from "#schemas/consultationSchemas";
 
 import {
@@ -14,9 +15,31 @@ import {
   scheduleConsultation,
   rescheduleConsultation,
   cancelConsultation,
+  getAllPastConsultationsByClientId,
 } from "#controllers/consultation";
 
 const router = express.Router();
+
+router.route("/all/past/by-id").get(populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/consultation/all/past/by-id
+   * #desc    Get all the past consultations of the current provider for a specific client
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  const clientId = req.query.clientId;
+
+  return await getAllPastConsultationsByClientIdSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, language, providerId, clientId })
+    .then(getAllPastConsultationsByClientId)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
 
 router.route("/block").post(populateUser, async (req, res, next) => {
   /**
