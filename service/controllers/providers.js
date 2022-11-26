@@ -72,6 +72,10 @@ export const getAllProviders = async ({ country }) => {
           providers[i].provider_detail_id
         );
 
+        delete providers[i].street;
+        delete providers[i].city;
+        delete providers[i].postcode;
+
         providers[i] = {
           ...providers[i],
           languages: languages,
@@ -119,6 +123,10 @@ export const getProviderById = async ({ country, language, provider_id }) => {
         country,
         provider_id
       );
+
+      delete provider.street;
+      delete provider.city;
+      delete provider.postcode;
 
       provider = {
         ...provider,

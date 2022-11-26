@@ -40,7 +40,7 @@ router.get("/", populateProvider, async (req, res) => {
 router.get("/by-id", async (req, res, next) => {
   /**
    * #route   GET /provider/v1/provider/by-id
-   * #desc    Get providers data by id
+   * #desc    Get providers data by id, excluding the street, city and postcode data.
    */
 
   const country = req.header("x-country-alpha-2");
@@ -64,7 +64,7 @@ router.get("/by-id", async (req, res, next) => {
 router.get("/all", async (req, res, next) => {
   /**
    * #route   GET /provider/v1/provider/all
-   * #desc    Get all providers' data
+   * #desc    Get all providers' data, excluding the street, city and postcode data.
    */
 
   const country = req.header("x-country-alpha-2");
