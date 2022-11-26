@@ -10,6 +10,8 @@ import {
 
 import { getClientByIdQuery } from "#queries/clients";
 
+import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
+
 import { checkIsSlotAvailable } from "#utils/helperFunctions";
 
 import {
@@ -71,6 +73,154 @@ export const getAllPastConsultationsByClientId = async ({
           ? `${clientName} ${clientSurname}`
           : clientNickname,
         client_image: clientDetails.image,
+        time: consultation.time,
+        status: consultation.status,
+      });
+    }
+  }
+
+  return response;
+};
+
+export const getAllPastConsultations = async ({
+  country,
+  language,
+  providerId,
+}) => {
+  const consultations = await getAllConsultationsByProviderIdQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Get all clients ids
+  const clientsToFetch = Array.from(
+    new Set(consultations.map((consultation) => consultation.client_detail_id))
+  );
+
+  let clientsDetails = {};
+
+  // For each client to fetch, fetch it
+  for (let i = 0; i < clientsToFetch.length; i++) {
+    const clientId = clientsToFetch[i];
+
+    clientsDetails[clientId] = await getClientByIdQuery({
+      poolCountry: country,
+      clientId,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw clientNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
+
+  let response = [];
+
+  for (let i = 0; i < consultations.length; i++) {
+    const consultation = consultations[i];
+    const clientId = consultation.client_detail_id;
+    const client = clientsDetails[clientId];
+    const clientName = client.name;
+    const clientSurname = client.surname;
+    const clientNickname = client.nickname;
+
+    if (consultation.time < Date.now()) {
+      response.push({
+        consultation_id: consultation.consultation_id,
+        client_detail_id: clientId,
+        client_name: clientName
+          ? `${clientName} ${clientSurname}`
+          : clientNickname,
+        client_image: client.image,
+        time: consultation.time,
+        status: consultation.status,
+      });
+    }
+  }
+
+  return response;
+};
+
+export const getAllUpcomingConsultations = async ({
+  country,
+  language,
+  providerId,
+}) => {
+  const consultations = await getAllConsultationsByProviderIdQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Get all clients ids
+  const clientsToFetch = Array.from(
+    new Set(consultations.map((consultation) => consultation.client_detail_id))
+  );
+
+  let clientsDetails = {};
+
+  // For each client to fetch, fetch it
+  for (let i = 0; i < clientsToFetch.length; i++) {
+    const clientId = clientsToFetch[i];
+
+    clientsDetails[clientId] = await getClientByIdQuery({
+      poolCountry: country,
+      clientId,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw clientNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
+
+  let response = [];
+
+  for (let i = 0; i < consultations.length; i++) {
+    const consultation = consultations[i];
+    const clientId = consultation.client_detail_id;
+    const client = clientsDetails[clientId];
+    const clientName = client.name;
+    const clientSurname = client.surname;
+    const clientNickname = client.nickname;
+
+    if (consultation.time > Date.now()) {
+      response.push({
+        consultation_id: consultation.consultation_id,
+        client_detail_id: clientId,
+        client_name: clientName
+          ? `${clientName} ${clientSurname}`
+          : clientNickname,
+        client_image: client.image,
         time: consultation.time,
         status: consultation.status,
       });

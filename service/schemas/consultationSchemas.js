@@ -46,3 +46,15 @@ export const getAllPastConsultationsByClientIdSchema = yup.object().shape({
   providerId: yup.string().uuid().required(),
   clientId: yup.string().uuid().required(),
 });
+
+export const getAllPastConsultationsSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+});
+
+export const getAllUpcomingConsultationsSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+});
