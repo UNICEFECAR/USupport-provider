@@ -16,7 +16,10 @@ import {
   deleteProviderImageQuery,
 } from "#queries/providers";
 
-import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
+import {
+  getAllConsultationsByProviderIdQuery,
+  getAllConsultationsCountQuery,
+} from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
 
@@ -28,6 +31,7 @@ import {
 } from "#utils/errors";
 
 import {
+  getEarliestAvailableSlot,
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
 } from "#utils/helperFunctions";
@@ -50,6 +54,22 @@ export const getAllProviders = async ({ country }) => {
 
         providers[i].specializations = formatSpecializations(
           providers[i].specializations
+        );
+
+        providers[i].total_consultations = await getAllConsultationsCountQuery({
+          poolCountry: country,
+          providerId: providers[i].provider_detail_id,
+        })
+          .then((res) => {
+            return res.rows[0].count;
+          })
+          .catch((err) => {
+            throw err;
+          });
+
+        providers[i].earliest_available_slot = await getEarliestAvailableSlot(
+          country,
+          providers[i].provider_detail_id
         );
 
         providers[i] = {
@@ -82,6 +102,22 @@ export const getProviderById = async ({ country, language, provider_id }) => {
 
       provider.specializations = formatSpecializations(
         provider.specializations
+      );
+
+      provider.total_consultations = await getAllConsultationsCountQuery({
+        poolCountry: country,
+        providerId: provider_id,
+      })
+        .then((res) => {
+          return res.rows[0].count;
+        })
+        .catch((err) => {
+          throw err;
+        });
+
+      provider.earliest_available_slot = await getEarliestAvailableSlot(
+        country,
+        provider_id
       );
 
       provider = {

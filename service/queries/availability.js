@@ -1,5 +1,19 @@
 import { getDBPool } from "#utils/dbConfig";
 
+export const getUpcomingAvailabilityByProviderIdQuery = async ({
+  poolCountry,
+  providerId,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT *
+      FROM availability
+      WHERE provider_detail_id = $1 AND start_date > now() - interval '7 days'
+      ORDER BY start_date ASC;
+    `,
+    [providerId]
+  );
+
 export const getAvailabilitySingleWeekQuery = async ({
   poolCountry,
   provider_id,

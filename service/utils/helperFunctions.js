@@ -1,4 +1,7 @@
-import { getAvailabilitySingleWeekQuery } from "#queries/availability";
+import {
+  getAvailabilitySingleWeekQuery,
+  getUpcomingAvailabilityByProviderIdQuery,
+} from "#queries/availability";
 
 import {
   getProviderLanguageIdsQuery,
@@ -6,7 +9,10 @@ import {
   getProviderWorkWithQuery,
 } from "#queries/providers";
 
-import { getConsultationByTimeAndProviderIdQuery } from "#queries/consultation";
+import {
+  getConsultationByTimeAndProviderIdQuery,
+  getUpcomingConsultationsByProviderIdQuery,
+} from "#queries/consultation";
 
 export const getXDaysInSeconds = (x) => {
   const minute = 60;
@@ -171,4 +177,49 @@ export const checkIsSlotAvailable = async (country, providerId, time) => {
   if (consultation.rowCount > 0) return false;
 
   return true;
+};
+
+export const getEarliestAvailableSlot = async (country, providerId) => {
+  const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
+    poolCountry: country,
+    providerId: providerId,
+  })
+    .then((res) => {
+      return res.rows;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const upcomingConsultations = await getUpcomingConsultationsByProviderIdQuery(
+    {
+      poolCountry: country,
+      providerId: providerId,
+    }
+  )
+    .then((res) => {
+      return res.rows;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Find the earliest upcoming availability slot that is not already in the upcoming consultations
+  for (let j = 0; j < upcomingAvailability.length; j++) {
+    let availability = upcomingAvailability[j];
+    for (let k = 0; k < availability.slots?.length; k++) {
+      let slot = availability.slots[k];
+      const tomorrowTimestamp =
+        new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
+
+      if (
+        slot > new Date(tomorrowTimestamp * 1000) &&
+        !upcomingConsultations.find(
+          (consultation) => consultation.time === slot
+        )
+      ) {
+        return slot;
+      }
+    }
+  }
 };
