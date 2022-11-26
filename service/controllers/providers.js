@@ -407,7 +407,7 @@ export const getAllClients = async ({ country, language, providerId }) => {
           if (consultationTime > new Date()) {
             if (
               clients[clientIndex].next_consultation === null ||
-              consultationTime > clients[clientIndex].next_consultation
+              consultationTime < clients[clientIndex].next_consultation
             ) {
               clients[clientIndex].next_consultation = consultationTime;
             }
