@@ -155,7 +155,7 @@ export const getAllPastConsultations = async ({
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
 
-    if (consultation.time < Date.now()) {
+    if (consultation.time < Date.now() && consultation.status !== "suggested") {
       response.push({
         consultation_id: consultation.consultation_id,
         client_detail_id: clientId,

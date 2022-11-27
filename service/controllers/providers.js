@@ -438,6 +438,7 @@ export const getAllClients = async ({ country, language, providerId }) => {
           client_image: client.image,
           next_consultation: null,
           next_consultation_id: null,
+          next_consultation_status: null,
           past_consultations: 0,
         });
       }
@@ -461,6 +462,8 @@ export const getAllClients = async ({ country, language, providerId }) => {
               clients[clientIndex].next_consultation = consultationTime;
               clients[clientIndex].next_consultation_id =
                 consultation.consultation_id;
+              clients[clientIndex].next_consultation_status =
+                consultation.status;
             }
           } else {
             clients[clientIndex].past_consultations += 1;

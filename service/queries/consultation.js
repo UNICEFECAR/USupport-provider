@@ -204,7 +204,7 @@ export const getAllConsultationsByProviderIdQuery = async ({
     `
       SELECT * 
       FROM consultation
-      WHERE provider_detail_id = $1 AND (status = 'scheduled' OR status = 'finished')
+      WHERE provider_detail_id = $1 AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time DESC;
     `,
     [providerId]
