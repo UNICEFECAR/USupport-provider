@@ -5,6 +5,7 @@ import { populateUser } from "#middlewares/populateMiddleware";
 import {
   addConsultationAsPendingSchema,
   scheduleConsultationSchema,
+  suggestConsultationSchema,
   rescheduleConsultationSchema,
   cancelConsultationSchema,
   getAllConsultationsCountSchema,
@@ -16,6 +17,7 @@ import {
 import {
   addConsultationAsPending,
   scheduleConsultation,
+  suggestConsultation,
   rescheduleConsultation,
   cancelConsultation,
   getAllConsultationsCount,
@@ -151,6 +153,25 @@ router.route("/schedule").put(async (req, res, next) => {
     .strict()
     .validate({ country, language, ...payload })
     .then(scheduleConsultation)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/suggest").put(async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/consultation/suggest
+   * #desc    Suggest a consultation
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const payload = req.body;
+
+  return await suggestConsultationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, ...payload })
+    .then(suggestConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

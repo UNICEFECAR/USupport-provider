@@ -27,6 +27,12 @@ export const scheduleConsultationSchema = yup.object().shape({
   consultationId: yup.string().uuid().required(),
 });
 
+export const suggestConsultationSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  consultationId: yup.string().uuid().required(),
+});
+
 export const rescheduleConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),

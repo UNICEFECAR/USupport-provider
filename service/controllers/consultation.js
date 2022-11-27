@@ -1,8 +1,10 @@
 import {
   addConsultationAsPendingQuery,
   addConsultationAsScheduledQuery,
+  addConsultationAsSuggestedQuery,
   getConsultationByIdQuery,
   updateConsultationStatusAsScheduledQuery,
+  updateConsultationStatusAsSuggestedQuery,
   rescheduleConsultationQuery,
   cancelConsultationQuery,
   getAllConsultationsByProviderIdAndClientIdQuery,
@@ -330,6 +332,63 @@ export const scheduleConsultation = async ({
   }
 
   // TODO: Send notification to client and provider to confirm consultation
+  return { success: true };
+};
+
+export const suggestConsultation = async ({
+  country,
+  language,
+  consultationId,
+}) => {
+  const consultation = await getConsultationByIdQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then((raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        return raw.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Check if consultation status is still pending
+  // If it is, change status to suggested
+  // If it is not, check if it is still available
+  // If it is, make a new consultation with status suggested
+  // If it is not, throw error
+  if (consultation.status === "pending") {
+    // Change status to suggested
+    await updateConsultationStatusAsSuggestedQuery({
+      poolCountry: country,
+      consultationId,
+    });
+  } else {
+    const consultationTime = new Date(consultation.time).getTime() / 1000;
+
+    // Check if slot is still available
+    const isSlotAvailable = await checkIsSlotAvailable(
+      country,
+      consultation.provider_detail_id,
+      consultationTime
+    );
+    if (!isSlotAvailable) throw slotNotAvailable(language);
+
+    // Add consultation as suggested
+    await addConsultationAsSuggestedQuery({
+      poolCountry: country,
+      client_id: consultation.client_detail_id,
+      provider_id: consultation.provider_detail_id,
+      time: consultationTime,
+    }).catch((err) => {
+      throw err;
+    });
+  }
+
+  // TODO: Send notification to client and provider to confirm consultation suggestion
   return { success: true };
 };
 

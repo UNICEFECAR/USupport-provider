@@ -74,6 +74,23 @@ export const addConsultationAsScheduledQuery = async ({
     [client_id, provider_id, time]
   );
 
+export const addConsultationAsSuggestedQuery = async ({
+  poolCountry,
+  client_id,
+  provider_id,
+  time,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status)
+      VALUES ($1, $2, to_timestamp($3), 'suggested');
+      RETURNING *;
+  
+    `,
+    [client_id, provider_id, time]
+  );
+
 export const getConsultationByIdQuery = async ({
   poolCountry,
   consultationId,
@@ -110,6 +127,21 @@ export const updateConsultationStatusAsScheduledQuery = async ({
       SET status = 'scheduled', chat_id = (SELECT chat_id FROM chatData)
       WHERE consultation_id = $1;
 
+    `,
+    [consultationId]
+  );
+
+export const updateConsultationStatusAsSuggestedQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      UPDATE consultation
+      SET status = 'suggested'
+      WHERE consultation_id = $1;
+  
     `,
     [consultationId]
   );
