@@ -6,6 +6,8 @@ import {
   addConsultationAsPendingSchema,
   scheduleConsultationSchema,
   suggestConsultationSchema,
+  acceptSuggestedConsultationSchema,
+  rejectSuggestedConsultationSchema,
   rescheduleConsultationSchema,
   cancelConsultationSchema,
   getAllConsultationsCountSchema,
@@ -18,6 +20,8 @@ import {
   addConsultationAsPending,
   scheduleConsultation,
   suggestConsultation,
+  acceptSuggestedConsultation,
+  rejectSuggestedConsultation,
   rescheduleConsultation,
   cancelConsultation,
   getAllConsultationsCount,
@@ -172,6 +176,44 @@ router.route("/suggest").put(async (req, res, next) => {
     .strict()
     .validate({ country, language, ...payload })
     .then(suggestConsultation)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/accept-suggest").put(async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/consultation/accept-suggest
+   * #desc    Accept a suggested consultation
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const payload = req.body;
+
+  return await acceptSuggestedConsultationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, ...payload })
+    .then(acceptSuggestedConsultation)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/reject-suggest").put(async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/consultation/reject-suggest
+   * #desc    Reject a suggested consultation
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const payload = req.body;
+
+  return await rejectSuggestedConsultationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, ...payload })
+    .then(rejectSuggestedConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

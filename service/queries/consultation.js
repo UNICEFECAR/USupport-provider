@@ -146,6 +146,21 @@ export const updateConsultationStatusAsSuggestedQuery = async ({
     [consultationId]
   );
 
+export const updateConsultationStatusAsRejectedQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      UPDATE consultation
+      SET status = 'rejected'
+      WHERE consultation_id = $1;
+      
+    `,
+    [consultationId]
+  );
+
 export const rescheduleConsultationQuery = async ({
   poolCountry,
   consultationId,

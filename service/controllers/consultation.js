@@ -5,6 +5,7 @@ import {
   getConsultationByIdQuery,
   updateConsultationStatusAsScheduledQuery,
   updateConsultationStatusAsSuggestedQuery,
+  updateConsultationStatusAsRejectedQuery,
   rescheduleConsultationQuery,
   cancelConsultationQuery,
   getAllConsultationsByProviderIdAndClientIdQuery,
@@ -390,6 +391,50 @@ export const suggestConsultation = async ({
 
   // TODO: Send notification to client and provider to confirm consultation suggestion
   return { success: true };
+};
+
+export const acceptSuggestedConsultation = async ({
+  country,
+  language,
+  consultationId,
+}) => {
+  return await updateConsultationStatusAsScheduledQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then(async (raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        // TODO: Send notification to client and provider to confirm accepted consultation suggestion
+        return { success: true };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const rejectSuggestedConsultation = async ({
+  country,
+  language,
+  consultationId,
+}) => {
+  return await updateConsultationStatusAsRejectedQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then(async (raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        // TODO: Send notification to client and provider to confirm rejected consultation suggestion
+        return { success: true };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 };
 
 export const rescheduleConsultation = async ({
