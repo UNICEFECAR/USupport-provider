@@ -133,6 +133,106 @@ export const getSlotsForThreeWeeks = async ({
   return [...previousWeek, ...currentWeek, ...nextWeek];
 };
 
+export const getSlotsForSevenWeeks = async ({
+  country,
+  providerId,
+  startDate,
+}) => {
+  // Get the slots for 1 week ago
+  const weekOneTimestamp = new Date(Number(startDate) * 1000);
+  weekOneTimestamp.setDate(weekOneTimestamp.getDate() - 7);
+
+  const weekOne = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekOneTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for the current week
+  const weekTwoTimestamp = new Date(Number(startDate) * 1000);
+  weekTwoTimestamp.setDate(weekTwoTimestamp.getDate());
+
+  const weekTwo = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekTwoTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for 1 week from now
+  const weekThreeTimestamp = new Date(Number(startDate) * 1000);
+  weekThreeTimestamp.setDate(weekThreeTimestamp.getDate() + 7);
+
+  const weekThree = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekThreeTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for 2 weeks from now
+  const weekFourTimestamp = new Date(Number(startDate) * 1000);
+  weekFourTimestamp.setDate(weekFourTimestamp.getDate() + 14);
+
+  const weekFour = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekFourTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for 3 weeks from now
+  const weekFiveTimestamp = new Date(Number(startDate) * 1000);
+  weekFiveTimestamp.setDate(weekFiveTimestamp.getDate() + 21);
+
+  const weekFive = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekFiveTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for 4 weeks from now
+  const weekSixTimestamp = new Date(Number(startDate) * 1000);
+  weekSixTimestamp.setDate(weekSixTimestamp.getDate() + 28);
+
+  const weekSix = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekSixTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the slots for 5 weeks from now
+  const weekSevenTimestamp = new Date(Number(startDate) * 1000);
+  weekSevenTimestamp.setDate(weekSevenTimestamp.getDate() + 35);
+
+  const weekSeven = await getSlotsForSingleWeek({
+    country,
+    provider_id: providerId,
+    startDate: weekSevenTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [
+    ...weekOne,
+    ...weekTwo,
+    ...weekThree,
+    ...weekFour,
+    ...weekFive,
+    ...weekSix,
+    ...weekSeven,
+  ];
+};
+
 export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
@@ -239,7 +339,29 @@ export const getConsultationsForSingleWeek = async ({
       if (res.rowCount === 0) {
         return [];
       } else {
-        return res.rows[0]?.slots;
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getConsultationsTimeForSingleWeek = async ({
+  country,
+  providerId,
+  startDate,
+}) => {
+  return await getConsultationsSingleWeekQuery({
+    poolCountry: country,
+    providerId,
+    startDate,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows.map((row) => row.time);
       }
     })
     .catch((err) => {
@@ -283,4 +405,104 @@ export const getConsultationsForThreeWeeks = async ({
   });
 
   return [...previousWeek, ...currentWeek, ...nextWeek];
+};
+
+export const getConsultationsForSevenWeeks = async ({
+  country,
+  providerId,
+  startDate,
+}) => {
+  // Get the consultations for 1 week ago
+  const weekOneTimestamp = new Date(Number(startDate) * 1000);
+  weekOneTimestamp.setDate(weekOneTimestamp.getDate() - 7);
+
+  const weekOne = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekOneTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for the current week
+  const weekTwoTimestamp = new Date(Number(startDate) * 1000);
+  weekTwoTimestamp.setDate(weekTwoTimestamp.getDate());
+
+  const weekTwo = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekTwoTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for 1 week from now
+  const weekThreeTimestamp = new Date(Number(startDate) * 1000);
+  weekThreeTimestamp.setDate(weekThreeTimestamp.getDate() + 7);
+
+  const weekThree = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekThreeTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for 2 weeks from now
+  const weekFourTimestamp = new Date(Number(startDate) * 1000);
+  weekFourTimestamp.setDate(weekFourTimestamp.getDate() + 14);
+
+  const weekFour = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekFourTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for 3 weeks from now
+  const weekFiveTimestamp = new Date(Number(startDate) * 1000);
+  weekFiveTimestamp.setDate(weekFiveTimestamp.getDate() + 21);
+
+  const weekFive = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekFiveTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for 4 weeks from now
+  const weekSixTimestamp = new Date(Number(startDate) * 1000);
+  weekSixTimestamp.setDate(weekSixTimestamp.getDate() + 28);
+
+  const weekSix = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekSixTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get the consultations for 5 weeks from now
+  const weekSevenTimestamp = new Date(Number(startDate) * 1000);
+  weekSevenTimestamp.setDate(weekSevenTimestamp.getDate() + 35);
+
+  const weekSeven = await getConsultationsTimeForSingleWeek({
+    country,
+    providerId,
+    startDate: weekSevenTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [
+    ...weekOne,
+    ...weekTwo,
+    ...weekThree,
+    ...weekFour,
+    ...weekFive,
+    ...weekSix,
+    ...weekSeven,
+  ];
 };

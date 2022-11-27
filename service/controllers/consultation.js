@@ -109,20 +109,12 @@ export const getAllConsultationsSingleWeek = async ({
   startDate,
 }) => {
   const consultations = await getConsultationsForThreeWeeks({
-    poolCountry: country,
+    country,
     providerId,
     startDate,
-  })
-    .then((res) => {
-      if (res.rowCount === 0) {
-        return [];
-      } else {
-        return res.rows;
-      }
-    })
-    .catch((err) => {
-      throw err;
-    });
+  }).catch((err) => {
+    throw err;
+  });
 
   // Get all clients ids
   const clientsToFetch = Array.from(

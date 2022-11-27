@@ -21,6 +21,7 @@ app.use(helmet());
 app.use("/provider/v1/provider", v1.ProviderRouter);
 app.use("/provider/v1/availability", v1.AvailabilityRouter);
 app.use("/provider/v1/consultation", v1.ConsultationRouter);
+app.use("/provider/v1/calendar", v1.CalendarRouter);
 
 /*------------- Error middleware -------------*/
 
