@@ -13,6 +13,7 @@ import {
   getConsultationByTimeAndProviderIdQuery,
   getUpcomingConsultationsByProviderIdQuery,
   getConsultationsSingleWeekQuery,
+  getConsultationsSingleDayQuery,
 } from "#queries/consultation";
 
 export const getXDaysInSeconds = (x) => {
@@ -323,6 +324,66 @@ export const getEarliestAvailableSlot = async (country, providerId) => {
       }
     }
   }
+};
+
+export const getConsultationsForSingleDay = async ({
+  country,
+  providerId,
+  date,
+}) => {
+  return await getConsultationsSingleDayQuery({
+    poolCountry: country,
+    providerId,
+    date,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getConsultationsForThreeDays = async ({
+  country,
+  providerId,
+  date,
+}) => {
+  const previousDayTimestamp = new Date(Number(date) * 1000);
+  previousDayTimestamp.setDate(previousDayTimestamp.getDate() - 1);
+
+  const previousDay = await getConsultationsForSingleDay({
+    country,
+    providerId,
+    date: previousDayTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const currentDay = await getConsultationsForSingleDay({
+    country,
+    providerId,
+    date,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const nextDayTimestamp = new Date(Number(date) * 1000);
+  nextDayTimestamp.setDate(nextDayTimestamp.getDate() + 1);
+
+  const nextDay = await getConsultationsForSingleDay({
+    country,
+    providerId,
+    date: nextDayTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [...previousDay, ...currentDay, ...nextDay];
 };
 
 export const getConsultationsForSingleWeek = async ({

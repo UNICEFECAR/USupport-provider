@@ -270,3 +270,20 @@ export const getConsultationsSingleWeekQuery = async ({
     `,
     [providerId, startDate]
   );
+
+export const getConsultationsSingleDayQuery = async ({
+  poolCountry,
+  providerId,
+  date,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+    
+        SELECT * 
+        FROM consultation
+        WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '1 day' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+        ORDER BY time ASC;
+  
+      `,
+    [providerId, date]
+  );

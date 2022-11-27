@@ -19,6 +19,7 @@ import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
 import {
   checkIsSlotAvailable,
   getConsultationsForThreeWeeks,
+  getConsultationsForThreeDays,
 } from "#utils/helperFunctions";
 
 import {
@@ -112,6 +113,72 @@ export const getAllConsultationsSingleWeek = async ({
     country,
     providerId,
     startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  // Get all clients ids
+  const clientsToFetch = Array.from(
+    new Set(consultations.map((consultation) => consultation.client_detail_id))
+  );
+
+  let clientsDetails = {};
+
+  // For each client to fetch, fetch it
+  for (let i = 0; i < clientsToFetch.length; i++) {
+    const clientId = clientsToFetch[i];
+
+    clientsDetails[clientId] = await getClientByIdQuery({
+      poolCountry: country,
+      clientId,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw clientNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
+
+  let response = [];
+
+  for (let i = 0; i < consultations.length; i++) {
+    const consultation = consultations[i];
+    const clientId = consultation.client_detail_id;
+    const client = clientsDetails[clientId];
+    const clientName = client.name;
+    const clientSurname = client.surname;
+    const clientNickname = client.nickname;
+
+    response.push({
+      consultation_id: consultation.consultation_id,
+      client_detail_id: clientId,
+      client_name: clientName
+        ? `${clientName} ${clientSurname}`
+        : clientNickname,
+      client_image: client.image,
+      time: consultation.time,
+      status: consultation.status,
+    });
+  }
+
+  return response;
+};
+
+export const getAllConsultationsSingleDay = async ({
+  country,
+  language,
+  providerId,
+  date,
+}) => {
+  const consultations = await getConsultationsForThreeDays({
+    country,
+    providerId,
+    date,
   }).catch((err) => {
     throw err;
   });

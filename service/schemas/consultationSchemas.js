@@ -76,3 +76,10 @@ export const getAllConsultationsSingleWeekSchema = yup.object().shape({
   providerId: yup.string().uuid().required(),
   startDate: yup.string().required(),
 });
+
+export const getAllConsultationsSingleDaySchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+  date: yup.string().required(),
+});
