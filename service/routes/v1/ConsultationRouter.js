@@ -14,6 +14,7 @@ import {
   getAllPastConsultationsByClientIdSchema,
   getAllPastConsultationsSchema,
   getAllUpcomingConsultationsSchema,
+  getAllConsultationsSingleWeekSchema,
 } from "#schemas/consultationSchemas";
 
 import {
@@ -28,9 +29,31 @@ import {
   getAllPastConsultationsByClientId,
   getAllPastConsultations,
   getAllUpcomingConsultations,
+  getAllConsultationsSingleWeek,
 } from "#controllers/consultation";
 
 const router = express.Router();
+
+router.route("/single-week").get(populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/consultation/single-week
+   * #desc    Get all the consultations of the current provider for a single week
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  const startDate = req.query.startDate;
+
+  return await getAllConsultationsSingleWeekSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, language, providerId, startDate })
+    .then(getAllConsultationsSingleWeek)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
 
 router.route("/count").get(populateUser, async (req, res, next) => {
   /**

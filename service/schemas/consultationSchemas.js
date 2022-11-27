@@ -1,18 +1,5 @@
 import * as yup from "yup";
 
-const statusTypeSchema = yup
-  .string()
-  .oneOf([
-    "pending",
-    "timeout",
-    "suggested",
-    "scheduled",
-    "finished",
-    "rescheduled",
-    "cancelled",
-    "rejected",
-  ]);
-
 export const addConsultationAsPendingSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
@@ -81,4 +68,11 @@ export const getAllUpcomingConsultationsSchema = yup.object().shape({
 export const getAllConsultationsCountSchema = yup.object().shape({
   country: yup.string().required(),
   providerId: yup.string().uuid().required(),
+});
+
+export const getAllConsultationsSingleWeekSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerId: yup.string().uuid().required(),
+  startDate: yup.string().required(),
 });

@@ -12,6 +12,7 @@ import {
 import {
   getConsultationByTimeAndProviderIdQuery,
   getUpcomingConsultationsByProviderIdQuery,
+  getConsultationsSingleWeekQuery,
 } from "#queries/consultation";
 
 export const getXDaysInSeconds = (x) => {
@@ -222,4 +223,64 @@ export const getEarliestAvailableSlot = async (country, providerId) => {
       }
     }
   }
+};
+
+export const getConsultationsForSingleWeek = async ({
+  country,
+  providerId,
+  startDate,
+}) => {
+  return await getConsultationsSingleWeekQuery({
+    poolCountry: country,
+    providerId,
+    startDate,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows[0]?.slots;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getConsultationsForThreeWeeks = async ({
+  country,
+  providerId,
+  startDate,
+}) => {
+  const previousWeekTimestamp = new Date(Number(startDate) * 1000);
+  previousWeekTimestamp.setDate(previousWeekTimestamp.getDate() - 7);
+
+  const previousWeek = await getConsultationsForSingleWeek({
+    country,
+    providerId,
+    startDate: previousWeekTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const currentWeek = await getConsultationsForSingleWeek({
+    country,
+    providerId,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const nextWeekTimestamp = new Date(Number(startDate) * 1000);
+  nextWeekTimestamp.setDate(nextWeekTimestamp.getDate() + 7);
+
+  const nextWeek = await getConsultationsForSingleWeek({
+    country,
+    providerId,
+    startDate: nextWeekTimestamp / 1000,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return [...previousWeek, ...currentWeek, ...nextWeek];
 };

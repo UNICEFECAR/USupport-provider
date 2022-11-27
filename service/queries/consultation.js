@@ -156,7 +156,7 @@ export const updateConsultationStatusAsRejectedQuery = async ({
       UPDATE consultation
       SET status = 'rejected'
       WHERE consultation_id = $1;
-      
+
     `,
     [consultationId]
   );
@@ -252,4 +252,21 @@ export const getUpcomingConsultationsByProviderIdQuery = async ({
   
       `,
     [providerId]
+  );
+
+export const getConsultationsSingleWeekQuery = async ({
+  poolCountry,
+  providerId,
+  startDate,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+  
+      SELECT * 
+      FROM consultation
+      WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '7 days' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+      ORDER BY time ASC;
+
+    `,
+    [providerId, startDate]
   );
