@@ -149,8 +149,7 @@ export const getAvailabilitySingleDay = async ({
   startDate,
   day,
 }) => {
-  const now = new Date();
-  const nowTimestamp = now.getTime() / 1000;
+  const tomorrowTimestamp = new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
 
   let slots = [];
 
@@ -180,12 +179,13 @@ export const getAvailabilitySingleDay = async ({
 
   // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
+  // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
   threeWeeksSlots.forEach((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
 
     if (
-      slotTimestamp > nowTimestamp &&
+      slotTimestamp > tomorrowTimestamp &&
       slotTimestamp >= previousDayTimestamp &&
       slotTimestamp < nextDayTimestamp &&
       !allConsultationsForDay.some(
