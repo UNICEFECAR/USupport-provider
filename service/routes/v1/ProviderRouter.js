@@ -241,6 +241,44 @@ router.delete("/image", populateProvider, async (req, res, next) => {
     .catch(next);
 });
 
+router.put("/image/admin", async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/provider/image/admin
+   * #desc    Country admin to update the provider image
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const { providerId: provider_id, image } = req.body;
+
+  return await updateProviderImageSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, provider_id, image })
+    .then(updateProviderImage)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.delete("/image/admin", async (req, res, next) => {
+  /**
+   * #route   DELETE /provider/v1/provider/image/admin
+   * #desc    Country admin to delete the provider image
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const { providerId: provider_id } = req.body;
+
+  return await deleteProviderImageSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, provider_id })
+    .then(deleteProviderImage)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
 router.get("/clients", populateUser, async (req, res, next) => {
   /**
    * #route   GET /provider/v1/provider/clients
