@@ -140,11 +140,11 @@ router.put("/by-id/admin", async (req, res, next) => {
     isRequestedByAdmin: true,
   }).catch(next);
 
-  const currentEmail = provider.email;
-  const currentLanguageIds = provider.languages?.map(
+  const currentEmail = provider?.email;
+  const currentLanguageIds = provider?.languages?.map(
     (language) => language.language_id
   );
-  const currentWorkWithIds = provider.work_with?.map(
+  const currentWorkWithIds = provider?.work_with?.map(
     (workWith) => workWith.work_with_id
   );
 
