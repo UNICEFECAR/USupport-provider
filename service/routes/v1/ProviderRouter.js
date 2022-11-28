@@ -48,6 +48,12 @@ router.get("/by-id", async (req, res, next) => {
 
   const provider_id = req.query.providerId;
 
+  let isRequestedByAdmin = false;
+
+  if (req.header("x-admin-id")) {
+    isRequestedByAdmin = true;
+  }
+
   return await getProviderByIdSchema
     .noUnknown(true)
     .strict()
@@ -55,6 +61,7 @@ router.get("/by-id", async (req, res, next) => {
       country,
       language,
       provider_id,
+      isRequestedByAdmin,
     })
     .then(getProviderById)
     .then((result) => res.status(200).send(result))

@@ -20,6 +20,7 @@ export const getProviderByIdSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   provider_id: yup.string().uuid().required(),
+  isRequestedByAdmin: yup.boolean().required(),
 });
 
 export const updateProviderDataSchema = yup.object().shape({

@@ -90,7 +90,12 @@ export const getAllProviders = async ({ country }) => {
     });
 };
 
-export const getProviderById = async ({ country, language, provider_id }) => {
+export const getProviderById = async ({
+  country,
+  language,
+  provider_id,
+  isRequestedByAdmin,
+}) => {
   return await getProviderByIdQuery({ poolCountry: country, provider_id })
     .then(async (res) => {
       if (res.rowCount === 0) {
@@ -124,9 +129,11 @@ export const getProviderById = async ({ country, language, provider_id }) => {
         provider_id
       );
 
-      delete provider.street;
-      delete provider.city;
-      delete provider.postcode;
+      if (!isRequestedByAdmin) {
+        delete provider.street;
+        delete provider.city;
+        delete provider.postcode;
+      }
 
       provider = {
         ...provider,
