@@ -40,7 +40,7 @@ router.get("/", populateProvider, async (req, res) => {
 router.get("/by-id", async (req, res, next) => {
   /**
    * #route   GET /provider/v1/provider/by-id
-   * #desc    Get providers data by id, excluding the street, city and postcode data.
+   * #desc    Get providers data by id, excluding the street, city and postcode data if request is not from a country admin
    */
 
   const country = req.header("x-country-alpha-2");
@@ -113,6 +113,52 @@ router.put("/", populateProvider, async (req, res, next) => {
       country,
       language,
       provider_id,
+      currentEmail,
+      currentLanguageIds,
+      currentWorkWithIds,
+      ...payload,
+    })
+    .then(updateProviderData)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.put("/by-id/admin", async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/provider/by-id/admin
+   * #desc    Country admin to update provider data by id
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const { providerId } = req.body;
+
+  const provider = await getProviderById({
+    country,
+    language,
+    provider_id: providerId,
+    isRequestedByAdmin: true,
+  }).catch(next);
+
+  const currentEmail = provider.email;
+  const currentLanguageIds = provider.languages?.map(
+    (language) => language.language_id
+  );
+  const currentWorkWithIds = provider.work_with?.map(
+    (workWith) => workWith.work_with_id
+  );
+
+  const payload = req.body;
+
+  delete payload.providerId;
+
+  return await updateProviderDataSchema
+    .noUnknown(true)
+    .strict()
+    .validate({
+      country,
+      language,
+      provider_id: providerId,
       currentEmail,
       currentLanguageIds,
       currentWorkWithIds,
