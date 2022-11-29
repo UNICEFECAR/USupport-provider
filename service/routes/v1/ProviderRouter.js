@@ -25,6 +25,8 @@ import {
   getAllClients,
 } from "#controllers/providers";
 
+import { getUserByProviderID } from "#queries/users";
+
 const router = express.Router();
 
 router.get("/", populateProvider, async (req, res) => {
@@ -184,6 +186,52 @@ router.delete("/", populateProvider, populateUser, async (req, res, next) => {
   const userPassword = req.user.password;
 
   const payload = req.body;
+
+  return await deleteProviderDataSchema
+    .noUnknown(true)
+    .strict()
+    .validate({
+      country,
+      language,
+      provider_id,
+      user_id,
+      image,
+      userPassword,
+      ...payload,
+    })
+    .then(deleteProviderData)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.delete("/by-id/admin", async (req, res, next) => {
+  /**
+   * #route   DELETE /provider/v1/provider/by-id/admin
+   * #desc    Country admin to delete provider data
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const { providerId } = req.body;
+
+  const provider = await getProviderById({
+    country,
+    language,
+    provider_id: providerId,
+    isRequestedByAdmin: true,
+  }).catch(next);
+
+  const provider_id = provider.provider_detail_id;
+  const image = provider.image;
+
+  const user = await getUserByProviderID(country, provider_id);
+
+  const user_id = user.user_id;
+  const userPassword = user.password;
+
+  const payload = req.body;
+
+  delete payload.providerId;
 
   return await deleteProviderDataSchema
     .noUnknown(true)

@@ -12,3 +12,16 @@ export const getUserByID = async (poolCountry, user_id) =>
     `,
     [user_id]
   );
+
+export const getUserByProviderID = async (poolCountry, provider_id) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT user_id, country_id, type, client_detail_id, provider_detail_id, notification_preference_id, password
+        FROM "user"
+        WHERE provider_detail_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1;
+        
+    `,
+    [provider_id]
+  );

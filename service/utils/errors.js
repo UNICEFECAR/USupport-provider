@@ -55,3 +55,11 @@ export const consultationNotFound = (language) => {
   error.status = 404;
   return error;
 };
+
+export const providerHasFutureConsultations = (language) => {
+  const error = new Error();
+  error.message = t("provider_has_future_consultations_error", language);
+  error.name = "PROVIDER HAS FUTURE CONSULTATIONS";
+  error.status = 400;
+  return error;
+};

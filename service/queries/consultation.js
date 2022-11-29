@@ -287,3 +287,18 @@ export const getConsultationsSingleDayQuery = async ({
       `,
     [providerId, date]
   );
+
+export const getFutureConsultationsCountQuery = async ({
+  poolCountry,
+  providerId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      SELECT COUNT(*) 
+      FROM consultation
+      WHERE provider_detail_id = $1 AND time >= now() AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled');
+
+    `,
+    [providerId]
+  );

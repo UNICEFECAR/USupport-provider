@@ -6,4 +6,5 @@ export default {
   slots_not_within_week_error: "Slots are not within the week",
   slot_not_available_error: "Slot is not available",
   consultation_not_found_error: "Consultation not found",
+  provider_has_future_consultations_error: "Provider has future consultations",
 };

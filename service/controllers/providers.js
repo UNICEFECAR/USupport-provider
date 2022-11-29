@@ -19,6 +19,7 @@ import {
 import {
   getAllConsultationsByProviderIdQuery,
   getAllConsultationsCountQuery,
+  getFutureConsultationsCountQuery,
 } from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
@@ -28,6 +29,7 @@ import {
   clientNotFound,
   incorrectPassword,
   emailUsed,
+  providerHasFutureConsultations,
 } from "#utils/errors";
 
 import {
@@ -292,7 +294,20 @@ export const deleteProviderData = async ({
   password,
   userPassword,
 }) => {
-  // TODO: Perform required checks, like if provider has consultations, etc.
+  // Check if provider has consultations in the future
+  await getFutureConsultationsCountQuery({
+    poolCountry: country,
+    providerId: provider_id,
+  })
+    .then((res) => {
+      if (res.rows[0].count > 0) {
+        throw providerHasFutureConsultations(language);
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
   const validatePassword = await bcrypt.compare(password, userPassword);
 
   if (!validatePassword) {
