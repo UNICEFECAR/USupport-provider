@@ -292,6 +292,7 @@ export const deleteProviderData = async ({
   password,
   userPassword,
 }) => {
+  // TODO: Perform required checks, like if provider has consultations, etc.
   const validatePassword = await bcrypt.compare(password, userPassword);
 
   if (!validatePassword) {
