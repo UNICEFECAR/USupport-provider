@@ -293,6 +293,7 @@ export const deleteProviderData = async ({
   image,
   password,
   userPassword,
+  isRequestedByAdmin,
 }) => {
   // Check if provider has consultations in the future
   await getFutureConsultationsCountQuery({
@@ -308,10 +309,12 @@ export const deleteProviderData = async ({
       throw err;
     });
 
-  const validatePassword = await bcrypt.compare(password, userPassword);
+  if (!isRequestedByAdmin) {
+    const validatePassword = await bcrypt.compare(password, userPassword);
 
-  if (!validatePassword) {
-    throw incorrectPassword(language);
+    if (!validatePassword) {
+      throw incorrectPassword(language);
+    }
   }
 
   return await deleteProviderDataQuery({

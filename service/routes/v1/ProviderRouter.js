@@ -27,6 +27,8 @@ import {
 
 import { getUserByProviderID } from "#queries/users";
 
+import { userNotFound } from "#utils/errors";
+
 const router = express.Router();
 
 router.get("/", populateProvider, async (req, res) => {
@@ -224,10 +226,20 @@ router.delete("/by-id/admin", async (req, res, next) => {
   const provider_id = provider.provider_detail_id;
   const image = provider.image;
 
-  const user = await getUserByProviderID(country, provider_id);
+  const user = await getUserByProviderID(country, provider_id)
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw userNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   const user_id = user.user_id;
-  const userPassword = user.password;
+  const isRequestedByAdmin = true;
 
   const payload = req.body;
 
@@ -242,7 +254,7 @@ router.delete("/by-id/admin", async (req, res, next) => {
       provider_id,
       user_id,
       image,
-      userPassword,
+      isRequestedByAdmin,
       ...payload,
     })
     .then(deleteProviderData)

@@ -49,15 +49,25 @@ export const updateProviderDataSchema = yup.object().shape({
   currentLanguageIds: yup.array().of(yup.string().uuid()).notRequired(),
 });
 
-export const deleteProviderDataSchema = yup.object().shape({
-  provider_id: yup.string().uuid().required(),
-  user_id: yup.string().uuid().required(),
-  country: yup.string().required(),
-  language: yup.string().required(),
-  image: yup.string().required(),
-  userPassword: yup.string().required(),
-  password: yup.string().required(),
-});
+export const deleteProviderDataSchema = yup.object().shape(
+  {
+    provider_id: yup.string().uuid().required(),
+    user_id: yup.string().uuid().required(),
+    country: yup.string().required(),
+    language: yup.string().required(),
+    image: yup.string().required(),
+    isRequestedByAdmin: yup.boolean().notRequired(),
+    userPassword: yup.string().when("isRequestedByAdmin", {
+      is: undefined,
+      then: yup.string().required(),
+    }),
+    password: yup.string().when("isRequestedByAdmin", {
+      is: undefined,
+      then: yup.string().required(),
+    }),
+  },
+  ["isRequestedByAdmin"]
+);
 
 export const updateProviderImageSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),

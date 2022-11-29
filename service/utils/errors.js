@@ -16,6 +16,14 @@ export const emailUsed = (language) => {
   return error;
 };
 
+export const userNotFound = (language) => {
+  const error = new Error();
+  error.message = t("user_not_found_error", language);
+  error.name = "USER NOT FOUND";
+  error.status = 404;
+  return error;
+};
+
 export const providerNotFound = (language) => {
   const error = new Error();
   error.message = t("provider_not_found_error", language);

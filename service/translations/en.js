@@ -7,4 +7,5 @@ export default {
   slot_not_available_error: "Slot is not available",
   consultation_not_found_error: "Consultation not found",
   provider_has_future_consultations_error: "Provider has future consultations",
+  user_not_found_error: "User not found",
 };
