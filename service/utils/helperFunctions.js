@@ -7,6 +7,7 @@ import {
   getProviderLanguageIdsQuery,
   getProviderLanguagesQuery,
   getProviderWorkWithQuery,
+  getProviderEmailAndUserIdQuery,
 } from "#queries/providers";
 
 import {
@@ -15,6 +16,10 @@ import {
   getConsultationsSingleWeekQuery,
   getConsultationsSingleDayQuery,
 } from "#queries/consultation";
+
+import { getClientEmailAndUserIdQuery } from "#queries/clients";
+
+import { clientNotFound, providerNotFound } from "#utils/errors";
 
 export const getXDaysInSeconds = (x) => {
   const minute = 60;
@@ -566,4 +571,54 @@ export const getConsultationsForSevenWeeks = async ({
     ...weekSix,
     ...weekSeven,
   ];
+};
+
+export const getClientNotificationsData = async ({
+  language,
+  country,
+  clientId,
+}) => {
+  return await getClientEmailAndUserIdQuery({
+    poolCountry: country,
+    clientId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return clientNotFound(language);
+      } else {
+        const client = res.rows[0];
+        return {
+          email: client.email,
+          userId: client.user_id,
+        };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getProviderNotificationsData = async ({
+  language,
+  country,
+  providerId,
+}) => {
+  return await getProviderEmailAndUserIdQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return providerNotFound(language);
+      } else {
+        const provider = res.rows[0];
+        return {
+          email: provider.email,
+          userId: provider.user_id,
+        };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 };

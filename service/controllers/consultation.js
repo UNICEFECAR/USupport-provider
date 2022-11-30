@@ -16,10 +16,14 @@ import { getClientByIdQuery } from "#queries/clients";
 
 import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
 
+import { produceRaiseNotification } from "#utils/kafkaProducers";
+
 import {
   checkIsSlotAvailable,
   getConsultationsForThreeWeeks,
   getConsultationsForThreeDays,
+  getClientNotificationsData,
+  getProviderNotificationsData,
 } from "#utils/helperFunctions";
 
 import {
@@ -468,7 +472,54 @@ export const scheduleConsultation = async ({
     });
   }
 
-  // TODO: Send notification to client and provider to confirm consultation
+  // Send Client Email and Internal notification
+  const { email: clientEmail, userId: clientUserId } =
+    getClientNotificationsData({
+      language,
+      country,
+      clientId: consultation.client_detail_id,
+    }).catch((err) => {
+      throw err;
+    });
+
+  await produceRaiseNotification({
+    channels: [clientEmail ? "email" : "", "in-platform"],
+    emailArgs: {
+      emailType: "client-consultationConfirmBooking",
+      recipientEmail: clientEmail,
+    },
+    inPlatformArgs: {
+      notificationType: "consultation_booking",
+      recipientId: clientUserId,
+      country: country,
+    },
+    language,
+  }).catch(console.log);
+
+  // Send Provider Email and Internal notification
+  const { email: providerEmail, userId: providerUserId } =
+    getProviderNotificationsData({
+      language,
+      country,
+      providerId: consultation.provider_detail_id,
+    }).catch((err) => {
+      throw err;
+    });
+
+  await produceRaiseNotification({
+    channels: ["email", "in-platform"],
+    emailArgs: {
+      emailType: "provider-consultationNotifyBooking",
+      recipientEmail: providerEmail,
+    },
+    inPlatformArgs: {
+      notificationType: "consultation_booking",
+      recipientId: providerUserId,
+      country: country,
+    },
+    language,
+  }).catch(console.log);
+
   return { success: true };
 };
 

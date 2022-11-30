@@ -26,6 +26,21 @@ export const getProviderByUserID = async (poolCountry, user_id) =>
     [user_id]
   );
 
+export const getProviderEmailAndUserIdQuery = async ({
+  poolCountry,
+  providerId,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+    SELECT "user".user_id, email
+    FROM "user"
+      JOIN provider_detail ON "user".provider_detail_id = provider_detail.provider_detail_id
+    WHERE provider_detail.provider_detail_id = $1
+    LIMIT 1;
+    `,
+    [providerId]
+  );
+
 export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
   await getDBPool("piiDb", poolCountry).query(
     `

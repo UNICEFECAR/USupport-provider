@@ -12,3 +12,15 @@ export const getClientByIdQuery = async ({ poolCountry, clientId }) =>
     `,
     [clientId]
   );
+
+export const getClientEmailAndUserIdQuery = async ({ poolCountry, clientId }) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT "user".user_id, email
+      FROM "user"
+        JOIN client_detail ON "user".client_detail_id = client_detail.client_detail_id
+      WHERE client_detail.client_detail_id = $1
+      LIMIT 1;
+      `,
+    [clientId]
+  );
