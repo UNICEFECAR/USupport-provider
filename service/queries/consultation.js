@@ -125,8 +125,8 @@ export const updateConsultationStatusAsScheduledQuery = async ({
 
       UPDATE consultation
       SET status = 'scheduled', chat_id = (SELECT chat_id FROM chatData)
-      WHERE consultation_id = $1;
-
+      WHERE consultation_id = $1
+      RETURNING *;
     `,
     [consultationId]
   );
@@ -155,7 +155,8 @@ export const updateConsultationStatusAsRejectedQuery = async ({
 
       UPDATE consultation
       SET status = 'rejected'
-      WHERE consultation_id = $1;
+      WHERE consultation_id = $1
+      RETURNING *;
 
     `,
     [consultationId]

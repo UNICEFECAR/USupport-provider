@@ -576,7 +576,54 @@ export const suggestConsultation = async ({
     });
   }
 
-  // TODO: Send notification to client and provider to confirm consultation suggestion
+  // Send Client Email and Internal notification
+  const { email: clientEmail, userId: clientUserId } =
+    getClientNotificationsData({
+      language,
+      country,
+      clientId: consultation.client_detail_id,
+    }).catch((err) => {
+      throw err;
+    });
+
+  await produceRaiseNotification({
+    channels: [clientEmail ? "email" : "", "in-platform"],
+    emailArgs: {
+      emailType: "client-consultationNotifySuggestion",
+      recipientEmail: clientEmail,
+    },
+    inPlatformArgs: {
+      notificationType: "consultation_suggestion",
+      recipientId: clientUserId,
+      country: country,
+    },
+    language,
+  }).catch(console.log);
+
+  // Send Provider Email and Internal notification
+  const { email: providerEmail, userId: providerUserId } =
+    getProviderNotificationsData({
+      language,
+      country,
+      providerId: consultation.provider_detail_id,
+    }).catch((err) => {
+      throw err;
+    });
+
+  await produceRaiseNotification({
+    channels: ["email", "in-platform"],
+    emailArgs: {
+      emailType: "provider-consultationConfirmSuggestion",
+      recipientEmail: providerEmail,
+    },
+    inPlatformArgs: {
+      notificationType: "consultation_suggestion",
+      recipientId: providerUserId,
+      country: country,
+    },
+    language,
+  }).catch(console.log);
+
   return { success: true };
 };
 
@@ -593,7 +640,56 @@ export const acceptSuggestedConsultation = async ({
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       } else {
-        // TODO: Send notification to client and provider to confirm accepted consultation suggestion
+        const consultation = raw.rows[0];
+
+        // Send Client Email and Internal notification
+        const { email: clientEmail, userId: clientUserId } =
+          getClientNotificationsData({
+            language,
+            country,
+            clientId: consultation.client_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: [clientEmail ? "email" : "", "in-platform"],
+          emailArgs: {
+            emailType: "client-consultationConfirmSuggestionBooking",
+            recipientEmail: clientEmail,
+          },
+          inPlatformArgs: {
+            notificationType: "consultation_suggestion_booking",
+            recipientId: clientUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
+
+        // Send Provider Email and Internal notification
+        const { email: providerEmail, userId: providerUserId } =
+          getProviderNotificationsData({
+            language,
+            country,
+            providerId: consultation.provider_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: ["email", "in-platform"],
+          emailArgs: {
+            emailType: "provider-consultationNotifySuggestionBooking",
+            recipientEmail: providerEmail,
+          },
+          inPlatformArgs: {
+            notificationType: "consultation_suggestion_booking",
+            recipientId: providerUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
+
         return { success: true };
       }
     })
@@ -615,7 +711,56 @@ export const rejectSuggestedConsultation = async ({
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       } else {
-        // TODO: Send notification to client and provider to confirm rejected consultation suggestion
+        const consultation = raw.rows[0];
+
+        // Send Client Email and Internal notification
+        const { email: clientEmail, userId: clientUserId } =
+          getClientNotificationsData({
+            language,
+            country,
+            clientId: consultation.client_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: [clientEmail ? "email" : "", "in-platform"],
+          emailArgs: {
+            emailType: "client-consultationConfirmSuggestionCancellation",
+            recipientEmail: clientEmail,
+          },
+          inPlatformArgs: {
+            notificationType: "consultation_suggestion_cancellation",
+            recipientId: clientUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
+
+        // Send Provider Email and Internal notification
+        const { email: providerEmail, userId: providerUserId } =
+          getProviderNotificationsData({
+            language,
+            country,
+            providerId: consultation.provider_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: ["email", "in-platform"],
+          emailArgs: {
+            emailType: "provider-consultationNotifySuggestionCancellation",
+            recipientEmail: providerEmail,
+          },
+          inPlatformArgs: {
+            notificationType: "consultation_suggestion_cancellation",
+            recipientId: providerUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
+
         return { success: true };
       }
     })
@@ -648,8 +793,62 @@ export const rescheduleConsultation = async ({
         throw err;
       });
 
+      const consultation = await getConsultationByIdQuery({
+        poolCountry: country,
+        consultationId,
+      }).catch((err) => {
+        throw err;
+      });
+
+      // Send Client Email and Internal notification
+      const { email: clientEmail, userId: clientUserId } =
+        getClientNotificationsData({
+          language,
+          country,
+          clientId: consultation.client_detail_id,
+        }).catch((err) => {
+          throw err;
+        });
+
+      await produceRaiseNotification({
+        channels: [clientEmail ? "email" : "", "in-platform"],
+        emailArgs: {
+          emailType: "client-consultationConfirmReschedule",
+          recipientEmail: clientEmail,
+        },
+        inPlatformArgs: {
+          notificationType: "consultation_reschedule",
+          recipientId: clientUserId,
+          country: country,
+        },
+        language,
+      }).catch(console.log);
+
+      // Send Provider Email and Internal notification
+      const { email: providerEmail, userId: providerUserId } =
+        getProviderNotificationsData({
+          language,
+          country,
+          providerId: consultation.provider_detail_id,
+        }).catch((err) => {
+          throw err;
+        });
+
+      await produceRaiseNotification({
+        channels: ["email", "in-platform"],
+        emailArgs: {
+          emailType: "provider-consultationNotifyReschedule",
+          recipientEmail: providerEmail,
+        },
+        inPlatformArgs: {
+          notificationType: "consultation_reschedule",
+          recipientId: providerUserId,
+          country: country,
+        },
+        language,
+      }).catch(console.log);
+
       return { success: true };
-      // TODO: Send notification to client and provider to confirm consultation recchedule
     })
     .catch((err) => {
       throw err;
@@ -666,15 +865,71 @@ export const cancelConsultation = async ({
     poolCountry: country,
     consultationId,
   })
-    .then((raw) => {
+    .then(async (raw) => {
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       } else {
-        if (canceledBy === "client") {
-          // TODO: Send notification to client and provider for canceled consultation
-        } else if (canceledBy === "provider") {
-          // TODO: Send notification to client and provider for canceled consultation
-        }
+        const consultation = raw.rows[0];
+
+        // Send Client Email and Internal notification
+        const { email: clientEmail, userId: clientUserId } =
+          getClientNotificationsData({
+            language,
+            country,
+            clientId: consultation.client_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: [clientEmail ? "email" : "", "in-platform"],
+          emailArgs: {
+            emailType:
+              canceledBy === "client"
+                ? "client-consultationConfirmCancellation"
+                : "client-consultationNotifyCancellation",
+            recipientEmail: clientEmail,
+          },
+          inPlatformArgs: {
+            notificationType:
+              canceledBy === "client"
+                ? "consultation_cancellation"
+                : "consultation_cancellation_provider",
+            recipientId: clientUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
+
+        // Send Provider Email and Internal notification
+        const { email: providerEmail, userId: providerUserId } =
+          getProviderNotificationsData({
+            language,
+            country,
+            providerId: consultation.provider_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
+
+        await produceRaiseNotification({
+          channels: ["email", "in-platform"],
+          emailArgs: {
+            emailType:
+              canceledBy === "client"
+                ? "provider-consultationNotifyCancellation"
+                : "provider-consultationConfirmCancellation",
+            recipientEmail: providerEmail,
+          },
+          inPlatformArgs: {
+            notificationType:
+              canceledBy === "client"
+                ? "consultation_cancellation"
+                : "consultation_cancellation_provider",
+            recipientId: providerUserId,
+            country: country,
+          },
+          language,
+        }).catch(console.log);
         return { success: true };
       }
     })
