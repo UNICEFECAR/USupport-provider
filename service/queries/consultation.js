@@ -194,6 +194,83 @@ export const cancelConsultationQuery = async ({
     [consultationId]
   );
 
+export const joinConsultationClientQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      UPDATE consultation
+      SET client_join_time = now()
+      WHERE consultation_id = $1 AND client_join_time IS NULL;
+
+    `,
+    [consultationId]
+  );
+
+export const joinConsultationProviderQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+  
+      UPDATE consultation
+      SET provider_join_time = now()
+      WHERE consultation_id = $1 AND provider_join_time IS NULL;
+
+    `,
+    [consultationId]
+  );
+
+export const leaveConsultationClientQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+  
+      UPDATE consultation
+      SET client_leave_time = now()
+      WHERE consultation_id = $1
+      RETURNING *;
+
+    `,
+    [consultationId]
+  );
+
+export const leaveConsultationProviderQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+    
+      UPDATE consultation
+      SET provider_leave_time = now()
+      WHERE consultation_id = $1
+      RETURNING *;
+
+    `,
+    [consultationId]
+  );
+
+export const updateConsultationStatusAsFinishedQuery = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+
+      UPDATE consultation
+      SET status = 'finished'
+      WHERE consultation_id = $1
+
+    `,
+    [consultationId]
+  );
+
 export const getConsultationsForDayQuery = async ({
   poolCountry,
   providerId,

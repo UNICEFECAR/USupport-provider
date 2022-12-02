@@ -8,4 +8,6 @@ export default {
   consultation_not_found_error: "Consultation not found",
   provider_has_future_consultations_error: "Provider has future consultations",
   user_not_found_error: "User not found",
+  consultation_not_scheduled_error: "Consultation is not scheduled",
+  service_not_found_error: "Service not found",
 };

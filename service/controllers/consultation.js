@@ -10,6 +10,11 @@ import {
   cancelConsultationQuery,
   getAllConsultationsByProviderIdAndClientIdQuery,
   getAllConsultationsCountQuery,
+  joinConsultationClientQuery,
+  joinConsultationProviderQuery,
+  leaveConsultationClientQuery,
+  leaveConsultationProviderQuery,
+  updateConsultationStatusAsFinishedQuery,
 } from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
@@ -30,6 +35,7 @@ import {
   slotNotAvailable,
   consultationNotFound,
   clientNotFound,
+  consultationNotScheduled,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -853,6 +859,109 @@ export const rescheduleConsultation = async ({
     .catch((err) => {
       throw err;
     });
+};
+
+export const joinConsultation = async ({
+  country,
+  language,
+  consultationId,
+  userType,
+}) => {
+  // Check if the consultation is in the right status
+  const consultation = await getConsultationByIdQuery({
+    poolCountry: country,
+    consultationId,
+  })
+    .then(async (raw) => {
+      if (raw.rowCount === 0) {
+        throw consultationNotFound(language);
+      }
+
+      return raw.rows[0];
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  if (consultation.status !== "scheduled") {
+    throw consultationNotScheduled(language);
+  }
+
+  // Store the join time for the user type
+  if (userType === "client") {
+    await joinConsultationClientQuery({
+      poolCountry: country,
+      consultationId,
+    }).catch((err) => {
+      throw err;
+    });
+  } else if (userType === "provider") {
+    await joinConsultationProviderQuery({
+      poolCountry: country,
+      consultationId,
+    }).catch((err) => {
+      throw err;
+    });
+  }
+
+  return { success: true };
+};
+
+export const leaveConsultation = async ({
+  country,
+  language,
+  consultationId,
+  userType,
+}) => {
+  // Store the leave time for the user type and update the status if both users have left
+  let newConsultation;
+
+  if (userType === "client") {
+    newConsultation = await leaveConsultationClientQuery({
+      poolCountry: country,
+      consultationId,
+    })
+      .then(async (raw) => {
+        if (raw.rowCount === 0) {
+          throw consultationNotFound(language);
+        }
+
+        return raw.rows[0];
+      })
+      .catch((err) => {
+        throw err;
+      });
+  } else if (userType === "provider") {
+    newConsultation = await leaveConsultationProviderQuery({
+      poolCountry: country,
+      consultationId,
+    })
+      .then(async (raw) => {
+        if (raw.rowCount === 0) {
+          throw consultationNotFound(language);
+        }
+
+        return raw.rows[0];
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
+
+  // Update the status of the consultation if both users have left
+  if (
+    newConsultation.client_leave_time !== null &&
+    newConsultation.provider_leave_time !== null
+  ) {
+    await updateConsultationStatusAsFinishedQuery({
+      poolCountry: country,
+      consultationId,
+    }).catch((err) => {
+      throw err;
+    });
+  }
+
+  return { success: true };
 };
 
 export const cancelConsultation = async ({

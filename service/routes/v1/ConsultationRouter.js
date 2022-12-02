@@ -16,6 +16,8 @@ import {
   getAllUpcomingConsultationsSchema,
   getAllConsultationsSingleWeekSchema,
   getAllConsultationsSingleDaySchema,
+  joinConsultationSchema,
+  leaveConsultationSchema,
 } from "#schemas/consultationSchemas";
 
 import {
@@ -32,6 +34,8 @@ import {
   getAllUpcomingConsultations,
   getAllConsultationsSingleWeek,
   getAllConsultationsSingleDay,
+  joinConsultation,
+  leaveConsultation,
 } from "#controllers/consultation";
 
 const router = express.Router();
@@ -279,6 +283,44 @@ router.route("/reschedule").post(async (req, res, next) => {
     .strict()
     .validate({ country, language, ...payload })
     .then(rescheduleConsultation)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/join").put(async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/consultation/join
+   * #desc    Client/Provider join a consultation
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const payload = req.body;
+
+  return await joinConsultationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, ...payload })
+    .then(joinConsultation)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/leave").put(async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/consultation/finished
+   * #desc    Client/Provider leave a consultation
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const payload = req.body;
+
+  return await leaveConsultationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, ...payload })
+    .then(leaveConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

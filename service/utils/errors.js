@@ -71,3 +71,27 @@ export const providerHasFutureConsultations = (language) => {
   error.status = 400;
   return error;
 };
+
+export const consultationNotScheduled = (language) => {
+  const error = new Error();
+  error.message = t("consultation_not_scheduled_error", language);
+  error.name = "CONSULTATION NOT SCHEDULED";
+  error.status = 400;
+  return error;
+};
+
+export const consultationNotFinished = (language) => {
+  const error = new Error();
+  error.message = t("consultation_not_finished_error", language);
+  error.name = "CONSULTATION NOT FINISHED";
+  error.status = 400;
+  return error;
+};
+
+export const serviceNotFound = (language) => {
+  const error = new Error();
+  error.message = t("service_not_found_error", language);
+  error.name = "SERVICE NOT FOUND";
+  error.status = 404;
+  return error;
+};
