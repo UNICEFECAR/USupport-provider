@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import v1 from "#routes/index";
 import middleware from "#middlewares/index";
 
+import { scheduleJobs } from "#utils/scheduleJobs";
+
 dotenv.config();
 
 const app = express();
@@ -32,3 +34,6 @@ app.use(middleware.errorMiddleware.errorHandler);
 app.listen(PORT, () => {
   console.log(`Provider Server listening on port ${PORT}`);
 });
+
+/*------------------ Scheduled Jobs ------------------*/
+scheduleJobs();

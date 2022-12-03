@@ -35,6 +35,19 @@ export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
     [providerId, clientId]
   );
 
+export const updateStatusOfAllPendingConsultationsToTimeoutQuery = async ({
+  poolCountry,
+  minToTimeout,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+        UPDATE consultation
+        SET status = 'timeout'
+        WHERE status = 'pending' AND created_at < (NOW() - $1 * INTERVAL '1 MINUTE');
+      `,
+    [minToTimeout]
+  );
+
 export const addConsultationAsPendingQuery = async ({
   poolCountry,
   clientId,
