@@ -480,7 +480,7 @@ export const scheduleConsultation = async ({
 
   // Send Client Email and Internal notification
   const { email: clientEmail, userId: clientUserId } =
-    getClientNotificationsData({
+    await getClientNotificationsData({
       language,
       country,
       clientId: consultation.client_detail_id,
@@ -504,7 +504,7 @@ export const scheduleConsultation = async ({
 
   // Send Provider Email and Internal notification
   const { email: providerEmail, userId: providerUserId } =
-    getProviderNotificationsData({
+    await getProviderNotificationsData({
       language,
       country,
       providerId: consultation.provider_detail_id,
@@ -584,7 +584,7 @@ export const suggestConsultation = async ({
 
   // Send Client Email and Internal notification
   const { email: clientEmail, userId: clientUserId } =
-    getClientNotificationsData({
+    await getClientNotificationsData({
       language,
       country,
       clientId: consultation.client_detail_id,
@@ -608,7 +608,7 @@ export const suggestConsultation = async ({
 
   // Send Provider Email and Internal notification
   const { email: providerEmail, userId: providerUserId } =
-    getProviderNotificationsData({
+    await getProviderNotificationsData({
       language,
       country,
       providerId: consultation.provider_detail_id,
@@ -650,7 +650,7 @@ export const acceptSuggestedConsultation = async ({
 
         // Send Client Email and Internal notification
         const { email: clientEmail, userId: clientUserId } =
-          getClientNotificationsData({
+          await getClientNotificationsData({
             language,
             country,
             clientId: consultation.client_detail_id,
@@ -674,7 +674,7 @@ export const acceptSuggestedConsultation = async ({
 
         // Send Provider Email and Internal notification
         const { email: providerEmail, userId: providerUserId } =
-          getProviderNotificationsData({
+          await getProviderNotificationsData({
             language,
             country,
             providerId: consultation.provider_detail_id,
@@ -721,7 +721,7 @@ export const rejectSuggestedConsultation = async ({
 
         // Send Client Email and Internal notification
         const { email: clientEmail, userId: clientUserId } =
-          getClientNotificationsData({
+          await getClientNotificationsData({
             language,
             country,
             clientId: consultation.client_detail_id,
@@ -745,7 +745,7 @@ export const rejectSuggestedConsultation = async ({
 
         // Send Provider Email and Internal notification
         const { email: providerEmail, userId: providerUserId } =
-          getProviderNotificationsData({
+          await getProviderNotificationsData({
             language,
             country,
             providerId: consultation.provider_detail_id,
@@ -808,7 +808,7 @@ export const rescheduleConsultation = async ({
 
       // Send Client Email and Internal notification
       const { email: clientEmail, userId: clientUserId } =
-        getClientNotificationsData({
+        await getClientNotificationsData({
           language,
           country,
           clientId: consultation.client_detail_id,
@@ -832,7 +832,7 @@ export const rescheduleConsultation = async ({
 
       // Send Provider Email and Internal notification
       const { email: providerEmail, userId: providerUserId } =
-        getProviderNotificationsData({
+        await getProviderNotificationsData({
           language,
           country,
           providerId: consultation.provider_detail_id,
@@ -982,7 +982,7 @@ export const cancelConsultation = async ({
 
         // Send Client Email and Internal notification
         const { email: clientEmail, userId: clientUserId } =
-          getClientNotificationsData({
+          await getClientNotificationsData({
             language,
             country,
             clientId: consultation.client_detail_id,
@@ -1012,7 +1012,7 @@ export const cancelConsultation = async ({
 
         // Send Provider Email and Internal notification
         const { email: providerEmail, userId: providerUserId } =
-          getProviderNotificationsData({
+          await getProviderNotificationsData({
             language,
             country,
             providerId: consultation.provider_detail_id,
