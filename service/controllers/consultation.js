@@ -432,6 +432,7 @@ export const scheduleConsultation = async ({
   country,
   language,
   consultationId,
+  shouldSendNotification,
 }) => {
   const consultation = await getConsultationByIdQuery({
     poolCountry: country,
@@ -482,53 +483,54 @@ export const scheduleConsultation = async ({
   }
 
   // Send Client Email and Internal notification
-  const { email: clientEmail, userId: clientUserId } =
-    await getClientNotificationsData({
+  if (shouldSendNotification) {
+    const { email: clientEmail, userId: clientUserId } =
+      await getClientNotificationsData({
+        language,
+        country,
+        clientId: consultation.client_detail_id,
+      }).catch((err) => {
+        throw err;
+      });
+
+    await produceRaiseNotification({
+      channels: [clientEmail ? "email" : "", "in-platform"],
+      emailArgs: {
+        emailType: "client-consultationConfirmBooking",
+        recipientEmail: clientEmail,
+      },
+      inPlatformArgs: {
+        notificationType: "consultation_booking",
+        recipientId: clientUserId,
+        country: country,
+      },
       language,
-      country,
-      clientId: consultation.client_detail_id,
-    }).catch((err) => {
-      throw err;
-    });
+    }).catch(console.log);
 
-  await produceRaiseNotification({
-    channels: [clientEmail ? "email" : "", "in-platform"],
-    emailArgs: {
-      emailType: "client-consultationConfirmBooking",
-      recipientEmail: clientEmail,
-    },
-    inPlatformArgs: {
-      notificationType: "consultation_booking",
-      recipientId: clientUserId,
-      country: country,
-    },
-    language,
-  }).catch(console.log);
+    // Send Provider Email and Internal notification
+    const { email: providerEmail, userId: providerUserId } =
+      await getProviderNotificationsData({
+        language,
+        country,
+        providerId: consultation.provider_detail_id,
+      }).catch((err) => {
+        throw err;
+      });
 
-  // Send Provider Email and Internal notification
-  const { email: providerEmail, userId: providerUserId } =
-    await getProviderNotificationsData({
+    await produceRaiseNotification({
+      channels: ["email", "in-platform"],
+      emailArgs: {
+        emailType: "provider-consultationNotifyBooking",
+        recipientEmail: providerEmail,
+      },
+      inPlatformArgs: {
+        notificationType: "consultation_booking",
+        recipientId: providerUserId,
+        country: country,
+      },
       language,
-      country,
-      providerId: consultation.provider_detail_id,
-    }).catch((err) => {
-      throw err;
-    });
-
-  await produceRaiseNotification({
-    channels: ["email", "in-platform"],
-    emailArgs: {
-      emailType: "provider-consultationNotifyBooking",
-      recipientEmail: providerEmail,
-    },
-    inPlatformArgs: {
-      notificationType: "consultation_booking",
-      recipientId: providerUserId,
-      country: country,
-    },
-    language,
-  }).catch(console.log);
-
+    }).catch(console.log);
+  }
   return { success: true };
 };
 
@@ -798,6 +800,7 @@ export const rescheduleConsultation = async ({
         country,
         language,
         consultationId: newConsultationId,
+        shouldSendNotification: false,
       }).catch((err) => {
         throw err;
       });
@@ -805,9 +808,16 @@ export const rescheduleConsultation = async ({
       const consultation = await getConsultationByIdQuery({
         poolCountry: country,
         consultationId,
-      }).catch((err) => {
-        throw err;
-      });
+      })
+        .then((raw) => {
+          if (raw.rowCount === 0) {
+            throw consultationNotFound(language);
+          }
+          return raw.rows[0];
+        })
+        .catch((err) => {
+          throw err;
+        });
 
       // Send Client Email and Internal notification
       const { email: clientEmail, userId: clientUserId } =
