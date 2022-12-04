@@ -322,7 +322,8 @@ export const getEarliestAvailableSlot = async (country, providerId) => {
       if (
         slot > new Date(tomorrowTimestamp * 1000) &&
         !upcomingConsultations.find(
-          (consultation) => consultation.time === slot
+          (consultation) =>
+            new Date(consultation.time).getTime() === new Date(slot).getTime()
         )
       ) {
         return slot;
