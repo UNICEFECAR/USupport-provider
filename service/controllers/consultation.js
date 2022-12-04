@@ -99,6 +99,7 @@ export const getAllPastConsultationsByClientId = async ({
     if (consultation.time < Date.now()) {
       response.push({
         consultation_id: consultation.consultation_id,
+        chat_id: consultation.chat_id,
         client_detail_id: clientId,
         client_name: clientName
           ? `${clientName} ${clientSurname}`
@@ -305,6 +306,7 @@ export const getAllPastConsultations = async ({
     if (consultation.time < Date.now() && consultation.status !== "suggested") {
       response.push({
         consultation_id: consultation.consultation_id,
+        chat_id: consultation.chat_id,
         client_detail_id: clientId,
         client_name: clientName
           ? `${clientName} ${clientSurname}`
@@ -379,6 +381,7 @@ export const getAllUpcomingConsultations = async ({
     if (consultation.time > Date.now()) {
       response.push({
         consultation_id: consultation.consultation_id,
+        chat_id: consultation.chat_id,
         client_detail_id: clientId,
         client_name: clientName
           ? `${clientName} ${clientSurname}`
