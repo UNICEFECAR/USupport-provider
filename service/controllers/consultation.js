@@ -167,6 +167,7 @@ export const getAllConsultationsSingleWeek = async ({
 
     response.push({
       consultation_id: consultation.consultation_id,
+      chat_id: consultation.chat_id,
       client_detail_id: clientId,
       client_name: clientName
         ? `${clientName} ${clientSurname}`
@@ -233,6 +234,7 @@ export const getAllConsultationsSingleDay = async ({
 
     response.push({
       consultation_id: consultation.consultation_id,
+      chat_id: consultation.chat_id,
       client_detail_id: clientId,
       client_name: clientName
         ? `${clientName} ${clientSurname}`
