@@ -469,6 +469,9 @@ export const getAllClients = async ({ country, language, providerId }) => {
         });
       }
 
+      const oneHourBeforeNow = new Date();
+      oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
+
       // For each consultation, add it to the clients array in the right place
       for (let i = 0; i < consultations.length; i++) {
         const consultation = consultations[i];
@@ -480,7 +483,7 @@ export const getAllClients = async ({ country, language, providerId }) => {
         );
 
         if (clientIndex !== -1) {
-          if (consultationTime > new Date()) {
+          if (consultationTime > oneHourBeforeNow) {
             if (
               clients[clientIndex].next_consultation === null ||
               consultationTime < clients[clientIndex].next_consultation

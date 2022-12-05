@@ -96,7 +96,10 @@ export const getAllPastConsultationsByClientId = async ({
     const clientSurname = clientDetails.surname;
     const clientNickname = clientDetails.nickname;
 
-    if (consultation.time < Date.now()) {
+    const oneHourBeforeNow = new Date();
+    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
+
+    if (consultation.time < oneHourBeforeNow) {
       response.push({
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
@@ -305,7 +308,13 @@ export const getAllPastConsultations = async ({
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
 
-    if (consultation.time < Date.now() && consultation.status !== "suggested") {
+    const oneHourBeforeNow = new Date();
+    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
+
+    if (
+      consultation.time < oneHourBeforeNow &&
+      consultation.status !== "suggested"
+    ) {
       response.push({
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
@@ -380,7 +389,10 @@ export const getAllUpcomingConsultations = async ({
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
 
-    if (consultation.time > Date.now()) {
+    const oneHourBeforeNow = new Date();
+    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
+
+    if (consultation.time > oneHourBeforeNow) {
       response.push({
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
