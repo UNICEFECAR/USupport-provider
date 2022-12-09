@@ -314,12 +314,14 @@ router.route("/leave").put(async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
+  const userId = req.user.user_id;
+
   const payload = req.body;
 
   return await leaveConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ country, language, userId, ...payload })
     .then(leaveConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);

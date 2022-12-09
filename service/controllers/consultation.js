@@ -1,3 +1,5 @@
+import twilio from "twilio";
+
 import {
   addConsultationAsPendingQuery,
   addConsultationAsScheduledQuery,
@@ -937,6 +939,7 @@ export const joinConsultation = async ({
 export const leaveConsultation = async ({
   country,
   language,
+  userId,
   consultationId,
   userType,
 }) => {
@@ -987,6 +990,21 @@ export const leaveConsultation = async ({
       throw err;
     });
   }
+
+  const client = new twilio(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  );
+
+  client.video
+    .rooms(consultationId)
+    .participants(userId)
+    .update({
+      status: "disconnected",
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   return { success: true };
 };

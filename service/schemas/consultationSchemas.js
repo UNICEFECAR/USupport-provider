@@ -56,6 +56,7 @@ export const joinConsultationSchema = yup.object().shape({
 export const leaveConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
+  userId: yup.string().uuid().required(),
   consultationId: yup.string().uuid().required(),
   userType: yup.string().oneOf(["client", "provider"]).required(),
 });
