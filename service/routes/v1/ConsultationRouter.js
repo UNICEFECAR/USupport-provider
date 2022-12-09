@@ -306,7 +306,7 @@ router.route("/join").put(async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/leave").put(async (req, res, next) => {
+router.route("/leave").put(populateUser, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/consultation/finished
    * #desc    Client/Provider leave a consultation
