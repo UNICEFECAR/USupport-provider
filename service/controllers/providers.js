@@ -465,6 +465,7 @@ export const getAllClients = async ({ country, language, providerId }) => {
           next_consultation: null,
           next_consultation_id: null,
           next_consultation_status: null,
+          chat_id: null,
           past_consultations: 0,
         });
       }
@@ -493,6 +494,7 @@ export const getAllClients = async ({ country, language, providerId }) => {
                 consultation.consultation_id;
               clients[clientIndex].next_consultation_status =
                 consultation.status;
+              clients[clientIndex].chat_id = consultation.chat_id;
             }
           } else {
             clients[clientIndex].past_consultations += 1;
