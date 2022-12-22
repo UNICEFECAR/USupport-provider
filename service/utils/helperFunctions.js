@@ -93,7 +93,7 @@ export const getSlotsForSingleWeek = async ({
       if (res.rowCount === 0) {
         return [];
       } else {
-        return res.rows[0]?.slots;
+        return res.rows[0]?.slots || [];
       }
     })
     .catch((err) => {
