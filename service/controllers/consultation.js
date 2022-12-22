@@ -448,7 +448,7 @@ export const scheduleConsultation = async ({
   country,
   language,
   consultationId,
-  shouldSendNotification,
+  shouldSendNotification = true,
 }) => {
   const consultation = await getConsultationByIdQuery({
     poolCountry: country,
@@ -519,6 +519,10 @@ export const scheduleConsultation = async ({
         notificationType: "consultation_booking",
         recipientId: clientUserId,
         country: country,
+        data: {
+          provider_detail_id: consultation.provider_detail_id,
+          time: new Date(consultation.time).getTime() / 1000,
+        },
       },
       language,
     }).catch(console.log);
@@ -542,12 +546,16 @@ export const scheduleConsultation = async ({
       inPlatformArgs: {
         notificationType: "consultation_booking",
         recipientId: providerUserId,
-        country: country,
+        country,
+        data: {
+          client_detail_id: consultation.client_detail_id,
+          time: new Date(consultation.time).getTime() / 1000,
+        },
       },
       language,
     }).catch(console.log);
   }
-  return { success: true };
+  return { success: true, consultation };
 };
 
 export const suggestConsultation = async ({
@@ -623,6 +631,11 @@ export const suggestConsultation = async ({
       notificationType: "consultation_suggestion",
       recipientId: clientUserId,
       country: country,
+      data: {
+        provider_detail_id: consultation.provider_detail_id,
+        time: new Date(consultation.time).getTime() / 1000,
+        consultation_id: consultation.consultation_id,
+      },
     },
     language,
   }).catch(console.log);
@@ -647,6 +660,10 @@ export const suggestConsultation = async ({
       notificationType: "consultation_suggestion",
       recipientId: providerUserId,
       country: country,
+      data: {
+        client_detail_id: consultation.client_detail_id,
+        time: new Date(consultation.time).getTime() / 1000,
+      },
     },
     language,
   }).catch(console.log);
@@ -689,6 +706,10 @@ export const acceptSuggestedConsultation = async ({
             notificationType: "consultation_suggestion_booking",
             recipientId: clientUserId,
             country: country,
+            data: {
+              provider_detail_id: consultation.provider_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+            },
           },
           language,
         }).catch(console.log);
@@ -713,6 +734,10 @@ export const acceptSuggestedConsultation = async ({
             notificationType: "consultation_suggestion_booking",
             recipientId: providerUserId,
             country: country,
+            data: {
+              client_detail_id: consultation.client_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+            },
           },
           language,
         }).catch(console.log);
@@ -760,6 +785,11 @@ export const rejectSuggestedConsultation = async ({
             notificationType: "consultation_suggestion_cancellation",
             recipientId: clientUserId,
             country: country,
+            data: {
+              provider_detail_id: consultation.provider_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+              consultation_id: consultation.consultation_id,
+            },
           },
           language,
         }).catch(console.log);
@@ -784,6 +814,10 @@ export const rejectSuggestedConsultation = async ({
             notificationType: "consultation_suggestion_cancellation",
             recipientId: providerUserId,
             country: country,
+            data: {
+              client_detail_id: consultation.client_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+            },
           },
           language,
         }).catch(console.log);
@@ -812,7 +846,7 @@ export const rescheduleConsultation = async ({
       }
 
       // Schedule the new consultation
-      await scheduleConsultation({
+      const res = await scheduleConsultation({
         country,
         language,
         consultationId: newConsultationId,
@@ -820,6 +854,9 @@ export const rescheduleConsultation = async ({
       }).catch((err) => {
         throw err;
       });
+      const newConsultation = res.consultation;
+      const newConsultationTime =
+        new Date(newConsultation.time).getTime() / 1000;
 
       const consultation = await getConsultationByIdQuery({
         poolCountry: country,
@@ -855,6 +892,11 @@ export const rescheduleConsultation = async ({
           notificationType: "consultation_reschedule",
           recipientId: clientUserId,
           country: country,
+          data: {
+            time: new Date(consultation.time).getTime() / 1000,
+            new_consultation_time: newConsultationTime,
+            provider_detail_id: consultation.provider_detail_id,
+          },
         },
         language,
       }).catch(console.log);
@@ -879,6 +921,11 @@ export const rescheduleConsultation = async ({
           notificationType: "consultation_reschedule",
           recipientId: providerUserId,
           country: country,
+          data: {
+            time: new Date(consultation.time).getTime() / 1000,
+            new_consultation_time: newConsultationTime,
+            client_detail_id: consultation.client_detail_id,
+          },
         },
         language,
       }).catch(console.log);
@@ -1051,6 +1098,10 @@ export const cancelConsultation = async ({
                 : "consultation_cancellation_provider",
             recipientId: clientUserId,
             country: country,
+            data: {
+              provider_detail_id: consultation.provider_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+            },
           },
           language,
         }).catch(console.log);
@@ -1081,6 +1132,10 @@ export const cancelConsultation = async ({
                 : "consultation_cancellation_provider",
             recipientId: providerUserId,
             country: country,
+            data: {
+              client_detail_id: consultation.client_detail_id,
+              time: new Date(consultation.time).getTime() / 1000,
+            },
           },
           language,
         }).catch(console.log);
