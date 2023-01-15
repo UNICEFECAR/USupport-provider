@@ -17,9 +17,12 @@ import {
   leaveConsultationClientQuery,
   leaveConsultationProviderQuery,
   updateConsultationStatusAsFinishedQuery,
+  getAllUpcomingConsultationsByProviderIdQuery,
 } from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
+
+import { getProviderByIdQuery } from "#queries/providers";
 
 import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
 
@@ -112,6 +115,7 @@ export const getAllPastConsultationsByClientId = async ({
         client_image: clientDetails.image,
         time: consultation.time,
         status: consultation.status,
+        price: consultation.price,
       });
     }
   }
@@ -247,6 +251,7 @@ export const getAllConsultationsSingleDay = async ({
       client_image: client.image,
       time: consultation.time,
       status: consultation.status,
+      price: consultation.price,
     });
   }
 
@@ -327,6 +332,7 @@ export const getAllPastConsultations = async ({
         client_image: client.image,
         time: consultation.time,
         status: consultation.status,
+        price: consultation.price,
       });
     }
   }
@@ -338,21 +344,25 @@ export const getAllUpcomingConsultations = async ({
   country,
   language,
   providerId,
+  pageNo,
 }) => {
-  const consultations = await getAllConsultationsByProviderIdQuery({
+  const query = await getAllUpcomingConsultationsByProviderIdQuery({
     poolCountry: country,
     providerId,
+    pageNo,
   })
     .then((res) => {
       if (res.rowCount === 0) {
-        return [];
+        return { consultations: [], totalCount: 0 };
       } else {
-        return res.rows;
+        return { consultations: res.rows, totalCount: res.rows[0].total_count };
       }
     })
     .catch((err) => {
       throw err;
     });
+
+  const { consultations, totalCount } = query;
 
   // Get all clients ids
   const clientsToFetch = Array.from(
@@ -381,7 +391,7 @@ export const getAllUpcomingConsultations = async ({
       });
   }
 
-  let response = [];
+  let response = { consultations: [], totalCount };
 
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
@@ -395,7 +405,7 @@ export const getAllUpcomingConsultations = async ({
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
 
     if (consultation.time > oneHourBeforeNow) {
-      response.push({
+      response.consultations.push({
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
         client_detail_id: clientId,
@@ -405,6 +415,7 @@ export const getAllUpcomingConsultations = async ({
         client_image: client.image,
         time: consultation.time,
         status: consultation.status,
+        price: consultation.price,
       });
     }
   }
@@ -423,12 +434,30 @@ export const addConsultationAsPending = async ({
 
   if (!isSlotAvailable) throw slotNotAvailable(language);
 
+  const providerData = await getProviderByIdQuery({
+    poolCountry: country,
+    provider_id: providerId,
+  })
+    .then((raw) => {
+      if (raw.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        return raw.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const consultationPrice = providerData["consultation_price"];
+
   // Add consultation as pending
   const consultation = await addConsultationAsPendingQuery({
     poolCountry: country,
     clientId,
     providerId,
     time,
+    price: consultationPrice,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {
