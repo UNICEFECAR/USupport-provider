@@ -13,7 +13,7 @@ export const getProviderByUserID = async (poolCountry, user_id) =>
 
     ), providerData AS (
 
-        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description
+        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link
         FROM provider_detail
           JOIN userData ON userData.provider_detail_id = provider_detail.provider_detail_id
         ORDER BY provider_detail.created_at DESC
@@ -44,7 +44,7 @@ export const getProviderEmailAndUserIdQuery = async ({
 export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description
+      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link
       FROM provider_detail
         JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
       WHERE provider_detail.provider_detail_id = $1
@@ -57,7 +57,7 @@ export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
 export const getAllProvidersQuery = async ({ poolCountry }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description
+      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link
       FROM provider_detail
         JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
       ORDER BY provider_detail.name ASC;
@@ -138,6 +138,7 @@ export const updateProviderDataQuery = async ({
   sex,
   consultationPrice,
   description,
+  videoLink,
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
@@ -156,8 +157,9 @@ export const updateProviderDataQuery = async ({
           education = $12,
           sex = $13,
           consultation_price = $14,
-          description = $15
-      WHERE provider_detail_id = $16
+          description = $15,
+          video_link = $16
+      WHERE provider_detail_id = $17
       RETURNING *;
     `,
     [
@@ -176,6 +178,7 @@ export const updateProviderDataQuery = async ({
       sex,
       consultationPrice,
       description,
+      videoLink,
       provider_id,
     ]
   );
