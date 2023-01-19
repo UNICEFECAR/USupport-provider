@@ -25,6 +25,7 @@ export const getProviderByIdSchema = yup.object().shape({
 
 export const updateProviderDataSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),
+  user_id: yup.string().uuid().required(),
   country: yup.string().required(),
   language: yup.string().required(),
   name: yup.string().required(),
@@ -72,6 +73,7 @@ export const deleteProviderDataSchema = yup.object().shape(
 
 export const updateProviderImageSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),
+  user_id: yup.string().uuid().required(),
   country: yup.string().required(),
   language: yup.string().required(),
   image: yup.string().required(),
@@ -79,6 +81,7 @@ export const updateProviderImageSchema = yup.object().shape({
 
 export const deleteProviderImageSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),
+  user_id: yup.string().uuid().required(),
   country: yup.string().required(),
   language: yup.string().required(),
 });
