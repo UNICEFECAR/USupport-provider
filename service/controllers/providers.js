@@ -175,6 +175,7 @@ export const updateProviderData = async ({
   currentWorkWithIds,
   languageIds,
   currentLanguageIds,
+  videoLink,
 }) => {
   // Check if email is changed
   if (email !== currentEmail) {
@@ -211,6 +212,7 @@ export const updateProviderData = async ({
     sex,
     consultationPrice,
     description,
+    videoLink,
   })
     .then(async (res) => {
       if (res.rowCount === 0) {

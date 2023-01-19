@@ -149,11 +149,12 @@ router.route("/all/upcoming").get(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const providerId = req.user.provider_detail_id;
+  const pageNo = Number(req.query.pageNo);
 
   return await getAllUpcomingConsultationsSchema
     .noUnknown(true)
     .strict(true)
-    .validate({ country, language, providerId })
+    .validate({ country, language, providerId, pageNo })
     .then(getAllUpcomingConsultations)
     .then((result) => res.status(200).send(result))
     .catch(next);

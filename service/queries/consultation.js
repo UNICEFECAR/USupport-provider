@@ -53,16 +53,17 @@ export const addConsultationAsPendingQuery = async ({
   clientId,
   providerId,
   time,
+  price,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status)
-      VALUES ($1, $2, to_timestamp($3), 'pending')
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price)
+      VALUES ($1, $2, to_timestamp($3), 'pending', $4)
       RETURNING *;
 
     `,
-    [clientId, providerId, time]
+    [clientId, providerId, time, price]
   );
 
 export const addConsultationAsScheduledQuery = async ({
@@ -314,6 +315,23 @@ export const getAllConsultationsByProviderIdQuery = async ({
       ORDER BY time DESC;
     `,
     [providerId]
+  );
+
+export const getAllUpcomingConsultationsByProviderIdQuery = async ({
+  poolCountry,
+  providerId,
+  pageNo,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+      SELECT * , COUNT(*) OVER() AS total_count
+      FROM consultation
+      WHERE provider_detail_id = $1 AND time >= now() + interval '1 hour' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+      ORDER BY time ASC
+      LIMIT 6
+      OFFSET $2;
+    `,
+    [providerId, (pageNo - 1) * 6]
   );
 
 export const getAllConsultationsCountQuery = async ({

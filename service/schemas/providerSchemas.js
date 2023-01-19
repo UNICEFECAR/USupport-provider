@@ -48,6 +48,7 @@ export const updateProviderDataSchema = yup.object().shape({
   currentWorkWithIds: yup.array().of(yup.string().uuid()).notRequired(),
   languageIds: yup.array().of(yup.string().uuid()).notRequired(),
   currentLanguageIds: yup.array().of(yup.string().uuid()).notRequired(),
+  videoLink: yup.string().notRequired(),
 });
 
 export const deleteProviderDataSchema = yup.object().shape(
