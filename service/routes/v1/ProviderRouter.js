@@ -13,6 +13,7 @@ import {
   updateProviderImageSchema,
   deleteProviderImageSchema,
   getAllClientsSchema,
+  getActivitiesSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -23,6 +24,7 @@ import {
   updateProviderImage,
   deleteProviderImage,
   getAllClients,
+  getActivities,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -98,6 +100,7 @@ router.put("/", populateProvider, async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
+  const user_id = req.header("x-user-id");
 
   const provider_id = req.provider.provider_detail_id;
   const currentEmail = req.provider.email;
@@ -116,6 +119,7 @@ router.put("/", populateProvider, async (req, res, next) => {
     .validate({
       country,
       language,
+      user_id,
       provider_id,
       currentEmail,
       currentLanguageIds,
@@ -134,6 +138,7 @@ router.put("/by-id/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
+  const user_id = req.header("x-user-id");
 
   const { providerId } = req.body;
 
@@ -163,6 +168,7 @@ router.put("/by-id/admin", async (req, res, next) => {
       country,
       language,
       provider_id: providerId,
+      user_id,
       currentEmail,
       currentLanguageIds,
       currentWorkWithIds,
@@ -271,12 +277,13 @@ router.put("/image", populateProvider, populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const provider_id = req.provider.provider_detail_id;
-  const image = req.user.user_id;
+  const user_id = req.user.user_id;
+  const image = user_id;
 
   return await updateProviderImageSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id, image })
+    .validate({ country, language, provider_id, image, user_id })
     .then(updateProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -289,13 +296,14 @@ router.delete("/image", populateProvider, async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
+  const user_id = req.header("x-user-id");
 
   const provider_id = req.provider.provider_detail_id;
 
   return await deleteProviderImageSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id })
+    .validate({ country, language, provider_id, user_id })
     .then(deleteProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -308,13 +316,14 @@ router.put("/image/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
+  const user_id = req.header("x-user-id");
 
   const { providerId: provider_id, image } = req.body;
 
   return await updateProviderImageSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id, image })
+    .validate({ country, language, provider_id, image, user_id })
     .then(updateProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -327,13 +336,14 @@ router.delete("/image/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
+  const user_id = req.header("x-user-id");
 
   const { providerId: provider_id } = req.body;
 
   return await deleteProviderImageSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id })
+    .validate({ country, language, provider_id, user_id })
     .then(deleteProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -355,6 +365,26 @@ router.get("/clients", populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, providerId })
     .then(getAllClients)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/activities", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/clients
+   * #desc    Get all clients' data for the current provider
+   */
+
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  return await getActivitiesSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerId })
+    .then(getActivities)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

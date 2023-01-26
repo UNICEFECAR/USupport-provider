@@ -14,6 +14,7 @@ import {
   deleteProviderDataQuery,
   updateProviderImageQuery,
   deleteProviderImageQuery,
+  getActivitiesQuery,
 } from "#queries/providers";
 
 import {
@@ -22,7 +23,10 @@ import {
   getFutureConsultationsCountQuery,
 } from "#queries/consultation";
 
-import { getClientByIdQuery } from "#queries/clients";
+import {
+  getClientByIdQuery,
+  getMultipleClientsDataByIDs,
+} from "#queries/clients";
 
 import {
   providerNotFound,
@@ -31,12 +35,12 @@ import {
   emailUsed,
   providerHasFutureConsultations,
 } from "#utils/errors";
-
 import {
   getEarliestAvailableSlot,
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
 } from "#utils/helperFunctions";
+import { deleteCacheItem } from "#utils/cache";
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
@@ -154,6 +158,7 @@ export const updateProviderData = async ({
   country,
   language,
   provider_id,
+  user_id,
   name,
   patronym,
   surname,
@@ -213,7 +218,7 @@ export const updateProviderData = async ({
     description,
     videoLink,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
       } else {
@@ -278,6 +283,9 @@ export const updateProviderData = async ({
             throw err;
           });
         });
+
+        const cacheKey = `provider_${country}_${user_id}`;
+        await deleteCacheItem(cacheKey);
 
         return res.rows[0];
       }
@@ -360,6 +368,9 @@ export const deleteProviderData = async ({
           }
         }
 
+        const cacheKey = `provider_${country}_${user_id}`;
+        await deleteCacheItem(cacheKey);
+
         return res.rows[0];
       }
     })
@@ -373,16 +384,20 @@ export const updateProviderImage = async ({
   language,
   provider_id,
   image,
+  user_id,
 }) => {
   return await updateProviderImageQuery({
     poolCountry: country,
     provider_id,
     image,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
       } else {
+        const cacheKey = `provider_${country}_${user_id}`;
+        await deleteCacheItem(cacheKey);
+
         return res.rows[0];
       }
     })
@@ -395,15 +410,19 @@ export const deleteProviderImage = async ({
   country,
   language,
   provider_id,
+  user_id,
 }) => {
   return await deleteProviderImageQuery({
     poolCountry: country,
     provider_id,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
       } else {
+        const cacheKey = `provider_${country}_${user_id}`;
+        await deleteCacheItem(cacheKey);
+
         return res.rows[0];
       }
     })
@@ -509,4 +528,51 @@ export const getAllClients = async ({ country, language, providerId }) => {
     .catch((err) => {
       throw err;
     });
+};
+
+export const getActivities = async ({ country, providerId }) => {
+  const activities = await getActivitiesQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Make sure there are no duplicate client id's
+  const clientDetailIds = Array.from(
+    new Set(activities.map((x) => x.client_detail_id))
+  );
+
+  const clientDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  activities.forEach((consultation, index) => {
+    const clientData = clientDetails.find(
+      (x) => x.client_detail_id === consultation.client_detail_id
+    );
+    activities[index].clientData = clientData;
+    delete activities[index].clientData.client_detail_id;
+  });
+
+  return activities;
 };

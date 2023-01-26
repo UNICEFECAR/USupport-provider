@@ -184,6 +184,7 @@ export const getAllConsultationsSingleWeek = async ({
       client_image: client.image,
       time: consultation.time,
       status: consultation.status,
+      price: consultation.price,
     });
   }
 
