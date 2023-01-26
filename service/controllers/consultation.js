@@ -551,6 +551,7 @@ export const scheduleConsultation = async ({
         data: {
           provider_detail_id: consultation.provider_detail_id,
           time: new Date(consultation.time).getTime() / 1000,
+          consultationPrice: consultation.price,
         },
       },
       language,
@@ -579,6 +580,7 @@ export const scheduleConsultation = async ({
         data: {
           client_detail_id: consultation.client_detail_id,
           time: new Date(consultation.time).getTime() / 1000,
+          consultationPrice: consultation.price,
         },
       },
       language,
@@ -664,6 +666,7 @@ export const suggestConsultation = async ({
         provider_detail_id: consultation.provider_detail_id,
         time: new Date(consultation.time).getTime() / 1000,
         consultation_id: consultation.consultation_id,
+        consultationPrice: consultation.price,
       },
     },
     language,
@@ -692,6 +695,7 @@ export const suggestConsultation = async ({
       data: {
         client_detail_id: consultation.client_detail_id,
         time: new Date(consultation.time).getTime() / 1000,
+        consultationPrice: consultation.price,
       },
     },
     language,
