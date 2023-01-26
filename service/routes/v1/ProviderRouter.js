@@ -13,6 +13,7 @@ import {
   updateProviderImageSchema,
   deleteProviderImageSchema,
   getAllClientsSchema,
+  getActivitiesSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -23,6 +24,7 @@ import {
   updateProviderImage,
   deleteProviderImage,
   getAllClients,
+  getActivities,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -363,6 +365,26 @@ router.get("/clients", populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, providerId })
     .then(getAllClients)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/activities", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/clients
+   * #desc    Get all clients' data for the current provider
+   */
+
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerId = req.user.provider_detail_id;
+
+  return await getActivitiesSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerId })
+    .then(getActivities)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

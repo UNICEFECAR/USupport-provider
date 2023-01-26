@@ -14,6 +14,7 @@ import {
   deleteProviderDataQuery,
   updateProviderImageQuery,
   deleteProviderImageQuery,
+  getActivitiesQuery,
 } from "#queries/providers";
 
 import {
@@ -22,7 +23,10 @@ import {
   getFutureConsultationsCountQuery,
 } from "#queries/consultation";
 
-import { getClientByIdQuery } from "#queries/clients";
+import {
+  getClientByIdQuery,
+  getMultipleClientsDataByIDs,
+} from "#queries/clients";
 
 import {
   providerNotFound,
@@ -524,4 +528,51 @@ export const getAllClients = async ({ country, language, providerId }) => {
     .catch((err) => {
       throw err;
     });
+};
+
+export const getActivities = async ({ country, providerId }) => {
+  const activities = await getActivitiesQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  // Make sure there are no duplicate client id's
+  const clientDetailIds = Array.from(
+    new Set(activities.map((x) => x.client_detail_id))
+  );
+
+  const clientDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  activities.forEach((consultation, index) => {
+    const clientData = clientDetails.find(
+      (x) => x.client_detail_id === consultation.client_detail_id
+    );
+    activities[index].clientData = clientData;
+    delete activities[index].clientData.client_detail_id;
+  });
+
+  return activities;
 };

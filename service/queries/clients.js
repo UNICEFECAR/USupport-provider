@@ -24,3 +24,16 @@ export const getClientEmailAndUserIdQuery = async ({ poolCountry, clientId }) =>
       `,
     [clientId]
   );
+
+export const getMultipleClientsDataByIDs = async ({
+  poolCountry,
+  clientDetailIds,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT name, surname, nickname, email, client_detail_id
+      FROM client_detail
+      WHERE client_detail_id = ANY($1);
+    `,
+    [clientDetailIds]
+  );
