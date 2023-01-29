@@ -411,3 +411,16 @@ export const getFutureConsultationsCountQuery = async ({
     `,
     [providerId]
   );
+
+export const getConsultationTimeQuerry = async ({
+  poolCountry,
+  consultationId,
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+        SELECT time
+        FROM consultation
+        WHERE consultation_id = $1
+      `,
+    [consultationId]
+  );

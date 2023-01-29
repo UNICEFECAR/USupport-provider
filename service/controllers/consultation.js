@@ -18,6 +18,7 @@ import {
   leaveConsultationProviderQuery,
   updateConsultationStatusAsFinishedQuery,
   getAllUpcomingConsultationsByProviderIdQuery,
+  getConsultationTimeQuerry,
 } from "#queries/consultation";
 
 import { getClientByIdQuery } from "#queries/clients";
@@ -1174,6 +1175,27 @@ export const cancelConsultation = async ({
           language,
         }).catch(console.log);
         return { success: true };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getConsultationTime = async ({
+  country,
+  language,
+  consultationId,
+}) => {
+  return await getConsultationTimeQuerry({
+    poolCountry: country,
+    consultationId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw consultationNotFound(language);
+      } else {
+        return res.rows[0];
       }
     })
     .catch((err) => {

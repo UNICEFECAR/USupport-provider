@@ -99,3 +99,10 @@ export const getAllConsultationsSingleDaySchema = yup.object().shape({
   providerId: yup.string().uuid().required(),
   date: yup.string().required(),
 });
+
+export const getConsultationTimeSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  consultationId: yup.string().uuid().required(),
+  userId: yup.string().uuid().required(),
+});

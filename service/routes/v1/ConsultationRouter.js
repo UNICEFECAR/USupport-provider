@@ -18,6 +18,7 @@ import {
   getAllConsultationsSingleDaySchema,
   joinConsultationSchema,
   leaveConsultationSchema,
+  getConsultationTimeSchema,
 } from "#schemas/consultationSchemas";
 
 import {
@@ -36,6 +37,7 @@ import {
   getAllConsultationsSingleDay,
   joinConsultation,
   leaveConsultation,
+  getConsultationTime,
 } from "#controllers/consultation";
 
 const router = express.Router();
@@ -156,6 +158,28 @@ router.route("/all/upcoming").get(populateUser, async (req, res, next) => {
     .strict(true)
     .validate({ country, language, providerId, pageNo })
     .then(getAllUpcomingConsultations)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/time").get(populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/consultation/time
+   * #desc    Get consultation time by id
+   */
+
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const userId = req.user.user_id;
+
+  const consultationId = req.query.consultationId;
+
+  return await getConsultationTimeSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, language, userId, consultationId })
+    .then(getConsultationTime)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
