@@ -28,9 +28,7 @@ router
      * #desc    Get current provider availability for a single week
      */
     const country = req.header("x-country-alpha-2");
-
     const provider_id = req.user.provider_detail_id;
-
     const startDate = req.query.startDate;
 
     return await getAvailabilitySingleWeekSchema
@@ -50,13 +48,12 @@ router
     const language = req.header("x-language-alpha-2");
 
     const provider_id = req.user.provider_detail_id;
-
     const payload = req.body;
 
     return await updateAvailabilitySingleWeekSchema
       .noUnknown(true)
       .strict()
-      .validate({ country, language, provider_id, ...payload })
+      .validate({ ...payload, country, language, provider_id })
       .then(updateAvailabilitySingleWeek)
       .then((result) => res.status(200).send(result))
       .catch(next);
@@ -67,15 +64,13 @@ router
      * #desc    Delete a slot from the provider availability for a single week
      */
     const country = req.header("x-country-alpha-2");
-
     const provider_id = req.user.provider_detail_id;
-
     const payload = req.body;
 
     return await deleteAvailabilitySingleWeekSchema
       .noUnknown(true)
       .strict()
-      .validate({ country, provider_id, ...payload })
+      .validate({ ...payload, country, provider_id })
       .then(deleteAvailabilitySingleWeek)
       .then((result) => res.status(200).send(result))
       .catch(next);
@@ -90,13 +85,12 @@ router.route("/template").put(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const provider_id = req.user.provider_detail_id;
-
   const payload = req.body;
 
   return await updateAvailabilityByTemplateSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id, ...payload })
+    .validate({ ...payload, country, language, provider_id })
     .then(updateAvailabilityByTemplate)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -110,11 +104,11 @@ router.route("/single-day").get(populateUser, async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
 
-  let providerId = "";
+  let provider_id = "";
   if (req.user.provider_detail_id) {
-    providerId = req.user.provider_detail_id;
+    provider_id = req.user.provider_detail_id;
   } else {
-    providerId = req.query.providerId;
+    provider_id = req.query.providerId;
   }
 
   const startDate = req.query.startDate;
@@ -123,7 +117,7 @@ router.route("/single-day").get(populateUser, async (req, res, next) => {
   return await getAvailabilitySingleDaySchema
     .noUnknown(true)
     .strict(true)
-    .validate({ country, providerId, startDate, day })
+    .validate({ country, provider_id, startDate, day })
     .then(getAvailabilitySingleDay)
     .then((result) => res.status(200).send(result))
     .catch(next);
