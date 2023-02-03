@@ -431,10 +431,10 @@ export const deleteProviderImage = async ({
     });
 };
 
-export const getAllClients = async ({ country, language, providerId }) => {
+export const getAllClients = async ({ country, language, provider_id }) => {
   return await getAllConsultationsByProviderIdQuery({
     poolCountry: country,
-    providerId,
+    providerId: provider_id,
   })
     .then(async (res) => {
       let consultations = res.rows;
@@ -530,10 +530,10 @@ export const getAllClients = async ({ country, language, providerId }) => {
     });
 };
 
-export const getActivities = async ({ country, providerId }) => {
+export const getActivities = async ({ country, provider_id }) => {
   const activities = await getActivitiesQuery({
     poolCountry: country,
-    providerId,
+    providerId: provider_id,
   })
     .then((res) => {
       if (res.rowCount === 0) {

@@ -8,12 +8,11 @@ import {
 import {
   getAllProvidersSchema,
   getProviderByIdSchema,
+  getProviderByIdAdminSchema,
   updateProviderDataSchema,
   deleteProviderDataSchema,
   updateProviderImageSchema,
   deleteProviderImageSchema,
-  getAllClientsSchema,
-  getActivitiesSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -33,15 +32,86 @@ import { userNotFound } from "#utils/errors";
 
 const router = express.Router();
 
-router.get("/", populateProvider, async (req, res) => {
-  /**
-   * #route   GET /provider/v1/provider
-   * #desc    Get current provider data
-   */
-  const providerData = req.provider;
+router
+  .route("/")
+  .get(populateProvider, async (req, res) => {
+    /**
+     * #route   GET /provider/v1/provider
+     * #desc    Get current provider data
+     */
+    const providerData = req.provider;
 
-  res.status(200).send(providerData);
-});
+    res.status(200).send(providerData);
+  })
+  .put("/", populateProvider, async (req, res, next) => {
+    /**
+     * #route   PUT /provider/v1/provider
+     * #desc    Update current provider data
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+    const user_id = req.header("x-user-id");
+
+    const provider_id = req.provider.provider_detail_id;
+    const currentEmail = req.provider.email;
+    const currentLanguageIds = req.provider.languages?.map(
+      (language) => language.language_id
+    );
+    const currentWorkWithIds = req.provider.work_with?.map(
+      (workWith) => workWith.work_with_id
+    );
+
+    const payload = req.body;
+
+    return await updateProviderDataSchema
+      .noUnknown(true)
+      .strict()
+      .validate({
+        ...payload,
+        country,
+        language,
+        user_id,
+        provider_id,
+        currentEmail,
+        currentLanguageIds,
+        currentWorkWithIds,
+      })
+      .then(updateProviderData)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  })
+  .delete(populateProvider, populateUser, async (req, res, next) => {
+    /**
+     * #route   DELETE /provider/v1/provider
+     * #desc    Delete current provider data
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+
+    const provider_id = req.provider.provider_detail_id;
+    const image = req.provider.image;
+
+    const user_id = req.user.user_id;
+    const userPassword = req.user.password;
+
+    const payload = req.body;
+
+    return await deleteProviderDataSchema
+      .noUnknown(true)
+      .strict()
+      .validate({
+        ...payload,
+        country,
+        language,
+        provider_id,
+        user_id,
+        image,
+        userPassword,
+      })
+      .then(deleteProviderData)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  });
 
 router.get("/by-id", async (req, res, next) => {
   /**
@@ -60,7 +130,7 @@ router.get("/by-id", async (req, res, next) => {
     isRequestedByAdmin = true;
   }
 
-  return await getProviderByIdSchema
+  return await getProviderByIdAdminSchema
     .noUnknown(true)
     .strict()
     .validate({
@@ -85,269 +155,199 @@ router.get("/all", async (req, res, next) => {
   return await getAllProvidersSchema
     .noUnknown(true)
     .strict()
-    .validate({
-      country,
-    })
+    .validate({ country })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
 
-router.put("/", populateProvider, async (req, res, next) => {
-  /**
-   * #route   PUT /provider/v1/provider
-   * #desc    Update current provider data
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
+router
+  .route("/by-id/admin")
+  .put(async (req, res, next) => {
+    /**
+     * #route   PUT /provider/v1/provider/by-id/admin
+     * #desc    Country admin to update provider data by id
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+    const user_id = req.header("x-user-id");
 
-  const provider_id = req.provider.provider_detail_id;
-  const currentEmail = req.provider.email;
-  const currentLanguageIds = req.provider.languages?.map(
-    (language) => language.language_id
-  );
-  const currentWorkWithIds = req.provider.work_with?.map(
-    (workWith) => workWith.work_with_id
-  );
+    const { providerId } = req.body;
 
-  const payload = req.body;
-
-  return await updateProviderDataSchema
-    .noUnknown(true)
-    .strict()
-    .validate({
-      country,
-      language,
-      user_id,
-      provider_id,
-      currentEmail,
-      currentLanguageIds,
-      currentWorkWithIds,
-      ...payload,
-    })
-    .then(updateProviderData)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
-
-router.put("/by-id/admin", async (req, res, next) => {
-  /**
-   * #route   PUT /provider/v1/provider/by-id/admin
-   * #desc    Country admin to update provider data by id
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
-
-  const { providerId } = req.body;
-
-  const provider = await getProviderById({
-    country,
-    language,
-    provider_id: providerId,
-    isRequestedByAdmin: true,
-  }).catch(next);
-
-  const currentEmail = provider?.email;
-  const currentLanguageIds = provider?.languages?.map(
-    (language) => language.language_id
-  );
-  const currentWorkWithIds = provider?.work_with?.map(
-    (workWith) => workWith.work_with_id
-  );
-
-  const payload = req.body;
-
-  delete payload.providerId;
-
-  return await updateProviderDataSchema
-    .noUnknown(true)
-    .strict()
-    .validate({
+    const provider = await getProviderById({
       country,
       language,
       provider_id: providerId,
-      user_id,
-      currentEmail,
-      currentLanguageIds,
-      currentWorkWithIds,
-      ...payload,
-    })
-    .then(updateProviderData)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+      isRequestedByAdmin: true,
+    }).catch(next);
 
-router.delete("/", populateProvider, populateUser, async (req, res, next) => {
-  /**
-   * #route   DELETE /provider/v1/provider
-   * #desc    Delete current provider data
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
+    const currentEmail = provider?.email;
+    const currentLanguageIds = provider?.languages?.map(
+      (language) => language.language_id
+    );
+    const currentWorkWithIds = provider?.work_with?.map(
+      (workWith) => workWith.work_with_id
+    );
 
-  const provider_id = req.provider.provider_detail_id;
-  const image = req.provider.image;
+    const payload = req.body;
 
-  const user_id = req.user.user_id;
-  const userPassword = req.user.password;
+    delete payload.providerId;
 
-  const payload = req.body;
+    return await updateProviderDataSchema
+      .noUnknown(true)
+      .strict()
+      .validate({
+        ...payload,
+        country,
+        language,
+        provider_id: providerId,
+        user_id,
+        currentEmail,
+        currentLanguageIds,
+        currentWorkWithIds,
+      })
+      .then(updateProviderData)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  })
+  .delete(async (req, res, next) => {
+    /**
+     * #route   DELETE /provider/v1/provider/by-id/admin
+     * #desc    Country admin to delete provider data
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
 
-  return await deleteProviderDataSchema
-    .noUnknown(true)
-    .strict()
-    .validate({
+    const { providerId } = req.body;
+
+    const provider = await getProviderById({
       country,
       language,
-      provider_id,
-      user_id,
-      image,
-      userPassword,
-      ...payload,
-    })
-    .then(deleteProviderData)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+      provider_id: providerId,
+      isRequestedByAdmin: true,
+    }).catch(next);
 
-router.delete("/by-id/admin", async (req, res, next) => {
-  /**
-   * #route   DELETE /provider/v1/provider/by-id/admin
-   * #desc    Country admin to delete provider data
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
+    const provider_id = provider.provider_detail_id;
+    const image = provider.image;
 
-  const { providerId } = req.body;
+    const user = await getUserByProviderID(country, provider_id)
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw userNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
 
-  const provider = await getProviderById({
-    country,
-    language,
-    provider_id: providerId,
-    isRequestedByAdmin: true,
-  }).catch(next);
+    const user_id = user.user_id;
+    const isRequestedByAdmin = true;
 
-  const provider_id = provider.provider_detail_id;
-  const image = provider.image;
+    const payload = req.body;
 
-  const user = await getUserByProviderID(country, provider_id)
-    .then((res) => {
-      if (res.rowCount === 0) {
-        throw userNotFound(language);
-      } else {
-        return res.rows[0];
-      }
-    })
-    .catch((err) => {
-      throw err;
-    });
+    delete payload.providerId;
 
-  const user_id = user.user_id;
-  const isRequestedByAdmin = true;
+    return await deleteProviderDataSchema
+      .noUnknown(true)
+      .strict()
+      .validate({
+        ...payload,
+        country,
+        language,
+        provider_id,
+        user_id,
+        image,
+        isRequestedByAdmin,
+      })
+      .then(deleteProviderData)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  });
 
-  const payload = req.body;
+router
+  .route("/image")
+  .put(populateProvider, populateUser, async (req, res, next) => {
+    /**
+     * #route   PUT /provider/v1/provider/image
+     * #desc    Update the provider image
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
 
-  delete payload.providerId;
+    const provider_id = req.provider.provider_detail_id;
+    const user_id = req.user.user_id;
+    const image = user_id;
 
-  return await deleteProviderDataSchema
-    .noUnknown(true)
-    .strict()
-    .validate({
-      country,
-      language,
-      provider_id,
-      user_id,
-      image,
-      isRequestedByAdmin,
-      ...payload,
-    })
-    .then(deleteProviderData)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+    return await updateProviderImageSchema
+      .noUnknown(true)
+      .strict()
+      .validate({ country, language, provider_id, image, user_id })
+      .then(updateProviderImage)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  })
+  .delete("/image", populateProvider, async (req, res, next) => {
+    /**
+     * #route   DELETE /provider/v1/provider/image
+     * #desc    Delete the provider image
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+    const user_id = req.header("x-user-id");
 
-router.put("/image", populateProvider, populateUser, async (req, res, next) => {
-  /**
-   * #route   PUT /provider/v1/provider/image
-   * #desc    Update the provider image
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
+    const provider_id = req.provider.provider_detail_id;
 
-  const provider_id = req.provider.provider_detail_id;
-  const user_id = req.user.user_id;
-  const image = user_id;
+    return await deleteProviderImageSchema
+      .noUnknown(true)
+      .strict()
+      .validate({ country, language, provider_id, user_id })
+      .then(deleteProviderImage)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  });
 
-  return await updateProviderImageSchema
-    .noUnknown(true)
-    .strict()
-    .validate({ country, language, provider_id, image, user_id })
-    .then(updateProviderImage)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+router
+  .route("/image/admin")
+  .put(async (req, res, next) => {
+    /**
+     * #route   PUT /provider/v1/provider/image/admin
+     * #desc    Country admin to update the provider image
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+    const user_id = req.header("x-user-id");
 
-router.delete("/image", populateProvider, async (req, res, next) => {
-  /**
-   * #route   DELETE /provider/v1/provider/image
-   * #desc    Delete the provider image
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
+    const { providerId: provider_id, image } = req.body;
 
-  const provider_id = req.provider.provider_detail_id;
+    return await updateProviderImageSchema
+      .noUnknown(true)
+      .strict()
+      .validate({ country, language, provider_id, image, user_id })
+      .then(updateProviderImage)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  })
+  .delete(async (req, res, next) => {
+    /**
+     * #route   DELETE /provider/v1/provider/image/admin
+     * #desc    Country admin to delete the provider image
+     */
+    const country = req.header("x-country-alpha-2");
+    const language = req.header("x-language-alpha-2");
+    const user_id = req.header("x-user-id");
 
-  return await deleteProviderImageSchema
-    .noUnknown(true)
-    .strict()
-    .validate({ country, language, provider_id, user_id })
-    .then(deleteProviderImage)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+    const { providerId: provider_id } = req.body;
 
-router.put("/image/admin", async (req, res, next) => {
-  /**
-   * #route   PUT /provider/v1/provider/image/admin
-   * #desc    Country admin to update the provider image
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
-
-  const { providerId: provider_id, image } = req.body;
-
-  return await updateProviderImageSchema
-    .noUnknown(true)
-    .strict()
-    .validate({ country, language, provider_id, image, user_id })
-    .then(updateProviderImage)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
-
-router.delete("/image/admin", async (req, res, next) => {
-  /**
-   * #route   DELETE /provider/v1/provider/image/admin
-   * #desc    Country admin to delete the provider image
-   */
-  const country = req.header("x-country-alpha-2");
-  const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
-
-  const { providerId: provider_id } = req.body;
-
-  return await deleteProviderImageSchema
-    .noUnknown(true)
-    .strict()
-    .validate({ country, language, provider_id, user_id })
-    .then(deleteProviderImage)
-    .then((result) => res.status(200).send(result))
-    .catch(next);
-});
+    return await deleteProviderImageSchema
+      .noUnknown(true)
+      .strict()
+      .validate({ country, language, provider_id, user_id })
+      .then(deleteProviderImage)
+      .then((result) => res.status(200).send(result))
+      .catch(next);
+  });
 
 router.get("/clients", populateUser, async (req, res, next) => {
   /**
@@ -358,12 +358,12 @@ router.get("/clients", populateUser, async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
-  const providerId = req.user.provider_detail_id;
+  const provider_id = req.user.provider_detail_id;
 
-  return await getAllClientsSchema
+  return await getProviderByIdSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, providerId })
+    .validate({ country, language, provider_id })
     .then(getAllClients)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -378,12 +378,12 @@ router.get("/activities", populateUser, async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
-  const providerId = req.user.provider_detail_id;
+  const provider_id = req.user.provider_detail_id;
 
-  return await getActivitiesSchema
+  return await getProviderByIdSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, providerId })
+    .validate({ country, language, provider_id })
     .then(getActivities)
     .then((result) => res.status(200).send(result))
     .catch(next);
