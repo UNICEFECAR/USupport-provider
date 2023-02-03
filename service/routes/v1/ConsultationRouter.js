@@ -4,15 +4,12 @@ import { populateUser } from "#middlewares/populateMiddleware";
 
 import {
   addConsultationAsPendingSchema,
-  scheduleConsultationSchema,
-  suggestConsultationSchema,
-  acceptSuggestedConsultationSchema,
-  rejectSuggestedConsultationSchema,
   rescheduleConsultationSchema,
   cancelConsultationSchema,
+  getConsultationByIDSchema,
+  getConsultationsByProviderIDSchema,
   getAllConsultationsCountSchema,
   getAllPastConsultationsByClientIdSchema,
-  getAllPastConsultationsSchema,
   getAllUpcomingConsultationsSchema,
   getAllConsultationsSingleWeekSchema,
   getAllConsultationsSingleDaySchema,
@@ -51,7 +48,6 @@ router.route("/single-day").get(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const providerId = req.user.provider_detail_id;
-
   const date = req.query.date;
 
   return await getAllConsultationsSingleDaySchema
@@ -72,7 +68,6 @@ router.route("/single-week").get(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const providerId = req.user.provider_detail_id;
-
   const startDate = req.query.startDate;
 
   return await getAllConsultationsSingleWeekSchema
@@ -90,7 +85,6 @@ router.route("/count").get(populateUser, async (req, res, next) => {
    * #desc    Get the count of all past and future consultations for the current provider
    */
   const country = req.header("x-country-alpha-2");
-
   const providerId = req.user.provider_detail_id;
 
   return await getAllConsultationsCountSchema
@@ -111,7 +105,6 @@ router.route("/all/past/by-id").get(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const providerId = req.user.provider_detail_id;
-
   const clientId = req.query.clientId;
 
   return await getAllPastConsultationsByClientIdSchema
@@ -133,7 +126,7 @@ router.route("/all/past").get(populateUser, async (req, res, next) => {
 
   const providerId = req.user.provider_detail_id;
 
-  return await getAllPastConsultationsSchema
+  return await getConsultationsByProviderIDSchema
     .noUnknown(true)
     .strict(true)
     .validate({ country, language, providerId })
@@ -172,7 +165,6 @@ router.route("/time").get(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const userId = req.user.user_id;
-
   const consultationId = req.query.consultationId;
 
   return await getConsultationTimeSchema
@@ -227,10 +219,10 @@ router.route("/schedule").put(async (req, res, next) => {
 
   const payload = req.body;
 
-  return await scheduleConsultationSchema
+  return await getConsultationByIDSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(scheduleConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -246,10 +238,10 @@ router.route("/suggest").put(async (req, res, next) => {
 
   const payload = req.body;
 
-  return await suggestConsultationSchema
+  return await getConsultationByIDSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(suggestConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -265,10 +257,10 @@ router.route("/accept-suggest").put(async (req, res, next) => {
 
   const payload = req.body;
 
-  return await acceptSuggestedConsultationSchema
+  return await getConsultationByIDSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(acceptSuggestedConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -284,10 +276,10 @@ router.route("/reject-suggest").put(async (req, res, next) => {
 
   const payload = req.body;
 
-  return await rejectSuggestedConsultationSchema
+  return await getConsultationByIDSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(rejectSuggestedConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -306,7 +298,7 @@ router.route("/reschedule").post(async (req, res, next) => {
   return await rescheduleConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(rescheduleConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -325,7 +317,7 @@ router.route("/join").put(async (req, res, next) => {
   return await joinConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(joinConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -340,13 +332,12 @@ router.route("/leave").put(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const userId = req.user.user_id;
-
   const payload = req.body;
 
   return await leaveConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, userId, ...payload })
+    .validate({ ...payload, country, language, userId })
     .then(leaveConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -361,13 +352,12 @@ router.route("/cancel").put(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const canceledBy = req.user.type;
-
   const payload = req.body;
 
   return await cancelConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, canceledBy, ...payload })
+    .validate({ ...payload, country, language, canceledBy })
     .then(cancelConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
