@@ -145,7 +145,7 @@ export const updateAvailabilityByTemplate = async ({
 
 export const getAvailabilitySingleDay = async ({
   country,
-  providerId,
+  provider_id,
   startDate,
   day,
 }) => {
@@ -155,7 +155,7 @@ export const getAvailabilitySingleDay = async ({
 
   const threeWeeksSlots = await getSlotsForThreeWeeks({
     country,
-    provider_id: providerId,
+    provider_id,
     startDate,
   }).catch((err) => {
     throw err;
@@ -166,7 +166,7 @@ export const getAvailabilitySingleDay = async ({
 
   const allConsultationsForDay = await getConsultationsForDayQuery({
     poolCountry: country,
-    providerId,
+    provider_id,
     previousDayTimestamp,
     nextDayTimestamp,
   })

@@ -287,7 +287,7 @@ export const updateConsultationStatusAsFinishedQuery = async ({
 
 export const getConsultationsForDayQuery = async ({
   poolCountry,
-  providerId,
+  provider_id,
   previousDayTimestamp,
   nextDayTimestamp,
 }) =>
@@ -300,7 +300,7 @@ export const getConsultationsForDayQuery = async ({
       ORDER BY time DESC;
 
     `,
-    [providerId, previousDayTimestamp, nextDayTimestamp]
+    [provider_id, previousDayTimestamp, nextDayTimestamp]
   );
 
 export const getAllConsultationsByProviderIdQuery = async ({

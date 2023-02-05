@@ -1,108 +1,67 @@
 import * as yup from "yup";
 
-export const addConsultationAsPendingSchema = yup.object().shape({
+const USER_TYPES = ["client", "provider"];
+
+export const getConsultationsByProviderIDSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
-  clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
-  time: yup.string().required(),
 });
 
-export const scheduleConsultationSchema = yup.object().shape({
+export const addConsultationAsPendingSchema =
+  getConsultationsByProviderIDSchema.shape({
+    clientId: yup.string().uuid().required(),
+    time: yup.string().required(),
+  });
+
+export const getConsultationByIDSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
 });
 
-export const suggestConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
-});
-
-export const acceptSuggestedConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
-});
-
-export const rejectSuggestedConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
-});
-
-export const rescheduleConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
+export const rescheduleConsultationSchema = getConsultationByIDSchema.shape({
   newConsultationId: yup.string().uuid().required(),
 });
 
-export const cancelConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
-  canceledBy: yup.string().oneOf(["client", "provider"]).required(),
+export const cancelConsultationSchema = getConsultationByIDSchema.shape({
+  canceledBy: yup.string().oneOf(USER_TYPES).required(),
 });
 
-export const joinConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
-  userType: yup.string().oneOf(["client", "provider"]).required(),
+export const joinConsultationSchema = getConsultationByIDSchema.shape({
+  userType: yup.string().oneOf(USER_TYPES).required(),
 });
 
-export const leaveConsultationSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
+export const leaveConsultationSchema = getConsultationByIDSchema.shape({
   userId: yup.string().uuid().required(),
-  consultationId: yup.string().uuid().required(),
-  userType: yup.string().oneOf(["client", "provider"]).required(),
+  userType: yup.string().oneOf(USER_TYPES).required(),
 });
 
-export const getAllPastConsultationsByClientIdSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  providerId: yup.string().uuid().required(),
-  clientId: yup.string().uuid().required(),
-});
+export const getAllPastConsultationsByClientIdSchema =
+  getConsultationsByProviderIDSchema.shape({
+    clientId: yup.string().uuid().required(),
+  });
 
-export const getAllPastConsultationsSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  providerId: yup.string().uuid().required(),
-});
-
-export const getAllUpcomingConsultationsSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  providerId: yup.string().uuid().required(),
-  pageNo: yup.number().positive().required(),
-});
+export const getAllUpcomingConsultationsSchema =
+  getConsultationsByProviderIDSchema.shape({
+    pageNo: yup.number().positive().required(),
+  });
 
 export const getAllConsultationsCountSchema = yup.object().shape({
   country: yup.string().required(),
   providerId: yup.string().uuid().required(),
 });
 
-export const getAllConsultationsSingleWeekSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  providerId: yup.string().uuid().required(),
-  startDate: yup.string().required(),
-});
+export const getAllConsultationsSingleWeekSchema =
+  getConsultationsByProviderIDSchema.shape({
+    startDate: yup.string().required(),
+  });
 
-export const getAllConsultationsSingleDaySchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  providerId: yup.string().uuid().required(),
-  date: yup.string().required(),
-});
+export const getAllConsultationsSingleDaySchema =
+  getConsultationsByProviderIDSchema.shape({
+    date: yup.string().required(),
+  });
 
-export const getConsultationTimeSchema = yup.object().shape({
-  country: yup.string().required(),
-  language: yup.string().required(),
-  consultationId: yup.string().uuid().required(),
+export const getConsultationTimeSchema = getConsultationByIDSchema.shape({
   userId: yup.string().uuid().required(),
 });

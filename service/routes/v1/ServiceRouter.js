@@ -33,7 +33,7 @@ router.route("/add").post(async (req, res, next) => {
   return await addServicesAfterConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ ...payload, country, language })
     .then(addServicesAfterConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
