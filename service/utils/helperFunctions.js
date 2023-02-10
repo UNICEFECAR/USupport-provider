@@ -17,6 +17,8 @@ import {
   getConsultationsSingleDayQuery,
 } from "#queries/consultation";
 
+import { getCampaignDataForMultipleIds } from "#queries/sponsors";
+
 import { getClientEmailAndUserIdQuery } from "#queries/clients";
 
 import { clientNotFound, providerNotFound } from "#utils/errors";
@@ -89,11 +91,41 @@ export const getSlotsForSingleWeek = async ({
     provider_id,
     startDate,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.rowCount === 0) {
-        return [];
+        return {
+          slots: [],
+          campaign_slots: [],
+          campaigns_data: [],
+        };
       } else {
-        return res.rows[0]?.slots || [];
+        const campaignIds = Array.from(
+          new Set(res.rows[0].campaign_slots?.map((x) => x.campaignId))
+        );
+        let campaignsData = [];
+        if (campaignIds.length !== 0) {
+          campaignsData = await getCampaignDataForMultipleIds({
+            poolCountry: country,
+            campaignIds,
+          })
+            .then((res) => {
+              if (res.rowCount === 0) {
+                return [];
+              } else {
+                return res.rows;
+              }
+            })
+            .catch((err) => {
+              throw err;
+            });
+        }
+
+        const row = res.rows[0];
+        return {
+          slots: row?.slots || [],
+          campaign_slots: row?.campaign_slots || [],
+          campaigns_data: campaignsData,
+        };
       }
     })
     .catch((err) => {
@@ -135,8 +167,19 @@ export const getSlotsForThreeWeeks = async ({
   }).catch((err) => {
     throw err;
   });
-
-  return [...previousWeek, ...currentWeek, ...nextWeek];
+  return {
+    slots: [...previousWeek.slots, ...currentWeek.slots, ...nextWeek.slots],
+    campaign_slots: [
+      ...previousWeek.campaign_slots,
+      ...currentWeek.campaign_slots,
+      ...nextWeek.campaign_slots,
+    ],
+    campaigns_data: [
+      ...previousWeek.campaigns_data,
+      ...currentWeek.campaigns_data,
+      ...nextWeek.campaigns_data,
+    ],
+  };
 };
 
 export const getSlotsForSevenWeeks = async ({
@@ -228,24 +271,48 @@ export const getSlotsForSevenWeeks = async ({
     throw err;
   });
 
-  return [
-    ...weekOne,
-    ...weekTwo,
-    ...weekThree,
-    ...weekFour,
-    ...weekFive,
-    ...weekSix,
-    ...weekSeven,
-  ];
+  return {
+    slots: [
+      ...weekOne.slots,
+      ...weekTwo.slots,
+      ...weekThree.slots,
+      ...weekFour.slots,
+      ...weekFive.slots,
+      ...weekSix.slots,
+      ...weekSeven.slots,
+    ],
+    campaign_slots: [
+      ...weekOne.campaign_slots,
+      ...weekTwo.campaign_slots,
+      ...weekThree.campaign_slots,
+      ...weekFour.campaign_slots,
+      ...weekFive.campaign_slots,
+      ...weekSix.campaign_slots,
+      ...weekSeven.campaign_slots,
+    ],
+    campaigns_data: [
+      ...weekOne.campaigns_data,
+      ...weekTwo.campaigns_data,
+      ...weekThree.campaigns_data,
+      ...weekFour.campaigns_data,
+      ...weekFive.campaigns_data,
+      ...weekSix.campaigns_data,
+      ...weekSeven.campaigns_data,
+    ],
+  };
 };
 
 export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
-  const invalidSlots = slots.filter(
-    (slot) =>
+  const invalidSlots = slots.filter((slot) => {
+    if (typeof slot === "object") {
+      slot = slot.time;
+    }
+    return (
       Number(slot) < Number(startDate) || Number(slot) >= Number(nextStartDate)
-  );
+    );
+  });
 
   if (invalidSlots.length > 0) {
     return false;
@@ -258,7 +325,7 @@ export const checkIsSlotAvailable = async (country, providerId, time) => {
   // Check if provider is available at the time
   const startDate = getMonday(time);
 
-  const slots = await getSlotsForSingleWeek({
+  const slotsData = await getSlotsForSingleWeek({
     country,
     provider_id: providerId,
     startDate,
@@ -266,7 +333,7 @@ export const checkIsSlotAvailable = async (country, providerId, time) => {
     throw err;
   });
 
-  const slot = slots.find((slot) => {
+  const slot = slotsData.slots.find((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
     return slotTimestamp === Number(time);
   });

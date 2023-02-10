@@ -36,6 +36,7 @@ export const updateAvailabilitySingleWeek = async ({
   provider_id,
   startDate,
   slot,
+  campaignId,
 }) => {
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
@@ -49,7 +50,7 @@ export const updateAvailabilitySingleWeek = async ({
     startDate,
   })
     .then(async (res) => {
-      if (res.length === 0) {
+      if (res.slots.length === 0 && res.campaign_slots.length === 0) {
         await addAvailabilityRowQuery({
           poolCountry: country,
           provider_id,
@@ -64,6 +65,7 @@ export const updateAvailabilitySingleWeek = async ({
         provider_id,
         startDate,
         slot,
+        campaignId,
       }).catch((err) => {
         throw err;
       });
@@ -80,12 +82,14 @@ export const deleteAvailabilitySingleWeek = async ({
   provider_id,
   startDate,
   slot,
+  campaignId,
 }) => {
   await deleteAvailabilitySingleWeekQuery({
     poolCountry: country,
     provider_id,
     startDate,
     slot,
+    campaignId,
   }).catch((err) => {
     throw err;
   });
@@ -98,6 +102,8 @@ export const updateAvailabilityByTemplate = async ({
   language,
   provider_id,
   template,
+  countryId,
+  campaignId,
 }) => {
   for (const { startDate, slots } of template) {
     if (!checkSlotsWithinWeek(startDate, slots))
@@ -112,7 +118,7 @@ export const updateAvailabilityByTemplate = async ({
       startDate,
     })
       .then(async (res) => {
-        if (res?.length === 0) {
+        if (res.slots.length === 0 && res.campaign_slots.length === 0) {
           await addAvailabilityRowQuery({
             poolCountry: country,
             provider_id,
@@ -131,6 +137,8 @@ export const updateAvailabilityByTemplate = async ({
           provider_id,
           startDate,
           slots,
+          countryId,
+          campaignId,
         }).catch((err) => {
           throw err;
         });
@@ -139,7 +147,6 @@ export const updateAvailabilityByTemplate = async ({
         throw err;
       });
   }
-
   return { success: true };
 };
 
@@ -181,7 +188,7 @@ export const getAvailabilitySingleDay = async ({
   // Exclude slots that are in the past
   // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
-  threeWeeksSlots.forEach((slot) => {
+  threeWeeksSlots.slots.forEach((slot) => {
     const slotTimestamp = new Date(slot).getTime() / 1000;
 
     if (
