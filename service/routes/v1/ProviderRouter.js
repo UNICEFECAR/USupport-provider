@@ -14,6 +14,7 @@ import {
   deleteProviderImageSchema,
   getAllClientsSchema,
   getActivitiesSchema,
+  getRandomProvidersSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -25,6 +26,7 @@ import {
   deleteProviderImage,
   getAllClients,
   getActivities,
+  getRandomProviders,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -385,6 +387,24 @@ router.get("/activities", populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, providerId })
     .then(getActivities)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/random-providers", async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/random-providers
+   * #desc    Get random providers
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+  const numberOfProviders = Number(req.query.numberOfProviders);
+
+  return await getRandomProvidersSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, numberOfProviders })
+    .then(getRandomProviders)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

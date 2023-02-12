@@ -39,6 +39,7 @@ import {
   getEarliestAvailableSlot,
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
+  shuffleArray,
 } from "#utils/helperFunctions";
 import { deleteCacheItem } from "#utils/cache";
 
@@ -575,4 +576,24 @@ export const getActivities = async ({ country, providerId }) => {
   });
 
   return activities;
+};
+
+export const getRandomProviders = async ({
+  country,
+  language,
+  numberOfProviders,
+}) => {
+  const providers = await getAllProvidersQuery({ poolCountry: country })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  return shuffleArray(providers).slice(0, numberOfProviders);
 };
