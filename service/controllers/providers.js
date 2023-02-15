@@ -566,13 +566,11 @@ export const getActivities = async ({ country, providerId }) => {
     .catch((err) => {
       throw err;
     });
-
   activities.forEach((consultation, index) => {
     const clientData = clientDetails.find(
       (x) => x.client_detail_id === consultation.client_detail_id
     );
     activities[index].clientData = clientData;
-    delete activities[index].clientData.client_detail_id;
   });
 
   return activities;
