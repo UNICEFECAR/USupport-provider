@@ -658,6 +658,7 @@ export const getClientNotificationsData = async ({
         return {
           email: client.email,
           userId: client.user_id,
+          pushTokensArray: client.push_notification_tokens,
         };
       }
     })
@@ -683,6 +684,9 @@ export const getProviderNotificationsData = async ({
         return {
           email: provider.email,
           userId: provider.user_id,
+          fullName: provider.patronym
+            ? `${provider.name} ${provider.patronym} ${provider.surname}`
+            : `${provider.name} ${provider.surname}`,
         };
       }
     })
