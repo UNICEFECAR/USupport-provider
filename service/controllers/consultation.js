@@ -21,6 +21,11 @@ import {
   getConsultationTimeQuerry,
 } from "#queries/consultation";
 
+import {
+  addTransactionQuery,
+  getTrasanctionByConsultationIdQuery,
+} from "#queries/transactions";
+
 import { getClientByIdQuery } from "#queries/clients";
 
 import { getProviderByIdQuery } from "#queries/providers";
@@ -42,6 +47,7 @@ import {
   consultationNotFound,
   clientNotFound,
   consultationNotScheduled,
+  transactionNotFound,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -879,6 +885,41 @@ export const rescheduleConsultation = async ({
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       }
+
+      // Find transaction and get the payment intent id from it if it exists.
+      const transaction = await getTrasanctionByConsultationIdQuery({
+        poolCountry: country,
+        consultationId,
+      })
+        .then((res) => {
+          if (res.rowCount === 0) {
+            throw transactionNotFound(language);
+          } else {
+            return res.rows[0];
+          }
+        })
+        .catch((err) => {
+          throw err;
+        });
+
+      // Add new transaction to database.
+      await addTransactionQuery({
+        poolCountry: country,
+        type: transaction.type,
+        consultationId: newConsultationId,
+        paymentIntent: transaction.payment_intent,
+        paymentRefundId: null,
+      })
+        .then((raw) => {
+          if (raw.rowCount === 0) {
+            throw transactionNotFound(language);
+          } else {
+            return raw.rows[0];
+          }
+        })
+        .catch((err) => {
+          throw err;
+        });
 
       // Schedule the new consultation
       const res = await scheduleConsultation({

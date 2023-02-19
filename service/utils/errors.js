@@ -95,3 +95,11 @@ export const serviceNotFound = (language) => {
   error.status = 404;
   return error;
 };
+
+export const transactionNotFound = (language) => {
+  const error = new Error();
+  error.message = t("transaction_not_found_error", language);
+  error.name = "TRANSACTION NOT FOUND";
+  error.status = 404;
+  return error;
+};

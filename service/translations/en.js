@@ -10,4 +10,5 @@ export default {
   user_not_found_error: "User not found",
   consultation_not_scheduled_error: "Consultation is not scheduled",
   service_not_found_error: "Service not found",
+  transaction_not_found_error: "Transaction not found",
 };
