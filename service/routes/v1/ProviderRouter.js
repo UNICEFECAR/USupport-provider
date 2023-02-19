@@ -43,7 +43,7 @@ router
 
     res.status(200).send(providerData);
   })
-  .put("/", populateProvider, async (req, res, next) => {
+  .put(populateProvider, async (req, res, next) => {
     /**
      * #route   PUT /provider/v1/provider
      * #desc    Update current provider data
@@ -288,7 +288,7 @@ router
       .then((result) => res.status(200).send(result))
       .catch(next);
   })
-  .delete("/image", populateProvider, async (req, res, next) => {
+  .delete(populateProvider, async (req, res, next) => {
     /**
      * #route   DELETE /provider/v1/provider/image
      * #desc    Delete the provider image
