@@ -8,7 +8,7 @@ export const getCalendarFiveWeeks = async ({
   providerId,
   startDate,
 }) => {
-  const slots = await getSlotsForSevenWeeks({
+  const slotsData = await getSlotsForSevenWeeks({
     country,
     providerId,
     startDate,
@@ -24,5 +24,10 @@ export const getCalendarFiveWeeks = async ({
     throw err;
   });
 
-  return { slots, consultations };
+  return {
+    slots: slotsData.slots,
+    campaign_slots: slotsData.campaign_slots,
+    campaigns_data: slotsData.campaigns_data,
+    consultations,
+  };
 };
