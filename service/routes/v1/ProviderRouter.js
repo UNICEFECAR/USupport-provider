@@ -140,7 +140,6 @@ router.put("/by-id/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
 
   const { providerId } = req.body;
 
@@ -151,6 +150,7 @@ router.put("/by-id/admin", async (req, res, next) => {
     isRequestedByAdmin: true,
   }).catch(next);
 
+  const user_id = provider?.user_id;
   const currentEmail = provider?.email;
   const currentLanguageIds = provider?.languages?.map(
     (language) => language.language_id

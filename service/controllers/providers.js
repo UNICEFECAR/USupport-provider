@@ -140,6 +140,7 @@ export const getProviderById = async ({
         delete provider.street;
         delete provider.city;
         delete provider.postcode;
+        delete provider.user_id;
       }
 
       provider = {
