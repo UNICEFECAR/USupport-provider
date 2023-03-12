@@ -103,3 +103,19 @@ export const transactionNotFound = (language) => {
   error.status = 404;
   return error;
 };
+
+export const campaignNotFound = (language) => {
+  const error = new Error();
+  error.message = t("campaign_not_found_error", language);
+  error.name = "CAMPAIGN NOT FOUND";
+  error.status = 404;
+  return error;
+};
+
+export const slotAlreadyExists = (language) => {
+  const error = new Error();
+  error.message = t("slot_already_exists_error", language);
+  error.name = "SLOT ALREADY EXISTS";
+  error.status = 400;
+  return error;
+};
