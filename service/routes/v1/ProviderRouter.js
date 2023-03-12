@@ -15,6 +15,7 @@ import {
   getAllClientsSchema,
   getActivitiesSchema,
   getRandomProvidersSchema,
+  enrollCampaignSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -27,6 +28,9 @@ import {
   getAllClients,
   getActivities,
   getRandomProviders,
+  getCampaigns,
+  enrollProviderInCampaign,
+  getConsultationsForCampaign,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -55,6 +59,7 @@ router.get("/by-id", async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const provider_id = req.query.providerId;
+  const campaignId = req.query.campaignId;
 
   let isRequestedByAdmin = false;
 
@@ -70,6 +75,7 @@ router.get("/by-id", async (req, res, next) => {
       language,
       provider_id,
       isRequestedByAdmin,
+      campaignId,
     })
     .then(getProviderById)
     .then((result) => res.status(200).send(result))
@@ -84,11 +90,14 @@ router.get("/all", async (req, res, next) => {
 
   const country = req.header("x-country-alpha-2");
 
+  const { campaignId } = req.query;
+
   return await getAllProvidersSchema
     .noUnknown(true)
     .strict()
     .validate({
       country,
+      campaignId,
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))
@@ -405,6 +414,62 @@ router.get("/random-providers", async (req, res, next) => {
     .strict()
     .validate({ country, language, numberOfProviders })
     .then(getRandomProviders)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/campaigns", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/campaigns
+   * #desc    Get all campaigns
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+  const providerId = req.user.provider_detail_id;
+
+  return await getActivitiesSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerId })
+    .then(getCampaigns)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.post("/campaigns/enroll", populateUser, async (req, res, next) => {
+  /**
+   * #route   POST /provider/v1/provider/campaigns/enroll
+   * #desc    Enroll a provider to a campaign
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+  const providerId = req.user.provider_detail_id;
+
+  return await enrollCampaignSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ ...req.body, country, language, providerId })
+    .then(enrollProviderInCampaign)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/campaigns/consultations", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/campaigns/consultations
+   * #desc    Get all consultations for a campaign
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+  const providerId = req.user.provider_detail_id;
+
+  const { campaignId } = req.query;
+
+  return await enrollCampaignSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerId, campaignId })
+    .then(getConsultationsForCampaign)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
