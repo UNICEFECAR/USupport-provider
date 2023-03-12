@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 import {
   getAvailabilitySingleWeekQuery,
   getUpcomingAvailabilityByProviderIdQuery,
@@ -8,6 +10,7 @@ import {
   getProviderLanguagesQuery,
   getProviderWorkWithQuery,
   getProviderEmailAndUserIdQuery,
+  getCampaignIdsForProviderQuery,
 } from "#queries/providers";
 
 import {
@@ -17,11 +20,22 @@ import {
   getConsultationsSingleDayQuery,
 } from "#queries/consultation";
 
-import { getCampaignDataForMultipleIds } from "#queries/sponsors";
+import {
+  getCampaignDataForMultipleIdsQuery,
+  getCampignByCouponCodeQuery,
+  getCampaignDataByIdQuery,
+} from "#queries/sponsors";
 
 import { getClientEmailAndUserIdQuery } from "#queries/clients";
 
-import { clientNotFound, providerNotFound } from "#utils/errors";
+import {
+  campaignNotFound,
+  clientNotFound,
+  providerNotFound,
+} from "#utils/errors";
+
+const CLIENT_LOCAL_HOST = "http://localhost:3001";
+const CLIENT_URL = process.env.CLIENT_URL;
 
 export const getXDaysInSeconds = (x) => {
   const minute = 60;
@@ -81,6 +95,50 @@ export const getProviderLanguagesAndWorkWith = async ({
   };
 };
 
+const getUniqueCampaignsData = (campaignsData) => {
+  const uniqueCampaignsData = [];
+  const campaignIds = [];
+  campaignsData.forEach((campaign) => {
+    if (!campaignIds.includes(campaign.campaign_id)) {
+      uniqueCampaignsData.push(campaign);
+      campaignIds.push(campaign.campaign_id);
+    }
+  });
+  return uniqueCampaignsData;
+};
+
+const getProviderCampaignsData = async (country, provider_id) => {
+  const campaignIds = await getCampaignIdsForProviderQuery({
+    poolCountry: country,
+    providerId: provider_id,
+  }).then((res) => {
+    if (res.rowCount === 0) {
+      return [];
+    } else {
+      return res.rows.map((x) => x.campaign_id);
+    }
+  });
+
+  let campaignsData = [];
+  if (campaignIds.length !== 0) {
+    campaignsData = await getCampaignDataForMultipleIdsQuery({
+      poolCountry: country,
+      campaignIds,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          return [];
+        } else {
+          return res.rows;
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+  }
+  return campaignsData;
+};
+
 export const getSlotsForSingleWeek = async ({
   country,
   provider_id,
@@ -92,38 +150,29 @@ export const getSlotsForSingleWeek = async ({
     startDate,
   })
     .then(async (res) => {
+      const campaignsData = await getProviderCampaignsData(
+        country,
+        provider_id
+      );
+
       if (res.rowCount === 0) {
         return {
           slots: [],
           campaign_slots: [],
-          campaigns_data: [],
+          campaigns_data: campaignsData,
+          is_empty: true,
         };
       } else {
-        const campaignIds = Array.from(
-          new Set(res.rows[0].campaign_slots?.map((x) => x.campaignId))
-        );
-        let campaignsData = [];
-        if (campaignIds.length !== 0) {
-          campaignsData = await getCampaignDataForMultipleIds({
-            poolCountry: country,
-            campaignIds,
-          })
-            .then((res) => {
-              if (res.rowCount === 0) {
-                return [];
-              } else {
-                return res.rows;
-              }
-            })
-            .catch((err) => {
-              throw err;
-            });
-        }
+        let campaign_slots = res.rows[0].campaign_slots;
+        campaign_slots = Array.isArray(campaign_slots) ? campaign_slots : [];
+
+        campaign_slots = campaign_slots.flat();
 
         const row = res.rows[0];
         return {
           slots: row?.slots || [],
-          campaign_slots: row?.campaign_slots || [],
+          campaign_slots:
+            campaign_slots?.filter((x) => x.time && x.campaign_id) || [],
           campaigns_data: campaignsData,
         };
       }
@@ -167,6 +216,15 @@ export const getSlotsForThreeWeeks = async ({
   }).catch((err) => {
     throw err;
   });
+
+  const campaigns_data = [
+    ...previousWeek.campaigns_data,
+    ...currentWeek.campaigns_data,
+    ...nextWeek.campaigns_data,
+  ];
+
+  const uniqueCampaignsData = getUniqueCampaignsData(campaigns_data);
+
   return {
     slots: [...previousWeek.slots, ...currentWeek.slots, ...nextWeek.slots],
     campaign_slots: [
@@ -174,11 +232,7 @@ export const getSlotsForThreeWeeks = async ({
       ...currentWeek.campaign_slots,
       ...nextWeek.campaign_slots,
     ],
-    campaigns_data: [
-      ...previousWeek.campaigns_data,
-      ...currentWeek.campaigns_data,
-      ...nextWeek.campaigns_data,
-    ],
+    campaigns_data: uniqueCampaignsData,
   };
 };
 
@@ -271,6 +325,18 @@ export const getSlotsForSevenWeeks = async ({
     throw err;
   });
 
+  const campaigns_data = [
+    ...weekOne.campaigns_data,
+    ...weekTwo.campaigns_data,
+    ...weekThree.campaigns_data,
+    ...weekFour.campaigns_data,
+    ...weekFive.campaigns_data,
+    ...weekSix.campaigns_data,
+    ...weekSeven.campaigns_data,
+  ];
+
+  const uniqueCampaignsData = getUniqueCampaignsData(campaigns_data);
+
   return {
     slots: [
       ...weekOne.slots,
@@ -290,15 +356,7 @@ export const getSlotsForSevenWeeks = async ({
       ...weekSix.campaign_slots,
       ...weekSeven.campaign_slots,
     ],
-    campaigns_data: [
-      ...weekOne.campaigns_data,
-      ...weekTwo.campaigns_data,
-      ...weekThree.campaigns_data,
-      ...weekFour.campaigns_data,
-      ...weekFive.campaigns_data,
-      ...weekSix.campaigns_data,
-      ...weekSeven.campaigns_data,
-    ],
+    campaigns_data: uniqueCampaignsData,
   };
 };
 
@@ -321,7 +379,9 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
   return true;
 };
 
-export const checkIsSlotAvailable = async (country, providerId, time) => {
+export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
+  const isWithCoupon = typeof slotTime === "object";
+  const time = isWithCoupon ? slotTime.time : slotTime;
   // Check if provider is available at the time
   const startDate = getMonday(time);
 
@@ -333,8 +393,13 @@ export const checkIsSlotAvailable = async (country, providerId, time) => {
     throw err;
   });
 
-  const slot = slotsData.slots.find((slot) => {
-    const slotTimestamp = new Date(slot).getTime() / 1000;
+  const slotsToLoopThrough = isWithCoupon
+    ? slotsData.campaign_slots
+    : slotsData.slots;
+
+  const slot = slotsToLoopThrough.find((slot) => {
+    const slotTimestamp =
+      new Date(isWithCoupon ? slot.time : slot).getTime() / 1000;
     return slotTimestamp === Number(time);
   });
   if (!slot) return false;
@@ -349,11 +414,14 @@ export const checkIsSlotAvailable = async (country, providerId, time) => {
   });
 
   if (consultation.rowCount > 0) return false;
-
   return true;
 };
 
-export const getEarliestAvailableSlot = async (country, providerId) => {
+export const getEarliestAvailableSlot = async (
+  country,
+  providerId,
+  campaignId = null
+) => {
   const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
     poolCountry: country,
     providerId: providerId,
@@ -381,8 +449,14 @@ export const getEarliestAvailableSlot = async (country, providerId) => {
   // Find the earliest upcoming availability slot that is not already in the upcoming consultations
   for (let j = 0; j < upcomingAvailability.length; j++) {
     let availability = upcomingAvailability[j];
-    for (let k = 0; k < availability.slots?.length; k++) {
-      let slot = availability.slots[k];
+    const availabilityToMap = campaignId
+      ? availability.campaign_slots
+      : availability.slots;
+
+    for (let k = 0; k < availabilityToMap?.length; k++) {
+      let slot = campaignId
+        ? new Date(availabilityToMap[k].time)
+        : availabilityToMap[k];
       const tomorrowTimestamp =
         new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
 
@@ -393,6 +467,12 @@ export const getEarliestAvailableSlot = async (country, providerId) => {
             new Date(consultation.time).getTime() === new Date(slot).getTime()
         )
       ) {
+        if (campaignId) {
+          if (availabilityToMap[k].campaign_id === campaignId) {
+            return slot;
+          }
+          continue;
+        }
         return slot;
       }
     }
@@ -714,4 +794,66 @@ export const shuffleArray = (array) => {
   }
 
   return array;
+};
+
+export const getCampaignDataByCouponCode = async ({ country, couponCode }) => {
+  return await getCampignByCouponCodeQuery({
+    poolCountry: country,
+    couponCode,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return null;
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const checkCanClientUseCoupon = async ({
+  campaignId,
+  userId,
+  country,
+  language,
+}) => {
+  const campaignData = await getCampaignDataByIdQuery({
+    poolCountry: country,
+    campaignId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw campaignNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const couponCode = campaignData.coupon_code;
+
+  const response = await fetch(
+    `${CLIENT_URL}/client/v1/client/check-coupon?couponCode=${couponCode}`,
+    {
+      method: "GET",
+      headers: {
+        host: CLIENT_LOCAL_HOST,
+        "x-user-id": userId,
+        "Content-type": "application/json",
+        "Cache-control": "no-cache",
+        "x-country-alpha-2": country,
+        "x-language-alpha-2": language,
+      },
+    }
+  ).catch((err) => {
+    throw err;
+  });
+
+  const result = await response.json();
+
+  return result;
 };
