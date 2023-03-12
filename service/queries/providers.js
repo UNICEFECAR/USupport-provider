@@ -331,3 +331,75 @@ export const getActivitiesQuery = async ({ poolCountry, providerId }) => {
     [providerId]
   );
 };
+
+export const getSponsorAndActiveCampaignsQuery = async ({ poolCountry }) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT campaign.* as campaigns_data, sponsor.name as sponsor_name, sponsor.phone_prefix, sponsor.phone, sponsor.image as sponsor_image, sponsor.email
+      FROM campaign
+          LEFT JOIN sponsor ON  campaign.sponsor_id = sponsor.sponsor_id
+    `
+  );
+};
+
+export const getCampaignIdsForProviderQuery = async ({
+  poolCountry,
+  providerId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT campaign_id FROM provider_campaign_links
+      WHERE provider_detail_id = $1
+    `,
+    [providerId]
+  );
+};
+
+export const getProviderConductedConsultationsForCampaign = async ({
+  poolCountry,
+  providerId,
+  campaignIds,
+}) => {
+  return await getDBPool("clinicalDb", poolCountry).query(
+    `
+      SELECT COUNT(consultation.consultation_id) as count , transaction_log.campaign_id
+      FROM consultation
+        LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id AND transaction_log.campaign_id = ANY($2)
+        WHERE provider_detail_id = $1 AND (status = 'finished' OR status = 'scheduled')  AND transaction_log.consultation_id = consultation.consultation_id
+      GROUP BY transaction_log.campaign_id
+    `,
+    [providerId, campaignIds]
+  );
+};
+
+export const enrollProviderInCampaignQuery = async ({
+  poolCountry,
+  providerId,
+  campaignId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+      INSERT INTO provider_campaign_links (provider_detail_id, campaign_id)
+      VALUES ($1, $2)
+      RETURNING *;
+    `,
+    [providerId, campaignId]
+  );
+};
+
+export const getProvidersByCampaignIdQuery = async ({
+  poolCountry,
+  campaignId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+    SELECT provider_detail."provider_detail_id", provider_detail."name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, price_per_coupon, campaign.campaign_id
+    FROM provider_detail
+      JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
+      JOIN campaign ON campaign.campaign_id = $1
+      JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
+    ORDER BY provider_detail.name ASC;
+    `,
+    [campaignId]
+  );
+};
