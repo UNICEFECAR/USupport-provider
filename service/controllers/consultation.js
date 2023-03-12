@@ -26,9 +26,17 @@ import {
   getTrasanctionByConsultationIdQuery,
 } from "#queries/transactions";
 
-import { getClientByIdQuery } from "#queries/clients";
+import {
+  getClientByIdQuery,
+  getMultipleClientsDataByIDs,
+} from "#queries/clients";
 
 import { getProviderByIdQuery } from "#queries/providers";
+
+import {
+  getCampaignCouponPriceForMultipleIds,
+  getCampaignDataByIdQuery,
+} from "#queries/sponsors";
 
 import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
 
@@ -40,6 +48,7 @@ import {
   getConsultationsForThreeDays,
   getClientNotificationsData,
   getProviderNotificationsData,
+  checkCanClientUseCoupon,
 } from "#utils/helperFunctions";
 
 import {
@@ -48,6 +57,7 @@ import {
   clientNotFound,
   consultationNotScheduled,
   transactionNotFound,
+  campaignNotFound,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -102,11 +112,38 @@ export const getAllPastConsultationsByClientId = async ({
 
   let response = [];
 
+  const campaignIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.campaign_id))
+  );
+
+  const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
     const clientName = clientDetails.name;
     const clientSurname = clientDetails.surname;
     const clientNickname = clientDetails.nickname;
+    const campaignId = consultation.campaign_id;
+
+    const campaignData = campaignCouponPrices.find(
+      (x) => x.campaign_id === campaignId
+    );
+
+    const couponPrice = campaignData?.price_per_coupon;
+    const sponsorImage = campaignData?.image;
 
     const oneHourBeforeNow = new Date();
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
@@ -123,6 +160,9 @@ export const getAllPastConsultationsByClientId = async ({
         time: consultation.time,
         status: consultation.status,
         price: consultation.price,
+        coupon_price: couponPrice,
+        sponsor_image: sponsorImage,
+        campaign_id: campaignId,
       });
     }
   }
@@ -145,41 +185,61 @@ export const getAllConsultationsSingleWeek = async ({
   });
 
   // Get all clients ids
-  const clientsToFetch = Array.from(
+  const clientDetailIds = Array.from(
     new Set(consultations.map((consultation) => consultation.client_detail_id))
   );
 
-  let clientsDetails = {};
-
-  // For each client to fetch, fetch it
-  for (let i = 0; i < clientsToFetch.length; i++) {
-    const clientId = clientsToFetch[i];
-
-    clientsDetails[clientId] = await getClientByIdQuery({
-      poolCountry: country,
-      clientId,
+  let clientsDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
     })
-      .then((res) => {
-        if (res.rowCount === 0) {
-          throw clientNotFound(language);
-        } else {
-          return res.rows[0];
-        }
-      })
-      .catch((err) => {
-        throw err;
-      });
-  }
+    .catch((err) => {
+      throw err;
+    });
+
+  const campaignIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.campaign_id))
+  );
+
+  const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   let response = [];
 
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
     const clientId = consultation.client_detail_id;
-    const client = clientsDetails[clientId];
+    const client = clientsDetails.find((x) => x.client_detail_id === clientId);
     const clientName = client.name;
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
+    const campaignId = consultation.campaign_id;
+
+    const campaignData = campaignCouponPrices.find(
+      (x) => x.campaign_id === campaignId
+    );
+
+    const couponPrice = campaignData?.price_per_coupon;
+    const sponsorImage = campaignData?.image;
 
     response.push({
       consultation_id: consultation.consultation_id,
@@ -192,6 +252,9 @@ export const getAllConsultationsSingleWeek = async ({
       time: consultation.time,
       status: consultation.status,
       price: consultation.price,
+      coupon_price: couponPrice,
+      sponsor_image: sponsorImage,
+      campaign_id: campaignId,
     });
   }
 
@@ -213,43 +276,64 @@ export const getAllConsultationsSingleDay = async ({
   });
 
   // Get all clients ids
-  const clientsToFetch = Array.from(
+  const clientDetailIds = Array.from(
     new Set(consultations.map((consultation) => consultation.client_detail_id))
   );
 
-  let clientsDetails = {};
-
-  // For each client to fetch, fetch it
-  for (let i = 0; i < clientsToFetch.length; i++) {
-    const clientId = clientsToFetch[i];
-
-    clientsDetails[clientId] = await getClientByIdQuery({
-      poolCountry: country,
-      clientId,
+  // Fetch all the client data at once
+  let clientsDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
     })
-      .then((res) => {
-        if (res.rowCount === 0) {
-          throw clientNotFound(language);
-        } else {
-          return res.rows[0];
-        }
-      })
-      .catch((err) => {
-        throw err;
-      });
-  }
+    .catch((err) => {
+      throw err;
+    });
+
+  const campaignIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.campaign_id))
+  );
+
+  const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   let response = [];
 
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
     const clientId = consultation.client_detail_id;
-    const client = clientsDetails[clientId];
+    const client = clientsDetails.find((x) => x.client_detail_id === clientId);
     const clientName = client.name;
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
+    const campaignId = consultation.campaign_id;
 
-    response.push({
+    const campaignData = campaignCouponPrices.find(
+      (x) => x.campaign_id === campaignId
+    );
+
+    const couponPrice = campaignData?.price_per_coupon;
+    const sponsorImage = campaignData?.image;
+
+    const res = {
       consultation_id: consultation.consultation_id,
       chat_id: consultation.chat_id,
       client_detail_id: clientId,
@@ -260,7 +344,15 @@ export const getAllConsultationsSingleDay = async ({
       time: consultation.time,
       status: consultation.status,
       price: consultation.price,
-    });
+    };
+
+    if (campaignData) {
+      res["sponsor_image"] = sponsorImage;
+      res["coupon_price"] = couponPrice;
+      res["campaign_id"] = campaignId;
+    }
+
+    response.push(res);
   }
 
   return response;
@@ -287,41 +379,62 @@ export const getAllPastConsultations = async ({
     });
 
   // Get all clients ids
-  const clientsToFetch = Array.from(
+  const clientDetailIds = Array.from(
     new Set(consultations.map((consultation) => consultation.client_detail_id))
   );
 
-  let clientsDetails = {};
-
-  // For each client to fetch, fetch it
-  for (let i = 0; i < clientsToFetch.length; i++) {
-    const clientId = clientsToFetch[i];
-
-    clientsDetails[clientId] = await getClientByIdQuery({
-      poolCountry: country,
-      clientId,
+  // Fetch the data for the clients at once
+  let clientsDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
     })
-      .then((res) => {
-        if (res.rowCount === 0) {
-          throw clientNotFound(language);
-        } else {
-          return res.rows[0];
-        }
-      })
-      .catch((err) => {
-        throw err;
-      });
-  }
+    .catch((err) => {
+      throw err;
+    });
+
+  const campaignIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.campaign_id))
+  );
+
+  const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   let response = [];
 
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
     const clientId = consultation.client_detail_id;
-    const client = clientsDetails[clientId];
+    const client = clientsDetails.find((x) => x.client_detail_id === clientId);
     const clientName = client.name;
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
+    const campaignId = consultation.campaign_id;
+
+    const campaignData = campaignCouponPrices.find(
+      (x) => x.campaign_id === campaignId
+    );
+
+    const couponPrice = campaignData?.price_per_coupon;
+    const sponsorImage = campaignData?.image;
 
     const oneHourBeforeNow = new Date();
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
@@ -330,7 +443,7 @@ export const getAllPastConsultations = async ({
       consultation.time < oneHourBeforeNow &&
       consultation.status !== "suggested"
     ) {
-      response.push({
+      const res = {
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
         client_detail_id: clientId,
@@ -341,7 +454,15 @@ export const getAllPastConsultations = async ({
         time: consultation.time,
         status: consultation.status,
         price: consultation.price,
-      });
+      };
+
+      if (campaignData) {
+        res["sponsor_image"] = sponsorImage;
+        res["coupon_price"] = couponPrice;
+        res["campaign_id"] = campaignId;
+      }
+
+      response.push(res);
     }
   }
 
@@ -373,47 +494,66 @@ export const getAllUpcomingConsultations = async ({
   const { consultations, totalCount } = query;
 
   // Get all clients ids
-  const clientsToFetch = Array.from(
+  const clientDetailIds = Array.from(
     new Set(consultations.map((consultation) => consultation.client_detail_id))
   );
-
-  let clientsDetails = {};
-
-  // For each client to fetch, fetch it
-  for (let i = 0; i < clientsToFetch.length; i++) {
-    const clientId = clientsToFetch[i];
-
-    clientsDetails[clientId] = await getClientByIdQuery({
-      poolCountry: country,
-      clientId,
+  let clientsDetails = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
     })
-      .then((res) => {
-        if (res.rowCount === 0) {
-          throw clientNotFound(language);
-        } else {
-          return res.rows[0];
-        }
-      })
-      .catch((err) => {
-        throw err;
-      });
-  }
+    .catch((err) => {
+      throw err;
+    });
+
+  const campaignIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.campaign_id))
+  );
+
+  const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 
   let response = { consultations: [], totalCount };
 
   for (let i = 0; i < consultations.length; i++) {
     const consultation = consultations[i];
     const clientId = consultation.client_detail_id;
-    const client = clientsDetails[clientId];
+    const client = clientsDetails.find((x) => x.client_detail_id === clientId);
     const clientName = client.name;
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
+    const campaignId = consultation.campaign_id;
+
+    const campaignData = campaignCouponPrices.find(
+      (x) => x.campaign_id === campaignId
+    );
+
+    const couponPrice = campaignData?.price_per_coupon;
+    const sponsorImage = campaignData?.image;
 
     const oneHourBeforeNow = new Date();
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
 
     if (consultation.time > oneHourBeforeNow) {
-      response.consultations.push({
+      const res = {
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
         client_detail_id: clientId,
@@ -424,7 +564,15 @@ export const getAllUpcomingConsultations = async ({
         time: consultation.time,
         status: consultation.status,
         price: consultation.price,
-      });
+      };
+
+      if (campaignData) {
+        res["sponsor_image"] = sponsorImage;
+        res["coupon_price"] = couponPrice;
+        res["campaign_id"] = campaignId;
+      }
+
+      response.consultations.push(res);
     }
   }
 
@@ -437,9 +585,9 @@ export const addConsultationAsPending = async ({
   clientId,
   providerId,
   time,
+  userId,
 }) => {
   const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
-
   if (!isSlotAvailable) throw slotNotAvailable(language);
 
   const providerData = await getProviderByIdQuery({
@@ -456,16 +604,45 @@ export const addConsultationAsPending = async ({
     .catch((err) => {
       throw err;
     });
-
   const consultationPrice = providerData["consultation_price"];
 
+  const campaignId =
+    typeof time === "object" && time.campaign_id ? time.campaign_id : null;
+
+  let campaignData;
+  if (campaignId) {
+    campaignData = await getCampaignDataByIdQuery({
+      poolCountry: country,
+      campaignId,
+    }).then((res) => {
+      if (res.rowCount === 0) {
+        throw campaignNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    });
+
+    const canUseCoupon = await checkCanClientUseCoupon({
+      campaignId,
+      country,
+      language,
+      userId,
+    }).catch((err) => {
+      throw err;
+    });
+
+    if (canUseCoupon.error) {
+      throw canUseCoupon.error;
+    }
+  }
   // Add consultation as pending
   const consultation = await addConsultationAsPendingQuery({
     poolCountry: country,
     clientId,
     providerId,
-    time,
-    price: consultationPrice,
+    time: typeof time === "object" ? time.time : time,
+    price: campaignId ? campaignData.price_per_coupon : consultationPrice,
+    campaignId,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {
@@ -530,6 +707,20 @@ export const scheduleConsultation = async ({
       client_id: consultation.client_detail_id,
       provider_id: consultation.provider_detail_id,
       time: consultationTime,
+    }).catch((err) => {
+      throw err;
+    });
+  }
+
+  if (consultation.campaign_id) {
+    console.log("add transaction");
+    await addTransactionQuery({
+      poolCountry: country,
+      type: "coupon",
+      consultationId: consultationId,
+      paymentIntent: null,
+      paymentRefundId: null,
+      campaignId: consultation.campaign_id,
     }).catch((err) => {
       throw err;
     });
