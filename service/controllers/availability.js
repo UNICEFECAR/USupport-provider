@@ -7,7 +7,14 @@ import {
 
 import { getConsultationsForDayQuery } from "#queries/consultation";
 
-import { slotsNotWithinWeek } from "#utils/errors";
+import { getProvidersByCampaignIdQuery } from "#queries/providers";
+import { getCampaignDataByIdQuery } from "#queries/sponsors";
+
+import {
+  campaignNotFound,
+  slotsNotWithinWeek,
+  slotAlreadyExists,
+} from "#utils/errors";
 
 import {
   getSlotsForSingleWeek,
@@ -41,6 +48,34 @@ export const updateAvailabilitySingleWeek = async ({
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
 
+  // If the campaignId is provided, get the data for that campaign
+  let campaignStartDate, campaignEndDate;
+  const today = new Date().getTime();
+  if (campaignId) {
+    const campaignData = await getCampaignDataByIdQuery({
+      poolCountry: country,
+      campaignId,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw campaignNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+    campaignStartDate = new Date(campaignData.campaign_start_date).getTime();
+    campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
+  }
+
+  if (campaignId) {
+    if (today < campaignStartDate || today > campaignEndDate) {
+      throw slotsNotWithinWeek(language);
+    }
+  }
+
   // Check if start date already exists in the database
   // If it does, update the slot
   // If it doesn't, create a new row and add the slot
@@ -58,6 +93,20 @@ export const updateAvailabilitySingleWeek = async ({
         }).catch((err) => {
           throw err;
         });
+      }
+
+      // Check if the slot already exists in the availability
+      // and compare the campaignId's if it's a campaign slot
+      const slotsToCheck = campaignId ? res.campaign_slots : res.slots;
+      const slotExists = slotsToCheck.some((s) => {
+        const slotToCheck = campaignId
+          ? new Date(s.time).getTime()
+          : new Date(s).getTime();
+        return slotToCheck === slot * 1000 && s.campaign_id === campaignId;
+      });
+
+      if (slotExists) {
+        throw slotAlreadyExists(language);
       }
 
       return await updateAvailabilitySingleSlotQuery({
@@ -105,6 +154,34 @@ export const updateAvailabilityByTemplate = async ({
   countryId,
   campaignId,
 }) => {
+  // If the campaignId is provided, get the data for that campaign
+  let campaignStartDate, campaignEndDate;
+  const today = new Date().getTime();
+  if (campaignId) {
+    const campaignData = await getCampaignDataByIdQuery({
+      poolCountry: country,
+      campaignId,
+    })
+      .then((res) => {
+        if (res.rowCount === 0) {
+          throw campaignNotFound(language);
+        } else {
+          return res.rows[0];
+        }
+      })
+      .catch((err) => {
+        throw err;
+      });
+    campaignStartDate = new Date(campaignData.campaign_start_date).getTime();
+    campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
+  }
+
+  if (campaignId) {
+    if (today < campaignStartDate || today > campaignEndDate) {
+      throw slotsNotWithinWeek(language);
+    }
+  }
+
   for (const { startDate, slots } of template) {
     if (!checkSlotsWithinWeek(startDate, slots))
       throw slotsNotWithinWeek(language);
@@ -118,7 +195,7 @@ export const updateAvailabilityByTemplate = async ({
       startDate,
     })
       .then(async (res) => {
-        if (res.slots.length === 0 && res.campaign_slots.length === 0) {
+        if (res.is_empty) {
           await addAvailabilityRowQuery({
             poolCountry: country,
             provider_id,
@@ -155,10 +232,21 @@ export const getAvailabilitySingleDay = async ({
   providerId,
   startDate,
   day,
+  campaignId,
 }) => {
   const tomorrowTimestamp = new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
 
   let slots = [];
+  let campaignData;
+
+  if (campaignId) {
+    campaignData = await getProvidersByCampaignIdQuery({
+      poolCountry: country,
+      campaignId,
+    }).catch((err) => {
+      throw err;
+    });
+  }
 
   const threeWeeksSlots = await getSlotsForThreeWeeks({
     country,
@@ -184,12 +272,20 @@ export const getAvailabilitySingleDay = async ({
       throw err;
     });
 
+  const slotsToLoopThrough = campaignId
+    ? threeWeeksSlots.campaign_slots
+    : threeWeeksSlots.slots;
   // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
   // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
-  threeWeeksSlots.slots.forEach((slot) => {
-    const slotTimestamp = new Date(slot).getTime() / 1000;
+  slotsToLoopThrough.forEach((slot) => {
+    let slotTimestamp;
+    if (campaignId) {
+      slotTimestamp = new Date(slot.time).getTime() / 1000;
+    } else {
+      slotTimestamp = new Date(slot).getTime() / 1000;
+    }
 
     if (
       slotTimestamp > tomorrowTimestamp &&
@@ -204,7 +300,42 @@ export const getAvailabilitySingleDay = async ({
   });
 
   // Sort slots in ascending order
-  slots.sort((a, b) => a - b);
+  if (campaignId) {
+    slots.sort((a, b) => new Date(a.time) - new Date(b.time));
+  } else {
+    slots.sort((a, b) => a - b);
+  }
 
   return slots;
+};
+
+export const clearAvailabilitySlot = async ({
+  country,
+  provider_id,
+  startDate,
+  slot,
+  campaignIds,
+}) => {
+  const args = {
+    poolCountry: country,
+    provider_id,
+    startDate,
+    slot,
+  };
+  const queries = [deleteAvailabilitySingleWeekQuery(args)];
+  campaignIds.forEach((campaignId) => {
+    queries.push(
+      deleteAvailabilitySingleWeekQuery({
+        ...args,
+        campaignId,
+      })
+    );
+  });
+
+  try {
+    const res = await Promise.all(queries);
+    return { success: true };
+  } catch (err) {
+    throw err;
+  }
 };
