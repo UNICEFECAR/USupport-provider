@@ -36,9 +36,18 @@ export const deleteAvailabilitySingleWeekSchema = yup.object().shape({
   campaignId: yup.string().uuid().notRequired(),
 });
 
+export const clearAvailabilitySlotSchema = yup.object().shape({
+  provider_id: yup.string().uuid().required(),
+  country: yup.string().required(),
+  startDate: yup.string().required(),
+  slot: yup.string().required(),
+  campaignIds: yup.array().of(yup.string().uuid()).required(),
+});
+
 export const getAvailabilitySingleDaySchema = yup.object().shape({
   country: yup.string().required(),
   providerId: yup.string().uuid().required(),
   startDate: yup.string().required(),
   day: yup.string().required(),
+  campaignId: yup.string().uuid().notRequired(),
 });

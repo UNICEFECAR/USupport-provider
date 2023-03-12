@@ -14,6 +14,7 @@ const specializationsTypeSchema = yup
 
 export const getAllProvidersSchema = yup.object().shape({
   country: yup.string().required(),
+  campaignId: yup.string().notRequired(),
 });
 
 export const getProviderByIdSchema = yup.object().shape({
@@ -21,6 +22,7 @@ export const getProviderByIdSchema = yup.object().shape({
   language: yup.string().required(),
   provider_id: yup.string().uuid().required(),
   isRequestedByAdmin: yup.boolean().required(),
+  campaignId: yup.string().notRequired(),
 });
 
 export const updateProviderDataSchema = yup.object().shape({
@@ -102,4 +104,8 @@ export const getRandomProvidersSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   numberOfProviders: yup.number().positive().required(),
+});
+
+export const enrollCampaignSchema = getActivitiesSchema.shape({
+  campaignId: yup.string().uuid().required(),
 });

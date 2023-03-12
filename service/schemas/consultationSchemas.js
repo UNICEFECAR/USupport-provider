@@ -1,11 +1,24 @@
 import * as yup from "yup";
 
+const timeCampaignSchema = yup.object().shape({
+  time: yup.string().required(),
+  campaign_id: yup.string().uuid().required(),
+});
+
+const timeSchema = yup.string().required();
+
 export const addConsultationAsPendingSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
-  time: yup.string().required(),
+  time: yup.lazy((value) => {
+    if (typeof value === "object") {
+      return timeCampaignSchema;
+    }
+    return timeSchema;
+  }),
+  userId: yup.string().uuid().notRequired(),
 });
 
 export const scheduleConsultationSchema = yup.object().shape({
