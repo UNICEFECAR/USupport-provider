@@ -11,4 +11,6 @@ export default {
   consultation_not_scheduled_error: "Consultation is not scheduled",
   service_not_found_error: "Service not found",
   transaction_not_found_error: "Transaction not found",
+  campaign_not_found_error: "Campaign not found",
+  slot_already_exists_error: "Slot already marked as available",
 };
