@@ -8,6 +8,7 @@ import {
   deleteAvailabilitySingleWeekSchema,
   updateAvailabilityByTemplateSchema,
   getAvailabilitySingleDaySchema,
+  clearAvailabilitySlotSchema,
 } from "#schemas/availabilitySchemas";
 
 import {
@@ -16,6 +17,7 @@ import {
   deleteAvailabilitySingleWeek,
   updateAvailabilityByTemplate,
   getAvailabilitySingleDay,
+  clearAvailabilitySlot,
 } from "#controllers/availability";
 
 const router = express.Router();
@@ -81,6 +83,26 @@ router
       .catch(next);
   });
 
+router.route("/clear-slot").delete(populateUser, async (req, res, next) => {
+  /**
+   * #route   DELETE /provider/v1/availability/clear-slot
+   * #desc    Delete all occurances of a timestamp from the providers availability
+   */
+  const country = req.header("x-country-alpha-2");
+
+  const provider_id = req.user.provider_detail_id;
+
+  const payload = req.body;
+
+  return await clearAvailabilitySlotSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ ...payload, country, provider_id })
+    .then(clearAvailabilitySlot)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
 router.route("/template").put(populateUser, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/availability/template
@@ -119,11 +141,12 @@ router.route("/single-day").get(populateUser, async (req, res, next) => {
 
   const startDate = req.query.startDate;
   const day = req.query.day;
+  const campaignId = req.query.campaignId;
 
   return await getAvailabilitySingleDaySchema
     .noUnknown(true)
     .strict(true)
-    .validate({ country, providerId, startDate, day })
+    .validate({ country, providerId, startDate, day, campaignId })
     .then(getAvailabilitySingleDay)
     .then((result) => res.status(200).send(result))
     .catch(next);
