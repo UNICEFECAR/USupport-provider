@@ -65,9 +65,15 @@ export const updateAvailabilitySingleSlotQuery = async ({
   } else {
     return await getDBPool("piiDb", poolCountry).query(
       `
-        UPDATE availability
-        SET campaign_slots = (SELECT array_agg(distinct e) FROM UNNEST(campaign_slots::jsonb[] || ARRAY[jsonb_build_object('campaignId', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ'))]) e)
-        WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+      WITH slots AS (
+        SELECT jsonb_agg(jsonb_build_object('campaign_id', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ'))) as s
+        FROM availability
+        WHERE provider_detail_id = $1 AND start_date = to_timestamp($2)
+      )
+      UPDATE availability
+      SET campaign_slots = campaign_slots || (SELECT s FROM slots)
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+  
       `,
       [provider_id, startDate, slot, campaignId]
     );
@@ -106,7 +112,7 @@ export const updateAvailabilityMultipleSlotsQuery = async ({
       FROM data
     )
     UPDATE availability
-    SET campaign_slots  = campaign_slots::jsonb[] || (
+        SET campaign_slots  = campaign_slots || (
         SELECT jsonb_agg(e)
         FROM UNNEST(ARRAY(SELECT * FROM new_campaign_slots)) e
     )
@@ -138,11 +144,15 @@ export const deleteAvailabilitySingleWeekQuery = async ({
   } else {
     return await getDBPool("piiDb", poolCountry).query(
       `
-      UPDATE availability
-      SET campaign_slots = array_remove(campaign_slots::jsonb[], jsonb_build_object('campaignId', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ')))
+      UPDATE availability a
+      SET campaign_slots = (
+        SELECT jsonb_agg(e)
+          FILTER (WHERE e != jsonb_build_object('campaign_id', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ')))
+        FROM jsonb_array_elements(campaign_slots) e
+      )
       WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
 
-    `,
+      `,
       [provider_id, startDate, slot, campaignId]
     );
   }
