@@ -31,7 +31,7 @@ export const getMultipleClientsDataByIDs = async ({
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT name, surname, nickname, email, client_detail_id
+      SELECT name, surname, nickname, email, client_detail_id, image
       FROM client_detail
       WHERE client_detail_id = ANY($1);
     `,
