@@ -15,18 +15,26 @@ import {
   updateProviderImageQuery,
   deleteProviderImageQuery,
   getActivitiesQuery,
+  getSponsorAndActiveCampaignsQuery,
+  getCampaignIdsForProviderQuery,
+  getProviderConductedConsultationsForCampaign,
+  enrollProviderInCampaignQuery,
+  getProvidersByCampaignIdQuery,
 } from "#queries/providers";
 
 import {
   getAllConsultationsByProviderIdQuery,
   getAllConsultationsCountQuery,
   getFutureConsultationsCountQuery,
+  getProviderConsultationsForCampaign,
 } from "#queries/consultation";
 
 import {
   getClientByIdQuery,
   getMultipleClientsDataByIDs,
 } from "#queries/clients";
+
+import { getCampaignCouponPriceForMultipleIds } from "#queries/sponsors";
 
 import {
   providerNotFound,
@@ -48,53 +56,69 @@ const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_REGION = process.env.AWS_REGION;
 const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME;
 
-export const getAllProviders = async ({ country }) => {
-  return await getAllProvidersQuery({ poolCountry: country })
-    .then(async (res) => {
-      let providers = res.rows;
-
-      for (let i = 0; i < providers.length; i++) {
-        const { languages, workWith } = await getProviderLanguagesAndWorkWith({
-          country,
-          provider_detail_id: providers[i].provider_detail_id,
+export const getAllProviders = async ({ country, campaignId }) => {
+  let providers;
+  try {
+    if (campaignId) {
+      providers = await getProvidersByCampaignIdQuery({
+        poolCountry: country,
+        campaignId: campaignId,
+      })
+        .then((res) => res.rows)
+        .catch((err) => {
+          throw err;
         });
+    } else {
+      providers = await getAllProvidersQuery({
+        poolCountry: country,
+      })
+        .then((res) => res.rows)
+        .catch((err) => {
+          throw err;
+        });
+    }
 
-        providers[i].specializations = formatSpecializations(
-          providers[i].specializations
-        );
+    for (let i = 0; i < providers.length; i++) {
+      const { languages, workWith } = await getProviderLanguagesAndWorkWith({
+        country,
+        provider_detail_id: providers[i].provider_detail_id,
+      });
 
-        providers[i].total_consultations = await getAllConsultationsCountQuery({
-          poolCountry: country,
-          providerId: providers[i].provider_detail_id,
+      providers[i].specializations = formatSpecializations(
+        providers[i].specializations
+      );
+
+      providers[i].total_consultations = await getAllConsultationsCountQuery({
+        poolCountry: country,
+        providerId: providers[i].provider_detail_id,
+      })
+        .then((res) => {
+          return res.rows[0].count;
         })
-          .then((res) => {
-            return res.rows[0].count;
-          })
-          .catch((err) => {
-            throw err;
-          });
+        .catch((err) => {
+          throw err;
+        });
+      providers[i].earliest_available_slot = await getEarliestAvailableSlot(
+        country,
+        providers[i].provider_detail_id,
+        providers[i].campaign_id
+      );
 
-        providers[i].earliest_available_slot = await getEarliestAvailableSlot(
-          country,
-          providers[i].provider_detail_id
-        );
+      delete providers[i].street;
+      delete providers[i].city;
+      delete providers[i].postcode;
 
-        delete providers[i].street;
-        delete providers[i].city;
-        delete providers[i].postcode;
+      providers[i] = {
+        ...providers[i],
+        languages: languages,
+        work_with: workWith,
+      };
+    }
 
-        providers[i] = {
-          ...providers[i],
-          languages: languages,
-          work_with: workWith,
-        };
-      }
-
-      return providers;
-    })
-    .catch((err) => {
-      throw err;
-    });
+    return providers;
+  } catch (err) {
+    throw err;
+  }
 };
 
 export const getProviderById = async ({
@@ -102,6 +126,7 @@ export const getProviderById = async ({
   language,
   provider_id,
   isRequestedByAdmin,
+  campaignId,
 }) => {
   return await getProviderByIdQuery({ poolCountry: country, provider_id })
     .then(async (res) => {
@@ -133,9 +158,9 @@ export const getProviderById = async ({
 
       provider.earliest_available_slot = await getEarliestAvailableSlot(
         country,
-        provider_id
+        provider_id,
+        campaignId
       );
-
       if (!isRequestedByAdmin) {
         delete provider.street;
         delete provider.city;
@@ -442,39 +467,55 @@ export const getAllClients = async ({ country, language, providerId }) => {
       let consultations = res.rows;
 
       // Get all clients ids
-      const clientsToFetch = Array.from(
+      const clientDetailIds = Array.from(
         new Set(
           consultations.map((consultation) => consultation.client_detail_id)
         )
       );
 
-      let clientsDetails = {};
-
-      // For each client to fetch, fetch it
-      for (let i = 0; i < clientsToFetch.length; i++) {
-        const clientId = clientsToFetch[i];
-
-        clientsDetails[clientId] = await getClientByIdQuery({
-          poolCountry: country,
-          clientId,
+      let clientsDetails = await getMultipleClientsDataByIDs({
+        poolCountry: country,
+        clientDetailIds,
+      })
+        .then((res) => {
+          if (res.rowCount === 0) {
+            return [];
+          } else {
+            return res.rows;
+          }
         })
-          .then((res) => {
-            if (res.rowCount === 0) {
-              throw clientNotFound(language);
-            } else {
-              return res.rows[0];
-            }
-          })
-          .catch((err) => {
-            throw err;
-          });
-      }
+        .catch((err) => {
+          throw err;
+        });
+
+      // Get all campaign ids
+      const campaignIds = Array.from(
+        new Set(consultations.map((consultation) => consultation.campaign_id))
+      );
+
+      // Get the data for each campaign
+      const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
+        poolCountry: country,
+        campaignIds,
+      })
+        .then((res) => {
+          if (res.rowCount === 0) {
+            return [];
+          } else {
+            return res.rows;
+          }
+        })
+        .catch((err) => {
+          throw err;
+        });
 
       // Initialise the clients array
       let clients = [];
 
-      for (let i = 0; i < clientsToFetch.length; i++) {
-        const client = clientsDetails[clientsToFetch[i]];
+      for (let i = 0; i < clientDetailIds.length; i++) {
+        const client = clientsDetails.find(
+          (x) => x.client_detail_id === clientDetailIds[i]
+        );
         const clientName = client.name;
         const clientSurname = client.surname;
         const clientNickname = client.nickname;
@@ -488,6 +529,8 @@ export const getAllClients = async ({ country, language, providerId }) => {
           next_consultation: null,
           next_consultation_id: null,
           next_consultation_status: null,
+          next_consultation_price: null,
+          next_consultation_coupon_price: null,
           chat_id: null,
           past_consultations: 0,
         });
@@ -501,10 +544,17 @@ export const getAllClients = async ({ country, language, providerId }) => {
         const consultation = consultations[i];
         const consultationTime = consultation.time;
         const clientDetailId = consultation.client_detail_id;
+        const campaignId = consultation.campaign_id;
 
         const clientIndex = clients.findIndex(
           (client) => client.client_detail_id === clientDetailId
         );
+
+        const campaignData = campaignCouponPrices.find(
+          (x) => x.campaign_id === campaignId
+        );
+
+        const couponPrice = campaignData?.price_per_coupon;
 
         if (clientIndex !== -1) {
           if (consultationTime > oneHourBeforeNow) {
@@ -515,6 +565,10 @@ export const getAllClients = async ({ country, language, providerId }) => {
               clients[clientIndex].next_consultation = consultationTime;
               clients[clientIndex].next_consultation_id =
                 consultation.consultation_id;
+              clients[clientIndex].next_consultation_status =
+                consultation.status;
+              clients[clientIndex].next_consultation_price = consultation.price;
+              clients[clientIndex].next_consultation_coupon_price = couponPrice;
               clients[clientIndex].next_consultation_status =
                 consultation.status;
               clients[clientIndex].chat_id = consultation.chat_id;
@@ -595,4 +649,141 @@ export const getRandomProviders = async ({
     });
 
   return shuffleArray(providers).slice(0, numberOfProviders);
+};
+
+export const getCampaigns = async ({ country, providerId }) => {
+  const data = await getSponsorAndActiveCampaignsQuery({
+    poolCountry: country,
+    providerId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const providerCampaignIds = await getCampaignIdsForProviderQuery({
+    poolCountry: country,
+    providerId,
+  }).then((res) => {
+    if (res.rowCount === 0) {
+      return [];
+    } else {
+      return res.rows.map((x) => x.campaign_id);
+    }
+  });
+
+  const conductedConsultationsForCampaign =
+    await getProviderConductedConsultationsForCampaign({
+      poolCountry: country,
+      providerId,
+      campaignIds: providerCampaignIds,
+    }).then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    });
+
+  for (let i = 0; i < data.length; i++) {
+    const campaignId = data[i].campaign_id;
+    const conductedConsultations = conductedConsultationsForCampaign.find(
+      (x) => x.campaign_id === campaignId
+    );
+    data[i].conducted_consultations = conductedConsultations
+      ? Number(conductedConsultations.count)
+      : 0;
+  }
+
+  return {
+    activeCampaigns: data,
+    providerCampaignIds,
+  };
+};
+
+export const enrollProviderInCampaign = async ({
+  country: poolCountry,
+  providerId,
+  campaignId,
+}) => {
+  await enrollProviderInCampaignQuery({
+    poolCountry,
+    providerId,
+    campaignId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  return { success: true };
+};
+
+export const getConsultationsForCampaign = async ({
+  country,
+  providerId,
+  campaignId,
+}) => {
+  const consultations = await getProviderConsultationsForCampaign({
+    poolCountry: country,
+    providerId,
+    campaignId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const clientDetailIds = Array.from(
+    new Set(consultations.map((x) => x.client_detail_id))
+  );
+  const clientsData = await getMultipleClientsDataByIDs({
+    poolCountry: country,
+    clientDetailIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  consultations.forEach((consultation, index) => {
+    const clientData = clientsData.find(
+      (x) => x.client_detail_id === consultation.client_detail_id
+    );
+    const clientName = clientData.name;
+    const clientSurname = clientData.surname;
+    const clientNickname = clientData.nickname;
+    const clientImage = clientData.image;
+
+    consultations[index].client_name =
+      clientName && clientSurname
+        ? `${clientName} ${clientSurname}`
+        : clientNickname;
+    consultations[index].client_image = clientImage;
+  });
+  return consultations;
 };
