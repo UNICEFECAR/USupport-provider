@@ -26,8 +26,9 @@ export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      SELECT *
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
       FROM consultation
+        LEFT JOIN transaction_log ON transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND client_detail_id = $2 AND (status = 'scheduled' OR status = 'finished')
       ORDER BY time DESC;
 
@@ -54,16 +55,17 @@ export const addConsultationAsPendingQuery = async ({
   providerId,
   time,
   price,
+  campaignId
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price)
-      VALUES ($1, $2, to_timestamp($3), 'pending', $4)
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price, campaign_id)
+      VALUES ($1, $2, to_timestamp($3), 'pending', $4, $5)
       RETURNING *;
 
     `,
-    [clientId, providerId, time, price]
+    [clientId, providerId, time, price,campaignId]
   );
 
 export const addConsultationAsScheduledQuery = async ({
@@ -309,8 +311,9 @@ export const getAllConsultationsByProviderIdQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT * 
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
       FROM consultation
+        LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time DESC;
     `,
@@ -324,8 +327,9 @@ export const getAllUpcomingConsultationsByProviderIdQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT * , COUNT(*) OVER() AS total_count
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, COUNT(*) OVER() AS total_count
       FROM consultation
+        LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND time >= now() + interval '1 hour' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time ASC
       LIMIT 6
@@ -370,12 +374,11 @@ export const getConsultationsSingleWeekQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-  
-      SELECT * 
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
       FROM consultation
+        LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '7 days' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time ASC;
-
     `,
     [providerId, startDate]
   );
@@ -388,8 +391,9 @@ export const getConsultationsSingleDayQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
     
-        SELECT * 
+        SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
         FROM consultation
+          LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
         WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '1 day' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
         ORDER BY time ASC;
   
@@ -424,3 +428,20 @@ export const getConsultationTimeQuerry = async ({
       `,
     [consultationId]
   );
+
+export const getProviderConsultationsForCampaign = async ({
+  poolCountry,
+  providerId,
+  campaignId,
+}) => {
+  return await getDBPool("clinicalDb", poolCountry).query(
+    `
+          SELECT consultation.consultation_id, consultation.provider_detail_id, consultation.client_detail_id, chat_id, status, time
+          FROM consultation
+            LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id AND transaction_log.campaign_id = $2
+            WHERE provider_detail_id = $1 AND transaction_log.consultation_id = consultation.consultation_id AND (status = 'finished' OR status = 'scheduled')
+          GROUP BY consultation.consultation_id
+        `,
+    [providerId, campaignId]
+  );
+};
