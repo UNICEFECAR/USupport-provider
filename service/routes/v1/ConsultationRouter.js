@@ -192,6 +192,8 @@ router.route("/block").post(populateUser, async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
+  const userId = req.user.user_id;
+
   let providerId = "";
   if (req.user.provider_detail_id) {
     providerId = req.user.provider_detail_id;
@@ -211,7 +213,7 @@ router.route("/block").post(populateUser, async (req, res, next) => {
   return await addConsultationAsPendingSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, clientId, providerId, time })
+    .validate({ country, language, clientId, providerId, time, userId })
     .then(addConsultationAsPending)
     .then((result) => res.status(200).send(result))
     .catch(next);
