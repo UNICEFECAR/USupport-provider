@@ -20,6 +20,7 @@ import {
   getProviderConductedConsultationsForCampaign,
   enrollProviderInCampaignQuery,
   getProvidersByCampaignIdQuery,
+  getCampaignNamesByIds,
 } from "#queries/providers";
 
 import {
@@ -621,10 +622,34 @@ export const getActivities = async ({ country, providerId }) => {
     .catch((err) => {
       throw err;
     });
+
+  const campaignIds = Array.from(new Set(activities.map((x) => x.campaign_id)));
+
+  const campaignNames = await getCampaignNamesByIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
   activities.forEach((consultation, index) => {
     const clientData = clientDetails.find(
       (x) => x.client_detail_id === consultation.client_detail_id
     );
+
+    const campaignName = campaignNames.find(
+      (x) => x.campaign_id === consultation.campaign_id
+    )?.name;
+
+    activities[index].campaign_name = campaignName;
     activities[index].clientData = clientData;
   });
 
