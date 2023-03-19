@@ -4,12 +4,12 @@ metadata:
   name: provider-config
 data:
   NODE_ENV: production
-  PORT: 3002
+  PORT: "3002"
   TZ: UTC
   
-  CLIENT_URL: http://client:3001
-  REDIS_CACHE: redis://redis:6379
+  CLIENT_URL: http://client-service:3001
+  REDIS_CACHE: redis://redis-service:6379
   
   AWS_REGION: eu-central-1
-  KAFKAJS_NO_PARTITIONER_WARNING: 1
+  KAFKAJS_NO_PARTITIONER_WARNING: "1"
    

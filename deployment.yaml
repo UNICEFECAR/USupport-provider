@@ -17,11 +17,11 @@ spec:
     spec:
       containers:
       - name: provider
-        image: {TODO: CHANGE}
+        image: 482053628475.dkr.ecr.eu-central-1.amazonaws.com/usupport-provider-api
         imagePullPolicy: Always
         envFrom:
         - secretRef:
-          name: provider-secrets
+            name: provider-secrets
         - configMapRef:
             name: provider-config
         ports:
