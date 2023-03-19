@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: provider-config
+data:
+  NODE_ENV: production
+  PORT: 3002
+  TZ: UTC
+  
+  CLIENT_URL: http://client:3001
+  REDIS_CACHE: redis://redis:6379
+  
+  AWS_REGION: eu-central-1
+  KAFKAJS_NO_PARTITIONER_WARNING: 1
+   

@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: provider
+  namespace: default
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: provider
+  template:
+    metadata:
+      labels:
+        app: provider
+    spec:
+      containers:
+      - name: provider
+        image: {TODO: CHANGE}
+        imagePullPolicy: Always
+        envFrom:
+        - secretRef:
+          name: provider-secrets
+        - configMapRef:
+            name: provider-config
+        ports:
+        - containerPort: 3002
+      imagePullSecrets:
+      - name: regcred
