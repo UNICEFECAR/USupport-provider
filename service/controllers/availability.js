@@ -71,7 +71,7 @@ export const updateAvailabilitySingleWeek = async ({
   }
 
   if (campaignId) {
-    if (today < campaignStartDate || today > campaignEndDate) {
+    if (today > campaignEndDate) {
       throw slotsNotWithinWeek(language);
     }
   }
@@ -177,7 +177,7 @@ export const updateAvailabilityByTemplate = async ({
   }
 
   if (campaignId) {
-    if (today < campaignStartDate || today > campaignEndDate) {
+    if (today > campaignEndDate) {
       throw slotsNotWithinWeek(language);
     }
   }
