@@ -739,6 +739,7 @@ export const getClientNotificationsData = async ({
           email: client.email,
           userId: client.user_id,
           pushTokensArray: client.push_notification_tokens,
+          language: client.language,
         };
       }
     })
@@ -767,6 +768,7 @@ export const getProviderNotificationsData = async ({
           fullName: provider.patronym
             ? `${provider.name} ${provider.patronym} ${provider.surname}`
             : `${provider.name} ${provider.surname}`,
+          language: provider.language,
         };
       }
     })

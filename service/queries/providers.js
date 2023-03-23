@@ -32,7 +32,7 @@ export const getProviderEmailAndUserIdQuery = async ({
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-    SELECT "user".user_id, email, name, patronym, surname
+    SELECT "user".user_id, email, name, patronym, surname, "user".language
     FROM "user"
       JOIN provider_detail ON "user".provider_detail_id = provider_detail.provider_detail_id
     WHERE provider_detail.provider_detail_id = $1

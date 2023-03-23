@@ -660,7 +660,7 @@ export const addConsultationAsPending = async ({
 
 export const scheduleConsultation = async ({
   country,
-  language,
+  language, // language of the client
   consultationId,
   shouldSendNotification = true,
 }) => {
@@ -713,7 +713,6 @@ export const scheduleConsultation = async ({
   }
 
   if (consultation.campaign_id) {
-    console.log("add transaction");
     await addTransactionQuery({
       poolCountry: country,
       type: "coupon",
@@ -741,10 +740,13 @@ export const scheduleConsultation = async ({
     });
 
     // Get provider notification data
+    // Note that this notification is raised when the client schedules a consultation, so the language comes from the client.
+    // To avoid sending the notification in the wrong language, we get the providers's language from the DB
     const {
       email: providerEmail,
       userId: providerUserId,
       fullName: providerName,
+      language: providerLanguage,
     } = await getProviderNotificationsData({
       language,
       country,
@@ -768,6 +770,7 @@ export const scheduleConsultation = async ({
       emailArgs: {
         emailType: "client-consultationConfirmBooking",
         recipientEmail: clientEmail,
+        recipientUserType: "client",
       },
       inPlatformArgs: {
         recipientId: clientUserId,
@@ -795,6 +798,7 @@ export const scheduleConsultation = async ({
       emailArgs: {
         emailType: "provider-consultationNotifyBooking",
         recipientEmail: providerEmail,
+        recipientUserType: "provider",
       },
       inPlatformArgs: {
         recipientId: providerUserId,
@@ -804,7 +808,7 @@ export const scheduleConsultation = async ({
         },
         ...baseArgs,
       },
-      language,
+      language: providerLanguage,
     }).catch(console.log);
   }
   return { success: true, consultation };
@@ -812,7 +816,7 @@ export const scheduleConsultation = async ({
 
 export const suggestConsultation = async ({
   country,
-  language,
+  language, // Language of the provider
   consultationId,
 }) => {
   const consultation = await getConsultationByIdQuery({
@@ -877,10 +881,13 @@ export const suggestConsultation = async ({
   });
 
   // Client notification data
+  // Note that this notification is raised when the provider suggests a consultation, so the language comes from the provider.
+  // To avoid sending the notification in the wrong language, we get the client's language from the DB
   const {
     email: clientEmail,
     userId: clientUserId,
     pushTokensArray,
+    language: clientLanguage,
   } = await getClientNotificationsData({
     language,
     country,
@@ -906,6 +913,7 @@ export const suggestConsultation = async ({
     emailArgs: {
       emailType: "client-consultationNotifySuggestion",
       recipientEmail: clientEmail,
+      recipientUserType: "client",
     },
     inPlatformArgs: {
       recipientId: clientUserId,
@@ -924,7 +932,7 @@ export const suggestConsultation = async ({
       },
       ...baseArgs,
     },
-    language,
+    language: clientLanguage,
   }).catch(console.log);
 
   // Send Provider Email and Internal notification
@@ -933,6 +941,7 @@ export const suggestConsultation = async ({
     emailArgs: {
       emailType: "provider-consultationConfirmSuggestion",
       recipientEmail: providerEmail,
+      recipientUserType: "provider",
     },
     inPlatformArgs: {
       notificationType: "consultation_suggestion",
@@ -952,7 +961,7 @@ export const suggestConsultation = async ({
 
 export const acceptSuggestedConsultation = async ({
   country,
-  language,
+  language, // language of the client
   consultationId,
 }) => {
   return await updateConsultationStatusAsScheduledQuery({
@@ -966,10 +975,14 @@ export const acceptSuggestedConsultation = async ({
         const consultation = raw.rows[0];
 
         // Get notification data for the provider
+        // Note that this notification is raised when the client accepts a consultation,
+        // so the language comes from the client.
+        // To avoid sending the notification in the wrong language, we get the provider's language from the DB
         const {
           email: providerEmail,
           userId: providerUserId,
           fullName: providerName,
+          language: providerLanguage,
         } = await getProviderNotificationsData({
           language,
           country,
@@ -1006,6 +1019,7 @@ export const acceptSuggestedConsultation = async ({
           emailArgs: {
             emailType: "client-consultationConfirmSuggestionBooking",
             recipientEmail: clientEmail,
+            recipientUserType: "client",
           },
           inPlatformArgs: {
             recipientId: clientUserId,
@@ -1032,6 +1046,7 @@ export const acceptSuggestedConsultation = async ({
           emailArgs: {
             emailType: "provider-consultationNotifySuggestionBooking",
             recipientEmail: providerEmail,
+            recipientUserType: "provider",
           },
           inPlatformArgs: {
             recipientId: providerUserId,
@@ -1041,7 +1056,7 @@ export const acceptSuggestedConsultation = async ({
             },
             ...baseArgs,
           },
-          language,
+          language: providerLanguage,
         }).catch(console.log);
 
         return { success: true };
@@ -1054,7 +1069,7 @@ export const acceptSuggestedConsultation = async ({
 
 export const rejectSuggestedConsultation = async ({
   country,
-  language,
+  language, // language of the client
   consultationId,
 }) => {
   return await updateConsultationStatusAsRejectedQuery({
@@ -1068,10 +1083,13 @@ export const rejectSuggestedConsultation = async ({
         const consultation = raw.rows[0];
 
         // Get notification data for the provider
+        // Note that this notification is raised when the client rejects a consultation, so the language comes from the client.
+        // To avoid sending the notification in the wrong language, we get the provider's language from the DB
         const {
           email: providerEmail,
           userId: providerUserId,
           fullName: providerName,
+          language: providerLanguage,
         } = await getProviderNotificationsData({
           language,
           country,
@@ -1109,6 +1127,7 @@ export const rejectSuggestedConsultation = async ({
           emailArgs: {
             emailType: "client-consultationConfirmSuggestionCancellation",
             recipientEmail: clientEmail,
+            recipientUserType: "client",
           },
           inPlatformArgs: {
             recipientId: clientUserId,
@@ -1135,6 +1154,7 @@ export const rejectSuggestedConsultation = async ({
           emailArgs: {
             emailType: "provider-consultationNotifySuggestionCancellation",
             recipientEmail: providerEmail,
+            recipientUserType: "provider",
           },
           inPlatformArgs: {
             recipientId: providerUserId,
@@ -1144,7 +1164,7 @@ export const rejectSuggestedConsultation = async ({
             },
             ...baseArgs,
           },
-          language,
+          language: providerLanguage,
         }).catch(console.log);
 
         return { success: true };
@@ -1157,7 +1177,7 @@ export const rejectSuggestedConsultation = async ({
 
 export const rescheduleConsultation = async ({
   country,
-  language,
+  language, // language of the client
   consultationId,
   newConsultationId,
 }) => {
@@ -1235,10 +1255,13 @@ export const rescheduleConsultation = async ({
         });
 
       // Get notification data for the provider
+      // Note that this notification is raised when the client reschedules a consultation, so the language comes from the client.
+      // To avoid sending the notification in the wrong language, we get the provider's language from the DB
       const {
         email: providerEmail,
         userId: providerUserId,
         fullName: providerName,
+        language: providerLanguage,
       } = await getProviderNotificationsData({
         language,
         country,
@@ -1276,6 +1299,7 @@ export const rescheduleConsultation = async ({
         emailArgs: {
           emailType: "client-consultationConfirmReschedule",
           recipientEmail: clientEmail,
+          recipientUserType: "client",
         },
         inPlatformArgs: {
           recipientId: clientUserId,
@@ -1302,6 +1326,7 @@ export const rescheduleConsultation = async ({
         emailArgs: {
           emailType: "provider-consultationNotifyReschedule",
           recipientEmail: providerEmail,
+          recipientUserType: "provider",
         },
         inPlatformArgs: {
           recipientId: providerUserId,
@@ -1311,7 +1336,7 @@ export const rescheduleConsultation = async ({
           },
           ...baseArgs,
         },
-        language,
+        language: providerLanguage,
       }).catch(console.log);
 
       return { success: true };
@@ -1461,6 +1486,7 @@ export const cancelConsultation = async ({
           email: providerEmail,
           userId: providerUserId,
           fullName: providerName,
+          language: providerLanguage,
         } = await getProviderNotificationsData({
           language,
           country,
@@ -1474,6 +1500,7 @@ export const cancelConsultation = async ({
           email: clientEmail,
           userId: clientUserId,
           pushTokensArray,
+          language: clientLanguage,
         } = await getClientNotificationsData({
           language,
           country,
@@ -1491,6 +1518,7 @@ export const cancelConsultation = async ({
                 ? "client-consultationConfirmCancellation"
                 : "client-consultationNotifyCancellation",
             recipientEmail: clientEmail,
+            recipientUserType: "client",
           },
           inPlatformArgs: {
             notificationType:
@@ -1513,7 +1541,7 @@ export const cancelConsultation = async ({
               canceledBy,
             },
           },
-          language,
+          language: clientLanguage,
         }).catch(console.log);
 
         // Send Provider Email and Internal notification
@@ -1525,6 +1553,7 @@ export const cancelConsultation = async ({
                 ? "provider-consultationNotifyCancellation"
                 : "provider-consultationConfirmCancellation",
             recipientEmail: providerEmail,
+            recipientUserType: "provider",
           },
           inPlatformArgs: {
             notificationType:
@@ -1538,7 +1567,7 @@ export const cancelConsultation = async ({
               time: new Date(consultation.time).getTime() / 1000,
             },
           },
-          language,
+          language: providerLanguage,
         }).catch(console.log);
         return { success: true };
       }
