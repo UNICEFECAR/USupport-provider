@@ -109,3 +109,16 @@ export const getRandomProvidersSchema = yup.object().shape({
 export const enrollCampaignSchema = getActivitiesSchema.shape({
   campaignId: yup.string().uuid().required(),
 });
+
+export const changeProviderStatusSchema = yup.object().shape({
+  language: yup.string().required(),
+  country: yup.string().required(),
+  providerDetailId: yup.string().uuid().required(),
+  status: yup.string().oneOf(["active", "inactive"]).required(),
+});
+
+export const getProviderStatusSchema = yup.object().shape({
+  language: yup.string().required(),
+  country: yup.string().required(),
+  providerDetailId: yup.string().uuid().required(),
+});

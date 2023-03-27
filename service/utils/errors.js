@@ -119,3 +119,11 @@ export const slotAlreadyExists = (language) => {
   error.status = 400;
   return error;
 };
+
+export const providerInactive = (language) => {
+  const error = new Error();
+  error.message = t("provider_inactive_error", language);
+  error.name = "PROVIDER INACTIVE";
+  error.status = 400;
+  return error;
+};

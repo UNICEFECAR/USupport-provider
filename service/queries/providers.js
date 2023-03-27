@@ -415,3 +415,47 @@ export const getCampaignNamesByIds = async ({ poolCountry, campaignIds }) => {
     [campaignIds]
   );
 };
+
+export const updateProviderStatusQuery = async ({
+  poolCountry,
+  providerDetailId,
+  status,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        UPDATE provider_detail
+        SET status = $1
+        WHERE provider_detail_id = $2
+        RETURNING *;
+      `,
+    [status, providerDetailId]
+  );
+};
+
+export const getProviderUserIdByDetailIdQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT user_id
+        FROM "user"
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
+  );
+};
+
+export const getProviderStatusQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT status
+        FROM provider_detail
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
+  );
+};
