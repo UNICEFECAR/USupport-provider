@@ -12,6 +12,7 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   language: yup.string().required(),
   clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
+  rescheduleCampaignSlot: yup.boolean().notRequired(),
   time: yup.lazy((value) => {
     if (typeof value === "object") {
       return timeCampaignSchema;

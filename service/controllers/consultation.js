@@ -31,7 +31,10 @@ import {
   getMultipleClientsDataByIDs,
 } from "#queries/clients";
 
-import { getProviderByIdQuery } from "#queries/providers";
+import {
+  getProviderByIdQuery,
+  getProviderStatusQuery,
+} from "#queries/providers";
 
 import {
   getCampaignCouponPriceForMultipleIds,
@@ -58,6 +61,7 @@ import {
   consultationNotScheduled,
   transactionNotFound,
   campaignNotFound,
+  providerInactive,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -586,6 +590,7 @@ export const addConsultationAsPending = async ({
   providerId,
   time,
   userId,
+  rescheduleCampaignSlot = false,
 }) => {
   const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
   if (!isSlotAvailable) throw slotNotAvailable(language);
@@ -610,6 +615,7 @@ export const addConsultationAsPending = async ({
     typeof time === "object" && time.campaign_id ? time.campaign_id : null;
 
   let campaignData;
+
   if (campaignId) {
     campaignData = await getCampaignDataByIdQuery({
       poolCountry: country,
@@ -622,17 +628,19 @@ export const addConsultationAsPending = async ({
       }
     });
 
-    const canUseCoupon = await checkCanClientUseCoupon({
-      campaignId,
-      country,
-      language,
-      userId,
-    }).catch((err) => {
-      throw err;
-    });
+    if (!rescheduleCampaignSlot) {
+      const canUseCoupon = await checkCanClientUseCoupon({
+        campaignId,
+        country,
+        language,
+        userId,
+      }).catch((err) => {
+        throw err;
+      });
 
-    if (canUseCoupon.error) {
-      throw canUseCoupon.error;
+      if (canUseCoupon.error) {
+        throw canUseCoupon.error;
+      }
     }
   }
   // Add consultation as pending
@@ -700,6 +708,15 @@ export const scheduleConsultation = async ({
       consultationTime
     );
     if (!isSlotAvailable) throw slotNotAvailable(language);
+
+    // Check if the provider is active
+    const providerStatus = await getProviderStatusQuery({
+      poolCountry: country,
+      providerId: consultation.provider_detail_id,
+    });
+    if (providerStatus === "inactive") {
+      throw providerInactive(language);
+    }
 
     // Add consultation as scheduled
     await addConsultationAsScheduledQuery({
