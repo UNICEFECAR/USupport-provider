@@ -818,7 +818,7 @@ export const getConsultationsForCampaign = async ({
   return consultations;
 };
 
-export const changeProviderStatus = async ({
+export const updateProviderStatus = async ({
   language,
   country,
   providerDetailId,

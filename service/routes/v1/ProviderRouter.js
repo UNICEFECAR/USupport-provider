@@ -16,7 +16,7 @@ import {
   getActivitiesSchema,
   getRandomProvidersSchema,
   enrollCampaignSchema,
-  changeProviderStatusSchema,
+  updateProviderStatusSchema,
   getProviderStatusSchema,
 } from "#schemas/providerSchemas";
 
@@ -33,7 +33,7 @@ import {
   getCampaigns,
   enrollProviderInCampaign,
   getConsultationsForCampaign,
-  changeProviderStatus,
+  updateProviderStatus,
   getProviderStatus,
 } from "#controllers/providers";
 
@@ -484,11 +484,11 @@ router.put("/update-status", async (req, res, next) => {
 
   const { status, providerDetailId } = req.body;
 
-  return await changeProviderStatusSchema
+  return await updateProviderStatusSchema
     .noUnknown(true)
     .strict(true)
     .validate({ country, language, providerDetailId, status })
-    .then(changeProviderStatus)
+    .then(updateProviderStatus)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
