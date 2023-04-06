@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: provider
-        image: 482053628475.dkr.ecr.eu-central-1.amazonaws.com/usupport-provider-api
+        image: 482053628475.dkr.ecr.eu-central-1.amazonaws.com/usupport-provider-api:beta
         imagePullPolicy: Always
         envFrom:
         - secretRef:
