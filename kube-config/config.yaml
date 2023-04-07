@@ -10,6 +10,5 @@ data:
   CLIENT_URL: http://client-service:3001
   REDIS_CACHE: redis://redis-service:6379
   
-  AWS_REGION: eu-central-1
   KAFKAJS_NO_PARTITIONER_WARNING: "1"
    
