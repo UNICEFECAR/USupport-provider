@@ -208,12 +208,20 @@ router.route("/block").post(populateUser, async (req, res, next) => {
     clientId = req.body.clientId;
   }
 
-  const { time } = req.body;
+  const { time, rescheduleCampaignSlot } = req.body;
 
   return await addConsultationAsPendingSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, clientId, providerId, time, userId })
+    .validate({
+      country,
+      language,
+      clientId,
+      providerId,
+      time,
+      userId,
+      rescheduleCampaignSlot,
+    })
     .then(addConsultationAsPending)
     .then((result) => res.status(200).send(result))
     .catch(next);

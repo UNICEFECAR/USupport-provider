@@ -16,6 +16,8 @@ import {
   getActivitiesSchema,
   getRandomProvidersSchema,
   enrollCampaignSchema,
+  updateProviderStatusSchema,
+  getProviderStatusSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -31,6 +33,8 @@ import {
   getCampaigns,
   enrollProviderInCampaign,
   getConsultationsForCampaign,
+  updateProviderStatus,
+  getProviderStatus,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -470,6 +474,36 @@ router.get("/campaigns/consultations", populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, providerId, campaignId })
     .then(getConsultationsForCampaign)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.put("/update-status", async (req, res, next) => {
+  const language = req.header("x-language-alpha-2");
+  const country = req.header("x-country-alpha-2");
+
+  const { status, providerDetailId } = req.body;
+
+  return await updateProviderStatusSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, language, providerDetailId, status })
+    .then(updateProviderStatus)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/status", async (req, res, next) => {
+  const language = req.header("x-language-alpha-2");
+  const country = req.header("x-country-alpha-2");
+
+  const { providerId } = req.query;
+
+  return await getProviderStatusSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, language, providerDetailId: providerId })
+    .then(getProviderStatus)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

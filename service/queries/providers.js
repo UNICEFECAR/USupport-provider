@@ -13,7 +13,7 @@ export const getProviderByUserID = async (poolCountry, user_id) =>
 
     ), providerData AS (
 
-        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link
+        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, status
         FROM provider_detail
           JOIN userData ON userData.provider_detail_id = provider_detail.provider_detail_id
         ORDER BY provider_detail.created_at DESC
@@ -32,7 +32,7 @@ export const getProviderEmailAndUserIdQuery = async ({
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-    SELECT "user".user_id, email, name, patronym, surname
+    SELECT "user".user_id, email, name, patronym, surname, "user".language
     FROM "user"
       JOIN provider_detail ON "user".provider_detail_id = provider_detail.provider_detail_id
     WHERE provider_detail.provider_detail_id = $1
@@ -54,12 +54,12 @@ export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
     [provider_id]
   );
 
-export const getAllProvidersQuery = async ({ poolCountry }) =>
+export const getAllActiveProvidersQuery = async ({ poolCountry }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link
+      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone_prefix, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, status
       FROM provider_detail
-        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
+        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL AND "provider_detail".status = 'active'
       ORDER BY provider_detail.name ASC;
     `
   );
@@ -324,7 +324,8 @@ export const deleteProviderImageQuery = async ({ poolCountry, provider_id }) =>
 export const getActivitiesQuery = async ({ poolCountry, providerId }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT client_detail_id, provider_detail_id, time, status, price, type, campaign_id FROM consultation
+      SELECT client_detail_id, provider_detail_id, time, status, price, type, transaction_log.campaign_id , consultation.created_at
+      FROM consultation
         INNER JOIN transaction_log ON consultation.consultation_id = transaction_log.consultation_id
       WHERE provider_detail_id = $1 AND (status = 'finished' OR (status = 'scheduled' AND now() > time + interval '1 hour'))
     `,
@@ -401,5 +402,60 @@ export const getProvidersByCampaignIdQuery = async ({
     ORDER BY provider_detail.name ASC;
     `,
     [campaignId]
+  );
+};
+
+export const getCampaignNamesByIds = async ({ poolCountry, campaignIds }) => {
+  return getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT campaign_id, name
+        FROM campaign
+        WHERE campaign_id = ANY($1)
+    `,
+    [campaignIds]
+  );
+};
+
+export const updateProviderStatusQuery = async ({
+  poolCountry,
+  providerDetailId,
+  status,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        UPDATE provider_detail
+        SET status = $1
+        WHERE provider_detail_id = $2
+        RETURNING *;
+      `,
+    [status, providerDetailId]
+  );
+};
+
+export const getProviderUserIdByDetailIdQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT user_id
+        FROM "user"
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
+  );
+};
+
+export const getProviderStatusQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT status
+        FROM provider_detail
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
   );
 };

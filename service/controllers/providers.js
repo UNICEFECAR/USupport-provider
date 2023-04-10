@@ -3,7 +3,7 @@ import AWS from "aws-sdk";
 import bcrypt from "bcryptjs";
 
 import {
-  getAllProvidersQuery,
+  getAllActiveProvidersQuery,
   getProviderByIdQuery,
   updateProviderDataQuery,
   checkIfEmailIsUsedQuery,
@@ -20,6 +20,10 @@ import {
   getProviderConductedConsultationsForCampaign,
   enrollProviderInCampaignQuery,
   getProvidersByCampaignIdQuery,
+  getCampaignNamesByIds,
+  updateProviderStatusQuery,
+  getProviderUserIdByDetailIdQuery,
+  getProviderStatusQuery,
 } from "#queries/providers";
 
 import {
@@ -69,7 +73,7 @@ export const getAllProviders = async ({ country, campaignId }) => {
           throw err;
         });
     } else {
-      providers = await getAllProvidersQuery({
+      providers = await getAllActiveProvidersQuery({
         poolCountry: country,
       })
         .then((res) => res.rows)
@@ -569,6 +573,8 @@ export const getAllClients = async ({ country, language, providerId }) => {
                 consultation.status;
               clients[clientIndex].next_consultation_price = consultation.price;
               clients[clientIndex].next_consultation_coupon_price = couponPrice;
+              clients[clientIndex].next_consultation_campaign_id =
+                campaignData?.campaign_id || null;
               clients[clientIndex].next_consultation_status =
                 consultation.status;
               clients[clientIndex].chat_id = consultation.chat_id;
@@ -621,10 +627,34 @@ export const getActivities = async ({ country, providerId }) => {
     .catch((err) => {
       throw err;
     });
+
+  const campaignIds = Array.from(new Set(activities.map((x) => x.campaign_id)));
+
+  const campaignNames = await getCampaignNamesByIds({
+    poolCountry: country,
+    campaignIds,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        return [];
+      } else {
+        return res.rows;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
   activities.forEach((consultation, index) => {
     const clientData = clientDetails.find(
       (x) => x.client_detail_id === consultation.client_detail_id
     );
+
+    const campaignName = campaignNames.find(
+      (x) => x.campaign_id === consultation.campaign_id
+    )?.name;
+
+    activities[index].campaign_name = campaignName;
     activities[index].clientData = clientData;
   });
 
@@ -636,7 +666,7 @@ export const getRandomProviders = async ({
   language,
   numberOfProviders,
 }) => {
-  const providers = await getAllProvidersQuery({ poolCountry: country })
+  const providers = await getAllActiveProvidersQuery({ poolCountry: country })
     .then((res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
@@ -786,4 +816,63 @@ export const getConsultationsForCampaign = async ({
     consultations[index].client_image = clientImage;
   });
   return consultations;
+};
+
+export const updateProviderStatus = async ({
+  language,
+  country,
+  providerDetailId,
+  status,
+}) => {
+  return await updateProviderStatusQuery({
+    poolCountry: country,
+    providerDetailId,
+    status,
+  })
+    .then(async (res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        const providerData = res.rows[0];
+        console.log(providerData);
+        const user_id = await getProviderUserIdByDetailIdQuery({
+          poolCountry: country,
+          providerDetailId,
+        }).then((res) => {
+          if (res.rowCount === 0) {
+            throw providerNotFound(language);
+          } else {
+            return res.rows[0].user_id;
+          }
+        });
+
+        const cacheKey = `provider_${country}_${user_id}`;
+        await deleteCacheItem(cacheKey);
+        return { success: true, newStatus: providerData.status };
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const getProviderStatus = async ({
+  language,
+  country,
+  providerDetailId,
+}) => {
+  return await getProviderStatusQuery({
+    poolCountry: country,
+    providerDetailId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
 };

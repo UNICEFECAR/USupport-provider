@@ -13,4 +13,5 @@ export default {
   transaction_not_found_error: "Transaction not found",
   campaign_not_found_error: "Campaign not found",
   slot_already_exists_error: "Slot already marked as available",
+  provider_inactive_error: "The provider is inactive",
 };

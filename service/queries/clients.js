@@ -16,7 +16,7 @@ export const getClientByIdQuery = async ({ poolCountry, clientId }) =>
 export const getClientEmailAndUserIdQuery = async ({ poolCountry, clientId }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT "user".user_id, email, push_notification_tokens
+      SELECT "user".user_id, email, push_notification_tokens, "user".language
       FROM "user"
         JOIN client_detail ON "user".client_detail_id = client_detail.client_detail_id
       WHERE client_detail.client_detail_id = $1
