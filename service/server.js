@@ -25,6 +25,7 @@ app.use("/provider/v1/availability", v1.AvailabilityRouter);
 app.use("/provider/v1/consultation", v1.ConsultationRouter);
 app.use("/provider/v1/calendar", v1.CalendarRouter);
 app.use("/provider/v1/services", v1.ServiceRouter);
+app.use("/provider/v1/my-qa", v1.MyQARouter);
 
 /*------------- Error middleware -------------*/
 
