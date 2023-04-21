@@ -459,3 +459,16 @@ export const getProviderStatusQuery = async ({
     [providerDetailId]
   );
 };
+
+export const getMultipleProvidersDataByIDs = async ({
+  poolCountry,
+  providerDetailIds,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT name, surname, patronym, email, provider_detail_id, image
+        FROM provider_detail
+        WHERE provider_detail_id = ANY($1);
+      `,
+    [providerDetailIds]
+  );

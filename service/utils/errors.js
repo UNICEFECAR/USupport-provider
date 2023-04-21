@@ -127,3 +127,11 @@ export const providerInactive = (language) => {
   error.status = 400;
   return error;
 };
+
+export const questionCantBeArchived = (language) => {
+  const error = new Error();
+  error.message = t("question_cant_be_archived_error", language);
+  error.name = "QUESTION CANT BE ARCHIVED";
+  error.status = 400;
+  return error;
+};
