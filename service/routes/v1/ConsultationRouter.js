@@ -1,6 +1,9 @@
 import express from "express";
 
-import { populateUser } from "#middlewares/populateMiddleware";
+import {
+  populateUser,
+  populateProvider,
+} from "#middlewares/populateMiddleware";
 
 import {
   addConsultationAsPendingSchema,
@@ -246,7 +249,7 @@ router.route("/schedule").put(async (req, res, next) => {
     .catch(next);
 });
 
-router.route("/suggest").put(async (req, res, next) => {
+router.put("/suggest", populateProvider, async (req, res, next) => {
   /**
    * #route   PUT /provider/v1/consultation/suggest
    * #desc    Suggest a consultation
@@ -254,12 +257,14 @@ router.route("/suggest").put(async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
+  const providerDetailId = req.provider.provider_detail_id;
+
   const payload = req.body;
 
   return await suggestConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, ...payload })
+    .validate({ country, language, providerDetailId, ...payload })
     .then(suggestConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);

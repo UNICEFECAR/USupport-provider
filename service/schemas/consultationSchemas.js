@@ -32,6 +32,7 @@ export const suggestConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
+  providerDetailId: yup.string().uuid().required(),
 });
 
 export const acceptSuggestedConsultationSchema = yup.object().shape({

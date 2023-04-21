@@ -713,6 +713,12 @@ export const scheduleConsultation = async ({
     const providerStatus = await getProviderStatusQuery({
       poolCountry: country,
       providerId: consultation.provider_detail_id,
+    }).then((res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        return res.rows[0].status;
+      }
     });
     if (providerStatus === "inactive") {
       throw providerInactive(language);
@@ -835,7 +841,23 @@ export const suggestConsultation = async ({
   country,
   language, // Language of the provider
   consultationId,
+  providerDetailId,
 }) => {
+  const providerStatus = await getProviderStatusQuery({
+    poolCountry: country,
+    providerDetailId,
+  }).then((res) => {
+    if (res.rowCount === 0) {
+      throw providerNotFound(language);
+    } else {
+      return res.rows[0].status;
+    }
+  });
+
+  if (providerStatus === "inactive") {
+    throw providerInactive(language);
+  }
+
   const consultation = await getConsultationByIdQuery({
     poolCountry: country,
     consultationId,
