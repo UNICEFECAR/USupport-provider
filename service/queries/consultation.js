@@ -55,7 +55,7 @@ export const addConsultationAsPendingQuery = async ({
   providerId,
   time,
   price,
-  campaignId
+  campaignId,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -65,7 +65,7 @@ export const addConsultationAsPendingQuery = async ({
       RETURNING *;
 
     `,
-    [clientId, providerId, time, price,campaignId]
+    [clientId, providerId, time, price, campaignId]
   );
 
 export const addConsultationAsScheduledQuery = async ({
@@ -436,7 +436,7 @@ export const getProviderConsultationsForCampaign = async ({
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
-          SELECT consultation.consultation_id, consultation.provider_detail_id, consultation.client_detail_id, chat_id, status, time
+          SELECT consultation.consultation_id, consultation.provider_detail_id, consultation.price, consultation.client_detail_id, chat_id, status, time
           FROM consultation
             LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id AND transaction_log.campaign_id = $2
             WHERE provider_detail_id = $1 AND transaction_log.consultation_id = consultation.consultation_id AND (status = 'finished' OR status = 'scheduled')
