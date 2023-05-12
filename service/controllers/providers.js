@@ -111,6 +111,9 @@ export const getAllProviders = async ({ country, campaignId }) => {
       delete providers[i].street;
       delete providers[i].city;
       delete providers[i].postcode;
+      delete providers[i].email;
+      delete providers[i].phone_prefix;
+      delete providers[i].phone;
 
       providers[i] = {
         ...providers[i],
@@ -170,6 +173,9 @@ export const getProviderById = async ({
         delete provider.city;
         delete provider.postcode;
         delete provider.user_id;
+        delete provider.email;
+        delete provider.phone_prefix;
+        delete provider.phone;
       }
 
       provider = {

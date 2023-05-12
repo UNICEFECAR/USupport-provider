@@ -60,7 +60,7 @@ router.get("/", populateProvider, async (req, res) => {
 router.get("/by-id", async (req, res, next) => {
   /**
    * #route   GET /provider/v1/provider/by-id
-   * #desc    Get providers data by id, excluding the street, city and postcode data if request is not from a country admin
+   * #desc    Get providers data by id, excluding the street, city, postcode, phone and email data if request is not from a country admin
    */
 
   const country = req.header("x-country-alpha-2");
