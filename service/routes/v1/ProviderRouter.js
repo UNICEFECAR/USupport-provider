@@ -18,6 +18,10 @@ import {
   enrollCampaignSchema,
   updateProviderStatusSchema,
   getProviderStatusSchema,
+  updateProviderImageSchemaAsProvider,
+  updateProviderImageSchemaAsAdmin,
+  deleteProviderImageSchemaAsProvider,
+  deleteProviderImageSchemaAsAdmin,
 } from "#schemas/providerSchemas";
 
 import {
@@ -295,7 +299,7 @@ router.put("/image", populateProvider, populateUser, async (req, res, next) => {
   const user_id = req.user.user_id;
   const image = user_id;
 
-  return await updateProviderImageSchema
+  return await updateProviderImageSchemaAsProvider
     .noUnknown(true)
     .strict()
     .validate({ country, language, provider_id, image, user_id })
@@ -315,7 +319,7 @@ router.delete("/image", populateProvider, async (req, res, next) => {
 
   const provider_id = req.provider.provider_detail_id;
 
-  return await deleteProviderImageSchema
+  return await deleteProviderImageSchemaAsProvider
     .noUnknown(true)
     .strict()
     .validate({ country, language, provider_id, user_id })
@@ -331,14 +335,14 @@ router.put("/image/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
+  const admin_id = req.header("x-admin-id");
 
   const { providerId: provider_id, image } = req.body;
 
-  return await updateProviderImageSchema
+  return await updateProviderImageSchemaAsAdmin
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id, image, user_id })
+    .validate({ country, language, provider_id, image, admin_id })
     .then(updateProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -351,14 +355,14 @@ router.delete("/image/admin", async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
-  const user_id = req.header("x-user-id");
+  const admin_id = req.header("x-admin-id");
 
   const { providerId: provider_id } = req.body;
 
-  return await deleteProviderImageSchema
+  return await deleteProviderImageSchemaAsAdmin
     .noUnknown(true)
     .strict()
-    .validate({ country, language, provider_id, user_id })
+    .validate({ country, language, provider_id, admin_id })
     .then(deleteProviderImage)
     .then((result) => res.status(200).send(result))
     .catch(next);
