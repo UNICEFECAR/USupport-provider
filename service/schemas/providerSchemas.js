@@ -36,7 +36,6 @@ export const updateProviderDataSchema = yup.object().shape({
   nickname: yup.string().notRequired(),
   email: yup.string().email().required(),
   currentEmail: yup.string().email().required(),
-  phonePrefix: yup.string().notRequired(),
   phone: yup.string().notRequired(),
   specializations: specializationsTypeSchema.notRequired(),
   street: yup.string().notRequired(),

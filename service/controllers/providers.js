@@ -112,7 +112,6 @@ export const getAllProviders = async ({ country, campaignId }) => {
       delete providers[i].city;
       delete providers[i].postcode;
       delete providers[i].email;
-      delete providers[i].phone_prefix;
       delete providers[i].phone;
 
       providers[i] = {
@@ -174,7 +173,6 @@ export const getProviderById = async ({
         delete provider.postcode;
         delete provider.user_id;
         delete provider.email;
-        delete provider.phone_prefix;
         delete provider.phone;
       }
 
@@ -202,7 +200,6 @@ export const updateProviderData = async ({
   nickname,
   email,
   currentEmail,
-  phonePrefix,
   phone,
   specializations,
   street,
@@ -243,7 +240,6 @@ export const updateProviderData = async ({
     surname,
     nickname,
     email,
-    phonePrefix,
     phone,
     specializations,
     street,
