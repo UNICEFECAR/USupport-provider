@@ -234,7 +234,7 @@ export const getAvailabilitySingleDay = async ({
   day,
   campaignId,
 }) => {
-  const tomorrowTimestamp = new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
+  const now = new Date().getTime() / 1000; // Clients can't book appointments in the past
 
   let slots = [];
   let campaignData;
@@ -288,7 +288,7 @@ export const getAvailabilitySingleDay = async ({
     }
 
     if (
-      slotTimestamp > tomorrowTimestamp &&
+      slotTimestamp > now &&
       slotTimestamp >= previousDayTimestamp &&
       slotTimestamp < nextDayTimestamp &&
       !allConsultationsForDay.some(

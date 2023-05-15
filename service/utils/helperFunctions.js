@@ -457,11 +457,10 @@ export const getEarliestAvailableSlot = async (
       let slot = campaignId
         ? new Date(availabilityToMap[k].time)
         : availabilityToMap[k];
-      const tomorrowTimestamp =
-        new Date().getTime() / 1000 + getXDaysInSeconds(1); // Clients can book consultations more than 24 hours in advance
+      const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
 
       if (
-        slot > new Date(tomorrowTimestamp * 1000) &&
+        slot > new Date(now * 1000) &&
         !upcomingConsultations.find(
           (consultation) =>
             new Date(consultation.time).getTime() === new Date(slot).getTime()
