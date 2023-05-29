@@ -19,6 +19,7 @@ import {
   updateConsultationStatusAsFinishedQuery,
   getAllUpcomingConsultationsByProviderIdQuery,
   getConsultationTimeQuerry,
+  getClientConsultationsForSpecificTime,
 } from "#queries/consultation";
 
 import {
@@ -62,6 +63,7 @@ import {
   transactionNotFound,
   campaignNotFound,
   providerInactive,
+  clientCantBook,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -595,6 +597,22 @@ export const addConsultationAsPending = async ({
   const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
   if (!isSlotAvailable) throw slotNotAvailable(language);
 
+  // Check if the client is free at the time of the consultation
+  const isClientFree = await getClientConsultationsForSpecificTime({
+    poolCountry: country,
+    clientId,
+    time,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) return true;
+      else return false;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  if (!isClientFree) throw clientCantBook(language);
+
   const providerData = await getProviderByIdQuery({
     poolCountry: country,
     provider_id: providerId,
@@ -873,6 +891,25 @@ export const suggestConsultation = async ({
       throw err;
     });
 
+  // Check if the client is free at the time of the consultation
+  const isClientFree = await getClientConsultationsForSpecificTime({
+    poolCountry: country,
+    clientId: consultation.client_detail_id,
+    time: new Date(consultation.time).getTime() / 1000,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) return true;
+      else {
+        console.log(res.rows);
+        return false;
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  if (!isClientFree) throw clientCantBook(language);
+
   // Check if consultation status is still pending
   // If it is, change status to suggested
   // If it is not, check if it is still available
@@ -1003,6 +1040,34 @@ export const acceptSuggestedConsultation = async ({
   language, // language of the client
   consultationId,
 }) => {
+  // Check if consultation exists
+  const consultation = await getConsultationByIdQuery({
+    poolCountry: country,
+    consultationId,
+  }).then((raw) => {
+    if (raw.rowCount === 0) {
+      throw consultationNotFound(language);
+    } else {
+      return raw.rows[0];
+    }
+  });
+
+  // Check if the client is free at the time of the consultation
+  const isClientFree = await getClientConsultationsForSpecificTime({
+    poolCountry: country,
+    clientId: consultation.client_detail_id,
+    time: new Date(consultation.time).getTime() / 1000,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) return true;
+      else return false;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  if (!isClientFree) throw clientCantBook(language);
+
   return await updateConsultationStatusAsScheduledQuery({
     poolCountry: country,
     consultationId,

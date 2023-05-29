@@ -445,3 +445,18 @@ export const getProviderConsultationsForCampaign = async ({
     [providerId, campaignId]
   );
 };
+
+export const getClientConsultationsForSpecificTime = async ({
+  poolCountry,
+  clientId,
+  time,
+}) => {
+  return await getDBPool("clinicalDb", poolCountry).query(
+    `
+        SELECT *
+        FROM consultation
+        WHERE client_detail_id = $1 AND time = to_timestamp($2) AND status = 'scheduled'
+      `,
+    [clientId, time]
+  );
+};
