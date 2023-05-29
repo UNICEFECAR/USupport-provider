@@ -668,7 +668,7 @@ export const getRandomProviders = async ({
   language,
   numberOfProviders,
 }) => {
-  const providers = await getAllActiveProvidersQuery({ poolCountry: country })
+  let providers = await getAllActiveProvidersQuery({ poolCountry: country })
     .then((res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
@@ -679,6 +679,22 @@ export const getRandomProviders = async ({
     .catch((err) => {
       throw err;
     });
+
+  for (let i = 0; i < providers.length; i++) {
+    providers[i].specializations = formatSpecializations(
+      providers[i].specializations
+    );
+
+    delete providers[i].street;
+    delete providers[i].city;
+    delete providers[i].postcode;
+    delete providers[i].email;
+    delete providers[i].phone;
+
+    providers[i] = {
+      ...providers[i],
+    };
+  }
 
   return shuffleArray(providers).slice(0, numberOfProviders);
 };
