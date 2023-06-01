@@ -15,4 +15,6 @@ export default {
   slot_already_exists_error: "Slot already marked as available",
   provider_inactive_error: "The provider is inactive",
   question_cant_be_archived_error: "The question can't be archived",
+  client_cant_book_error:
+    "Client already has a consultation booked for this time",
 };

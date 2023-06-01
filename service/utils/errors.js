@@ -135,3 +135,11 @@ export const questionCantBeArchived = (language) => {
   error.status = 400;
   return error;
 };
+
+export const clientCantBook = (language) => {
+  const error = new Error();
+  error.message = t("client_cant_book_error", language);
+  error.name = "CLIENT CANT BOOK";
+  error.status = 400;
+  return error;
+};
