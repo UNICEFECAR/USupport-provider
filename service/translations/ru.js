@@ -11,8 +11,11 @@ export default {
   user_not_found_error: "Пользователь не найден",
   consultation_not_scheduled_error: "Консультация не запланирована",
   service_not_found_error: "Сервис не найден",
-  transaction_not_found_error: "Transaction not found",
-  campaign_not_found_error: "Campaign not found",
-  slot_already_exists_error: "Slot already marked as available",
-  provider_inactive_error: "The provider is inactiveRU",
+  transaction_not_found_error: "Транзакция не найдена",
+  campaign_not_found_error: "Кампания не найдена",
+  slot_already_exists_error: "Временной промежуток уже помечен как доступный",
+  provider_inactive_error: "Консультант неактивен",
+  question_cant_be_archived_error: "Вопрос не может быть заархивирован",
+  client_cant_book_error:
+    "Client already has a consultation booked for this time",
 };
