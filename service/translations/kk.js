@@ -12,8 +12,12 @@ export default {
   user_not_found_error: "Пайдаланушы табылмады",
   consultation_not_scheduled_error: "Консультация жоспарланбаған",
   service_not_found_error: "Сервис табылмады",
-  transaction_not_found_error: "Transaction not found",
-  campaign_not_found_error: "Campaign not found",
-  slot_already_exists_error: "Slot already marked as available",
-  provider_inactive_error: "The provider is inactiveKK",
+  transaction_not_found_error: "Транзакция табылмады",
+  campaign_not_found_error: "Науқан табылмады",
+  slot_already_exists_error:
+    "Уақыт аралығы әлдеқашан қолжетімді деп белгіленген",
+  provider_inactive_error: "Консультант белсенді емес",
+  question_cant_be_archived_error: "Сұрақты мұрағаттау мүмкін емес",
+  client_cant_book_error:
+    "Client already has a consultation booked for this time",
 };
