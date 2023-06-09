@@ -33,7 +33,7 @@ export const getCampaignCouponPriceForMultipleIds = ({
 }) => {
   return getDBPool("piiDb", poolCountry).query(
     `
-        SELECT campaign_id, price_per_coupon, sponsor.image
+        SELECT campaign_id, price_per_coupon, sponsor.image, sponsor.name
         FROM campaign
           JOIN sponsor ON sponsor.sponsor_id = campaign.sponsor_id
         WHERE campaign.campaign_id = ANY($1);

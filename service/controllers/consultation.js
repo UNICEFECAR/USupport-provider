@@ -555,6 +555,7 @@ export const getAllUpcomingConsultations = async ({
 
     const couponPrice = campaignData?.price_per_coupon;
     const sponsorImage = campaignData?.image;
+    const sponsorName = campaignData?.name;
 
     const oneHourBeforeNow = new Date();
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
@@ -577,6 +578,7 @@ export const getAllUpcomingConsultations = async ({
         res["sponsor_image"] = sponsorImage;
         res["coupon_price"] = couponPrice;
         res["campaign_id"] = campaignId;
+        res["sponsor_name"] = sponsorName;
       }
 
       response.consultations.push(res);
