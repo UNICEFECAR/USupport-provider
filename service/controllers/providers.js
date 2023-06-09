@@ -577,6 +577,8 @@ export const getAllClients = async ({ country, language, providerId }) => {
               clients[clientIndex].next_consultation_coupon_price = couponPrice;
               clients[clientIndex].next_consultation_campaign_id =
                 campaignData?.campaign_id || null;
+              clients[clientIndex].next_consultation_sponsor_name =
+                campaignData?.name || null;
               clients[clientIndex].next_consultation_status =
                 consultation.status;
               clients[clientIndex].chat_id = consultation.chat_id;

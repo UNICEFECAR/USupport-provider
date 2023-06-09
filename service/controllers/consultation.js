@@ -247,6 +247,7 @@ export const getAllConsultationsSingleWeek = async ({
 
     const couponPrice = campaignData?.price_per_coupon;
     const sponsorImage = campaignData?.image;
+    const sponsorName = campaignData?.name;
 
     response.push({
       consultation_id: consultation.consultation_id,
@@ -262,6 +263,7 @@ export const getAllConsultationsSingleWeek = async ({
       coupon_price: couponPrice,
       sponsor_image: sponsorImage,
       campaign_id: campaignId,
+      sponsor_name: sponsorName,
     });
   }
 
@@ -339,6 +341,7 @@ export const getAllConsultationsSingleDay = async ({
 
     const couponPrice = campaignData?.price_per_coupon;
     const sponsorImage = campaignData?.image;
+    const sponsorName = campaignData?.name;
 
     const res = {
       consultation_id: consultation.consultation_id,
@@ -357,6 +360,7 @@ export const getAllConsultationsSingleDay = async ({
       res["sponsor_image"] = sponsorImage;
       res["coupon_price"] = couponPrice;
       res["campaign_id"] = campaignId;
+      res["sponsor_name"] = sponsorName;
     }
 
     response.push(res);
