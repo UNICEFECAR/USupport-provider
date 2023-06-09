@@ -17,5 +17,7 @@ export default {
   provider_inactive_error: "Консультант неактивен",
   question_cant_be_archived_error: "Вопрос не может быть заархивирован",
   client_cant_book_error:
-    "Client already has a consultation booked for this time",
+    "Client already has a consultation booked for this timeRU",
+  booking_not_allowed_error:
+    "You already have a consultation booked for this timeRU",
 };

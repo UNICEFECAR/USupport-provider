@@ -19,5 +19,7 @@ export default {
   provider_inactive_error: "Консультант белсенді емес",
   question_cant_be_archived_error: "Сұрақты мұрағаттау мүмкін емес",
   client_cant_book_error:
-    "Client already has a consultation booked for this time",
+    "Client already has a consultation booked for this timeКК",
+  booking_not_allowed_error:
+    "You already have a consultation booked for this timeKK",
 };

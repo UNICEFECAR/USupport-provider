@@ -64,6 +64,7 @@ import {
   campaignNotFound,
   providerInactive,
   clientCantBook,
+  bookingNotAllowed,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -908,7 +909,7 @@ export const suggestConsultation = async ({
       throw err;
     });
 
-  if (!isClientFree) throw clientCantBook(language);
+  if (!isClientFree) throw bookingNotAllowed(language);
 
   // Check if consultation status is still pending
   // If it is, change status to suggested

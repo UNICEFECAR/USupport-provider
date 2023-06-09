@@ -17,4 +17,6 @@ export default {
   question_cant_be_archived_error: "The question can't be archived",
   client_cant_book_error:
     "Client already has a consultation booked for this time",
+  booking_not_allowed_error:
+    "You already have a consultation booked for this time",
 };

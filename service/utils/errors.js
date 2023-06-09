@@ -136,6 +136,14 @@ export const questionCantBeArchived = (language) => {
   return error;
 };
 
+export const bookingNotAllowed = (language) => {
+  const error = new Error();
+  error.message = t("booking_not_allowed_error", language);
+  error.name = "BOOKING NOT ALLOWED";
+  error.status = 400;
+  return error;
+};
+
 export const clientCantBook = (language) => {
   const error = new Error();
   error.message = t("client_cant_book_error", language);
