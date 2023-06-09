@@ -614,7 +614,7 @@ export const addConsultationAsPending = async ({
       throw err;
     });
 
-  if (!isClientFree) throw clientCantBook(language);
+  if (!isClientFree) throw bookingNotAllowed(language);
 
   const providerData = await getProviderByIdQuery({
     poolCountry: country,
@@ -911,7 +911,7 @@ export const suggestConsultation = async ({
       throw err;
     });
 
-  if (!isClientFree) throw bookingNotAllowed(language);
+  if (!isClientFree) throw clientCantBook(language);
 
   // Check if consultation status is still pending
   // If it is, change status to suggested
@@ -1069,7 +1069,7 @@ export const acceptSuggestedConsultation = async ({
       throw err;
     });
 
-  if (!isClientFree) throw clientCantBook(language);
+  if (!isClientFree) throw bookingNotAllowed(language);
 
   return await updateConsultationStatusAsScheduledQuery({
     poolCountry: country,
