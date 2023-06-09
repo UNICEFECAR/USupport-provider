@@ -449,8 +449,10 @@ export const getProviderConsultationsForCampaign = async ({
 export const getClientConsultationsForSpecificTime = async ({
   poolCountry,
   clientId,
-  time,
+  time: slotTime,
 }) => {
+  const isWithCoupon = typeof slotTime === "object";
+  const time = isWithCoupon ? slotTime.time : slotTime;
   return await getDBPool("clinicalDb", poolCountry).query(
     `
         SELECT *
