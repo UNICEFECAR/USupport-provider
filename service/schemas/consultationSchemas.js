@@ -20,6 +20,7 @@ export const addConsultationAsPendingSchema = yup.object().shape({
     return timeSchema;
   }),
   userId: yup.string().uuid().notRequired(),
+  requestedBy: yup.string().oneOf(["client", "provider"]).required(),
 });
 
 export const scheduleConsultationSchema = yup.object().shape({

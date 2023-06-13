@@ -196,12 +196,14 @@ router.route("/block").post(populateUser, async (req, res, next) => {
   const language = req.header("x-language-alpha-2");
 
   const userId = req.user.user_id;
-
+  let requestedBy = "client";
   let providerId = "";
   if (req.user.provider_detail_id) {
     providerId = req.user.provider_detail_id;
+    requestedBy = "provider";
   } else {
     providerId = req.body.providerId;
+    requestedBy = "client";
   }
 
   let clientId = req.user.client_detail_id;
@@ -224,6 +226,7 @@ router.route("/block").post(populateUser, async (req, res, next) => {
       time,
       userId,
       rescheduleCampaignSlot,
+      requestedBy,
     })
     .then(addConsultationAsPending)
     .then((result) => res.status(200).send(result))

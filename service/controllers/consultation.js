@@ -600,6 +600,7 @@ export const addConsultationAsPending = async ({
   time,
   userId,
   rescheduleCampaignSlot = false,
+  requestedBy,
 }) => {
   const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
   if (!isSlotAvailable) throw slotNotAvailable(language);
@@ -618,7 +619,13 @@ export const addConsultationAsPending = async ({
       throw err;
     });
 
-  if (!isClientFree) throw bookingNotAllowed(language);
+  if (!isClientFree) {
+    if (requestedBy === "client") {
+      throw bookingNotAllowed(language);
+    } else {
+      throw clientCantBook(language);
+    }
+  }
 
   const providerData = await getProviderByIdQuery({
     poolCountry: country,
