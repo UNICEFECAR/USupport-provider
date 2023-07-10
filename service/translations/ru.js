@@ -18,5 +18,5 @@ export default {
   question_cant_be_archived_error: "Вопрос не может быть заархивирован",
   client_cant_book_error: "Клиент уже забронировал консультацию на это время",
   booking_not_allowed_error:
-    "You already have a consultation booked for this timeRU",
+    "У Вас уже забронирована консультация на это время",
 };

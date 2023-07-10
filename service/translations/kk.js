@@ -19,6 +19,5 @@ export default {
   provider_inactive_error: "Консультант белсенді емес",
   question_cant_be_archived_error: "Сұрақты мұрағаттау мүмкін емес",
   client_cant_book_error: "Клиент бұл уақытқа консультацияға тапсырыс берген",
-  booking_not_allowed_error:
-    "You already have a consultation booked for this timeKK",
+  booking_not_allowed_error: "Сіз бұл уақытқа консультацияға жазылғансыз",
 };
