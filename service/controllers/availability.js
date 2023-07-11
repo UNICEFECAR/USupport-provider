@@ -7,7 +7,6 @@ import {
 
 import { getConsultationsForDayQuery } from "#queries/consultation";
 
-import { getProvidersByCampaignIdQuery } from "#queries/providers";
 import { getCampaignDataByIdQuery } from "#queries/sponsors";
 
 import {
