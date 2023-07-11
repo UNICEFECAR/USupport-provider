@@ -10,8 +10,6 @@ import {
   getProviderByIdSchema,
   updateProviderDataSchema,
   deleteProviderDataSchema,
-  updateProviderImageSchema,
-  deleteProviderImageSchema,
   getAllClientsSchema,
   getActivitiesSchema,
   getRandomProvidersSchema,

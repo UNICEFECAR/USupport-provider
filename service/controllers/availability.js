@@ -48,7 +48,7 @@ export const updateAvailabilitySingleWeek = async ({
     throw slotsNotWithinWeek(language);
 
   // If the campaignId is provided, get the data for that campaign
-  let campaignStartDate, campaignEndDate;
+  let campaignEndDate;
   const today = new Date().getTime();
   if (campaignId) {
     const campaignData = await getCampaignDataByIdQuery({
@@ -153,7 +153,7 @@ export const updateAvailabilityByTemplate = async ({
   campaignId,
 }) => {
   // If the campaignId is provided, get the data for that campaign
-  let campaignStartDate, campaignEndDate;
+  let campaignEndDate;
   const today = new Date().getTime();
   if (campaignId) {
     const campaignData = await getCampaignDataByIdQuery({
@@ -329,10 +329,6 @@ export const clearAvailabilitySlot = async ({
     );
   });
 
-  try {
-    await Promise.all(queries);
-    return { success: true };
-  } catch (err) {
-    throw err;
-  }
+  await Promise.all(queries);
+  return { success: true };
 };
