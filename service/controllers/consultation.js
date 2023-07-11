@@ -65,6 +65,7 @@ import {
   providerInactive,
   clientCantBook,
   bookingNotAllowed,
+  providerNotFound,
 } from "#utils/errors";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
@@ -179,7 +180,6 @@ export const getAllPastConsultationsByClientId = async ({
 
 export const getAllConsultationsSingleWeek = async ({
   country,
-  language,
   providerId,
   startDate,
 }) => {
@@ -272,7 +272,6 @@ export const getAllConsultationsSingleWeek = async ({
 
 export const getAllConsultationsSingleDay = async ({
   country,
-  language,
   providerId,
   date,
 }) => {
@@ -369,11 +368,7 @@ export const getAllConsultationsSingleDay = async ({
   return response;
 };
 
-export const getAllPastConsultations = async ({
-  country,
-  language,
-  providerId,
-}) => {
+export const getAllPastConsultations = async ({ country, providerId }) => {
   const consultations = await getAllConsultationsByProviderIdQuery({
     poolCountry: country,
     providerId,
@@ -482,7 +477,6 @@ export const getAllPastConsultations = async ({
 
 export const getAllUpcomingConsultations = async ({
   country,
-  language,
   providerId,
   pageNo,
 }) => {

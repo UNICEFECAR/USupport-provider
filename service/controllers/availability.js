@@ -66,7 +66,6 @@ export const updateAvailabilitySingleWeek = async ({
       .catch((err) => {
         throw err;
       });
-    campaignStartDate = new Date(campaignData.campaign_start_date).getTime();
     campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
   }
 
@@ -172,7 +171,6 @@ export const updateAvailabilityByTemplate = async ({
       .catch((err) => {
         throw err;
       });
-    campaignStartDate = new Date(campaignData.campaign_start_date).getTime();
     campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
   }
 
@@ -237,16 +235,16 @@ export const getAvailabilitySingleDay = async ({
   const now = new Date().getTime() / 1000; // Clients can't book appointments in the past
 
   let slots = [];
-  let campaignData;
+  // let campaignData;
 
-  if (campaignId) {
-    campaignData = await getProvidersByCampaignIdQuery({
-      poolCountry: country,
-      campaignId,
-    }).catch((err) => {
-      throw err;
-    });
-  }
+  // if (campaignId) {
+  //   campaignData = await getProvidersByCampaignIdQuery({
+  //     poolCountry: country,
+  //     campaignId,
+  //   }).catch((err) => {
+  //     throw err;
+  //   });
+  // }
 
   const threeWeeksSlots = await getSlotsForThreeWeeks({
     country,
@@ -333,7 +331,7 @@ export const clearAvailabilitySlot = async ({
   });
 
   try {
-    const res = await Promise.all(queries);
+    await Promise.all(queries);
     return { success: true };
   } catch (err) {
     throw err;

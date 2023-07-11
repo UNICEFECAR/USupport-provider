@@ -42,7 +42,6 @@ import { getCampaignCouponPriceForMultipleIds } from "#queries/sponsors";
 
 import {
   providerNotFound,
-  clientNotFound,
   incorrectPassword,
   emailUsed,
   providerHasFutureConsultations,
@@ -464,7 +463,7 @@ export const deleteProviderImage = async ({
     });
 };
 
-export const getAllClients = async ({ country, language, providerId }) => {
+export const getAllClients = async ({ country, providerId }) => {
   return await getAllConsultationsByProviderIdQuery({
     poolCountry: country,
     providerId,

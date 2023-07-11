@@ -8,9 +8,5 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "plugins": ["prettier"],
-  "rules": {
-    "no-undefined": "off",
-    "no-undef": "off"
-  }
+  "plugins": ["prettier"]
 }
