@@ -417,6 +417,66 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
   return true;
 };
 
+export const getLatestAvailableSlot = async (
+  country,
+  providerId,
+  campaignId = null
+) => {
+  const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
+    poolCountry: country,
+    providerId: providerId,
+  })
+    .then((res) => {
+      return res.rows;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const upcomingConsultations = await getUpcomingConsultationsByProviderIdQuery(
+    {
+      poolCountry: country,
+      providerId: providerId,
+    }
+  )
+    .then((res) => {
+      return res.rows;
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const allAvailability = upcomingAvailability.map((x) => {
+    return campaignId ? x.campaign_slots : x.slots;
+  });
+  const allSlots = allAvailability.flat().sort((a, b) => {
+    if (campaignId) {
+      return new Date(b.time).getTime() - new Date(a.time).getTime();
+    }
+    return new Date(b).getTime() - new Date(a).getTime();
+  });
+
+  let latestAvailableSlot;
+  for (let l = 0; l < allSlots.length; l++) {
+    const slot = campaignId ? allSlots[l].time : allSlots[l];
+    if (!slot) continue;
+
+    const now = new Date().getTime(); // Clients cant book consultations in the past
+
+    if (
+      new Date(slot).getTime() > now &&
+      !upcomingConsultations.find(
+        (consultation) =>
+          new Date(consultation.time).getTime() === new Date(slot).getTime()
+      )
+    ) {
+      latestAvailableSlot = slot;
+      break;
+    }
+  }
+  return latestAvailableSlot;
+};
+
 export const getEarliestAvailableSlot = async (
   country,
   providerId,
