@@ -48,6 +48,7 @@ import {
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
   shuffleArray,
+  getLatestAvailableSlot,
 } from "#utils/helperFunctions";
 import { deleteCacheItem } from "#utils/cache";
 
@@ -56,13 +57,39 @@ const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_REGION = process.env.AWS_REGION;
 const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME;
 
-export const getAllProviders = async ({ country, campaignId }) => {
+export const allProviderTypes = [
+  "psychologist",
+  "psychotherapist",
+  "psychiatrist",
+  "coach",
+];
+
+export const getAllProviders = async ({
+  country,
+  campaignId,
+  offset,
+  limit,
+  availableAfter,
+  availableBefore,
+  providerTypes,
+  sex,
+  maxPrice,
+  onlyFreeConsultation,
+  language,
+}) => {
+  const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
+  let filteredProviders = [];
   let providers;
   try {
     if (campaignId) {
       providers = await getProvidersByCampaignIdQuery({
         poolCountry: country,
         campaignId: campaignId,
+        limit,
+        offset: newOffset,
+        maxPrice: maxPrice || 0,
+        onlyFreeConsultation: onlyFreeConsultation || false,
+        providerTypes: providerTypes || allProviderTypes,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -71,6 +98,11 @@ export const getAllProviders = async ({ country, campaignId }) => {
     } else {
       providers = await getAllActiveProvidersQuery({
         poolCountry: country,
+        limit,
+        offset: newOffset,
+        maxPrice: maxPrice || 0,
+        onlyFreeConsultation: onlyFreeConsultation || false,
+        providerTypes: providerTypes || allProviderTypes,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -84,9 +116,23 @@ export const getAllProviders = async ({ country, campaignId }) => {
         provider_detail_id: providers[i].provider_detail_id,
       });
 
+      const languageIds = languages.map((x) => x.language_id);
+
+      if (language && !languageIds.includes(language)) {
+        continue;
+      }
+
       providers[i].specializations = formatSpecializations(
         providers[i].specializations
       );
+
+      if (sex) {
+        const isSexMatching = sex.includes(providers[i].sex);
+
+        if (!isSexMatching) {
+          continue;
+        }
+      }
 
       providers[i].total_consultations = await getAllConsultationsCountQuery({
         poolCountry: country,
@@ -104,6 +150,47 @@ export const getAllProviders = async ({ country, campaignId }) => {
         providers[i].campaign_id
       );
 
+      providers[i].latest_available_slot = await getLatestAvailableSlot(
+        country,
+        providers[i].provider_detail_id,
+        providers[i].campaign_id
+      );
+
+      if (availableAfter) {
+        if (!providers[i].earliest_available_slot) {
+          continue;
+        }
+
+        const isAvailableAfter = !availableAfter
+          ? true
+          : new Date(
+              new Date(Number(availableAfter) * 1000).setHours(0, 0, 0, 0)
+            )?.getTime() <=
+            new Date(providers[i].earliest_available_slot).getTime();
+
+        if (!isAvailableAfter) {
+          continue;
+        }
+      }
+
+      if (availableBefore) {
+        if (!providers[i].latest_available_slot) {
+          continue;
+        }
+
+        const availableBeforeDate = new Date(
+          Number(availableBefore) * 1000
+        ).setHours(0, 0, 0, 0);
+        const isAvailableBefore = !availableBefore
+          ? true
+          : availableBeforeDate?.getTime() >=
+            new Date(providers[i].latest_available_slot).getTime();
+
+        if (!isAvailableBefore) {
+          continue;
+        }
+      }
+
       delete providers[i].street;
       delete providers[i].city;
       delete providers[i].postcode;
@@ -115,9 +202,9 @@ export const getAllProviders = async ({ country, campaignId }) => {
         languages: languages,
         work_with: workWith,
       };
+      filteredProviders.push(providers[i]);
     }
-
-    return providers;
+    return filteredProviders;
   } catch (err) {
     throw err;
   }
@@ -177,7 +264,6 @@ export const getProviderById = async ({
         languages: languages,
         work_with: workWith,
       };
-
       return provider;
     })
     .catch((err) => {
@@ -666,7 +752,11 @@ export const getRandomProviders = async ({
   language,
   numberOfProviders,
 }) => {
-  let providers = await getAllActiveProvidersQuery({ poolCountry: country })
+  let providers = await getAllActiveProvidersQuery({
+    poolCountry: country,
+    limit: numberOfProviders || 3,
+    offset: 1,
+  })
     .then((res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
@@ -850,7 +940,6 @@ export const updateProviderStatus = async ({
         throw providerNotFound(language);
       } else {
         const providerData = res.rows[0];
-        console.log(providerData);
         const user_id = await getProviderUserIdByDetailIdQuery({
           poolCountry: country,
           providerDetailId,

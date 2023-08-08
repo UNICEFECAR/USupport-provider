@@ -15,6 +15,15 @@ const specializationsTypeSchema = yup
 export const getAllProvidersSchema = yup.object().shape({
   country: yup.string().required(),
   campaignId: yup.string().notRequired(),
+  limit: yup.number().positive().required(),
+  offset: yup.number().positive().required(),
+  maxPrice: yup.number().notRequired().nullable(),
+  availableAfter: yup.string().notRequired().nullable(),
+  availableBefore: yup.string().notRequired().nullable(),
+  onlyFreeConsultation: yup.boolean().notRequired().nullable(),
+  providerTypes: yup.array().notRequired().nullable(),
+  sex: yup.array().notRequired().nullable(),
+  language: yup.string().notRequired().nullable(),
 });
 
 export const getProviderByIdSchema = yup.object().shape({

@@ -96,7 +96,19 @@ router.get("/all", async (req, res, next) => {
 
   const country = req.header("x-country-alpha-2");
 
-  const { campaignId } = req.query;
+  const {
+    campaignId,
+    limit,
+    offset,
+    maxPrice,
+    availableAfter,
+    availableBefore,
+    onlyFreeConsultation,
+    language,
+  } = req.query;
+
+  const providerTypes = req.query.providerTypes?.split(",") || null;
+  const sex = req.query.sex?.split(",") || null;
 
   return await getAllProvidersSchema
     .noUnknown(true)
@@ -104,6 +116,15 @@ router.get("/all", async (req, res, next) => {
     .validate({
       country,
       campaignId,
+      maxPrice: Number(maxPrice) || 0,
+      availableAfter,
+      availableBefore,
+      onlyFreeConsultation: onlyFreeConsultation === "true" ? true : false,
+      providerTypes,
+      sex,
+      language,
+      limit: Number(limit),
+      offset: Number(offset),
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))

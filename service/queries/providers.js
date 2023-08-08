@@ -1,3 +1,4 @@
+import { allProviderTypes } from "#controllers/providers";
 import { getDBPool } from "#utils/dbConfig";
 
 export const getProviderByUserID = async (poolCountry, user_id) =>
@@ -54,14 +55,34 @@ export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
     [provider_id]
   );
 
-export const getAllActiveProvidersQuery = async ({ poolCountry }) =>
+export const getAllActiveProvidersQuery = async ({
+  poolCountry,
+  limit,
+  offset,
+  maxPrice = 0,
+  onlyFreeConsultation = false,
+  providerTypes = allProviderTypes,
+}) =>
   await getDBPool("piiDb", poolCountry).query(
     `
       SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, status
       FROM provider_detail
         JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL AND "provider_detail".status = 'active'
-      ORDER BY provider_detail.name ASC;
-    `
+      WHERE 
+      (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END)
+      AND
+      (
+        ($4 = true AND consultation_price = 0) OR ($4 = false)
+      )
+      AND
+      (
+       specializations::text[] && $5::text[]
+      )
+      ORDER BY provider_detail.name ASC
+      LIMIT $1
+      OFFSET $2;
+    `,
+    [limit, offset, maxPrice, onlyFreeConsultation, providerTypes]
   );
 
 export const getProviderWorkWithQuery = async (poolCountry, provider_id) =>
@@ -387,6 +408,11 @@ export const enrollProviderInCampaignQuery = async ({
 export const getProvidersByCampaignIdQuery = async ({
   poolCountry,
   campaignId,
+  limit,
+  offset,
+  maxPrice,
+  onlyFreeConsultation,
+  providerTypes,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
@@ -395,9 +421,21 @@ export const getProvidersByCampaignIdQuery = async ({
       JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
       JOIN campaign ON campaign.campaign_id = $1
       JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
-    ORDER BY provider_detail.name ASC;
+    WHERE 
+      (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END)
+      AND
+      (
+        ($5 = true AND consultation_price = 0) OR ($5 = false)
+      )
+      AND
+      (
+       specializations::text[] && $6::text[]
+      )
+      ORDER BY provider_detail.name ASC
+      LIMIT $2
+      OFFSET $3;
     `,
-    [campaignId]
+    [campaignId, limit, offset, maxPrice, onlyFreeConsultation, providerTypes]
   );
 };
 
