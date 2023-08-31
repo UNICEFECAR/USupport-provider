@@ -8,5 +8,16 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "plugins": ["prettier"]
+  "plugins": ["prettier"],
+  "rules": {
+    "no-undefined": "off",
+    "no-undef": "off",
+    "quotes": [
+      "error",
+      "double",
+      {
+        "allowTemplateLiterals": true
+      }
+    ]
+  }
 }
