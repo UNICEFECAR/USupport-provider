@@ -183,7 +183,7 @@ export const getAllProviders = async ({
         ).setHours(0, 0, 0, 0);
         const isAvailableBefore = !availableBefore
           ? true
-          : availableBeforeDate?.getTime() >=
+          : new Date(availableBeforeDate)?.getTime() >=
             new Date(providers[i].latest_available_slot).getTime();
 
         if (!isAvailableBefore) {
