@@ -156,39 +156,45 @@ export const getAllProviders = async ({
         providers[i].campaign_id
       );
 
-      if (availableAfter) {
-        if (!providers[i].earliest_available_slot) {
-          continue;
+      if (
+        providers[i].earliest_available_slot &&
+        providers[i].latest_available_slot
+      ) {
+        const providerEarliestAvailable = new Date(
+          providers[i].earliest_available_slot
+        );
+
+        const providerLatestAvailable = new Date(
+          providers[i].latest_available_slot
+        );
+
+        if (availableAfter) {
+          let availableAfterDate = new Date(Number(availableAfter * 1000));
+          availableAfterDate = new Date(availableAfterDate.setHours(0));
+
+          const isAvailableAfter =
+            availableAfterDate <= providerEarliestAvailable ||
+            availableAfterDate <= providerLatestAvailable;
+
+          if (!isAvailableAfter) {
+            continue;
+          }
         }
 
-        const isAvailableAfter = !availableAfter
-          ? true
-          : new Date(
-              new Date(Number(availableAfter) * 1000).setHours(0, 0, 0, 0)
-            )?.getTime() <=
-            new Date(providers[i].earliest_available_slot).getTime();
+        if (availableBefore) {
+          let availableBeforeDate = new Date(Number(availableBefore * 1000));
+          availableBeforeDate = new Date(availableBeforeDate.setHours(0));
 
-        if (!isAvailableAfter) {
-          continue;
+          const isAvailableBefore =
+            availableBeforeDate >= providerLatestAvailable ||
+            availableBeforeDate >= providerEarliestAvailable;
+
+          if (!isAvailableBefore) {
+            continue;
+          }
         }
-      }
-
-      if (availableBefore) {
-        if (!providers[i].latest_available_slot) {
-          continue;
-        }
-
-        const availableBeforeDate = new Date(
-          Number(availableBefore) * 1000
-        ).setHours(0, 0, 0, 0);
-        const isAvailableBefore = !availableBefore
-          ? true
-          : new Date(availableBeforeDate)?.getTime() >=
-            new Date(providers[i].latest_available_slot).getTime();
-
-        if (!isAvailableBefore) {
-          continue;
-        }
+      } else {
+        continue;
       }
 
       delete providers[i].street;
