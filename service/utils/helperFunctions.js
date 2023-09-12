@@ -446,9 +446,11 @@ export const getLatestAvailableSlot = async (
       throw err;
     });
 
-  const allAvailability = upcomingAvailability.map((x) => {
-    return campaignId ? x.campaign_slots : x.slots;
-  });
+  const allAvailability = upcomingAvailability
+    .map((x) => {
+      return campaignId ? x.campaign_slots : x.slots;
+    })
+    .filter((x) => x);
   const allSlots = allAvailability.flat().sort((a, b) => {
     if (campaignId) {
       return new Date(b.time).getTime() - new Date(a.time).getTime();
