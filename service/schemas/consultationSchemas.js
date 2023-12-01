@@ -59,6 +59,7 @@ export const cancelConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
+  shouldRefund: yup.boolean().required(),
   canceledBy: yup.string().oneOf(["client", "provider"]).required(),
 });
 

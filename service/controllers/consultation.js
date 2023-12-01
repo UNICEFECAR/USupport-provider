@@ -1480,8 +1480,11 @@ export const joinConsultation = async ({
       throw err;
     });
 
-  if (consultation.status !== "scheduled") {
-    throw consultationNotScheduled(language);
+  if (
+    (userType === "client" && consultation.client_join_time) ||
+    (userType === "provider" && consultation.provider_join_time)
+  ) {
+    return { success: true };
   }
 
   // Store the join time for the user type
@@ -1581,11 +1584,14 @@ export const cancelConsultation = async ({
   country,
   language,
   consultationId,
+  shouldRefund,
   canceledBy,
 }) => {
+  const status = shouldRefund ? "canceled" : "late-canceled";
   return await cancelConsultationQuery({
     poolCountry: country,
     consultationId,
+    status,
   })
     .then(async (raw) => {
       if (raw.rowCount === 0) {
