@@ -38,3 +38,5 @@ api/logs/*
 
 # Kubernetes secrets
 secrets.yaml
+createProvidersFromJson.js
+providers.json
