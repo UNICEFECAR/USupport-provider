@@ -107,6 +107,7 @@ router.get("/all", async (req, res, next) => {
     language,
   } = req.query;
 
+  const onlyAvailable = req.query === "true" ? true : false;
   const providerTypes = req.query.providerTypes?.split(",") || null;
   const sex = req.query.sex?.split(",") || null;
 
@@ -125,6 +126,7 @@ router.get("/all", async (req, res, next) => {
       language,
       limit: Number(limit),
       offset: Number(offset),
+      onlyAvailable,
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))

@@ -76,6 +76,7 @@ export const getAllProviders = async ({
   maxPrice,
   onlyFreeConsultation,
   language,
+  onlyAvailable,
 }) => {
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
   let filteredProviders = [];
@@ -194,7 +195,9 @@ export const getAllProviders = async ({
           }
         }
       } else {
-        continue;
+        if (onlyAvailable) {
+          continue;
+        }
       }
 
       delete providers[i].street;

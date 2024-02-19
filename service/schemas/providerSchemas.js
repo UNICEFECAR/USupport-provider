@@ -24,6 +24,7 @@ export const getAllProvidersSchema = yup.object().shape({
   providerTypes: yup.array().notRequired().nullable(),
   sex: yup.array().notRequired().nullable(),
   language: yup.string().notRequired().nullable(),
+  onlyAvailable: yup.boolean().notRequired().nullable(),
 });
 
 export const getProviderByIdSchema = yup.object().shape({
