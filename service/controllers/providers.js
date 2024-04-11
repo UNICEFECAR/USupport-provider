@@ -24,6 +24,7 @@ import {
   updateProviderStatusQuery,
   getProviderUserIdByDetailIdQuery,
   getProviderStatusQuery,
+  addProviderRatingQuery,
 } from "#queries/providers";
 
 import {
@@ -768,7 +769,7 @@ export const getRandomProviders = async ({
   })
     .then((res) => {
       if (res.rowCount === 0) {
-        throw providerNotFound(language);
+        return [];
       } else {
         return res.rows;
       }
@@ -978,6 +979,31 @@ export const getProviderStatus = async ({
   return await getProviderStatusQuery({
     poolCountry: country,
     providerDetailId,
+  })
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw providerNotFound(language);
+      } else {
+        return res.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+};
+
+export const addProviderRating = async ({
+  country,
+  language,
+  providerDetailId,
+  rating,
+  comment,
+}) => {
+  return await addProviderRatingQuery({
+    poolCountry: country,
+    providerDetailId,
+    rating,
+    comment,
   })
     .then((res) => {
       if (res.rowCount === 0) {

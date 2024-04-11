@@ -20,6 +20,7 @@ import {
   updateProviderImageSchemaAsAdmin,
   deleteProviderImageSchemaAsProvider,
   deleteProviderImageSchemaAsAdmin,
+  addProviderRatingSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -37,6 +38,7 @@ import {
   getConsultationsForCampaign,
   updateProviderStatus,
   getProviderStatus,
+  addProviderRating,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -529,6 +531,26 @@ router.get("/status", async (req, res, next) => {
     .strict(true)
     .validate({ country, language, providerDetailId: providerId })
     .then(getProviderStatus)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.post("/add-rating", populateUser, async (req, res, next) => {
+  /**
+   * #route   POST /provider/v1/provider/add-rating
+   * #desc    Add rating for provider
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const providerDetailId = req.user.provider_detail_id;
+  const payload = req.body;
+
+  return await addProviderRatingSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerDetailId, ...payload })
+    .then(addProviderRating)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

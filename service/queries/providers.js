@@ -506,3 +506,18 @@ export const getMultipleProvidersDataByIDs = async ({
       `,
     [providerDetailIds]
   );
+
+export const addProviderRatingQuery = async ({
+  poolCountry,
+  providerDetailId,
+  rating,
+  comment,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+        INSERT INTO provider_rating (provider_detail_id, rating, comment)
+        VALUES ($1, $2, $3)
+        RETURNING *;
+      `,
+    [providerDetailId, rating, comment]
+  );

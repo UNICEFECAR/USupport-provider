@@ -151,3 +151,11 @@ export const getProviderStatusSchema = yup.object().shape({
   country: yup.string().required(),
   providerDetailId: yup.string().uuid().required(),
 });
+
+export const addProviderRatingSchema = yup.object().shape({
+  language: yup.string().required(),
+  country: yup.string().required(),
+  providerDetailId: yup.string().uuid().required(),
+  rating: yup.number().min(1).max(5).required(),
+  comment: yup.string().notRequired(),
+});
