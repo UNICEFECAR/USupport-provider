@@ -60,6 +60,8 @@ export const updateProviderDataSchema = yup.object().shape({
   languageIds: yup.array().of(yup.string().uuid()).notRequired(),
   currentLanguageIds: yup.array().of(yup.string().uuid()).notRequired(),
   videoLink: yup.string().notRequired(),
+  organizationIds: yup.array().of(yup.string().uuid()).notRequired(),
+  currentOrganizationIds: yup.array().of(yup.string().uuid()).notRequired(),
 });
 
 export const deleteProviderDataSchema = yup.object().shape(
