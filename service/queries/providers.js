@@ -45,10 +45,22 @@ export const getProviderEmailAndUserIdQuery = async ({
 export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, "user".user_id
+      SELECT provider_detail."provider_detail_id",
+             provider_detail."name", patronym, surname, nickname, email, phone,
+             image, specializations, street, city, postcode, education,
+             sex, consultation_price, description, video_link, "user".user_id,
+             JSON_AGG(
+                json_build_object(
+                  'organization_id', organization_provider_links.organization_id,
+                  'name', organization.name
+                )
+             ) as organizations
       FROM provider_detail
         JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
+        LEFT JOIN organization_provider_links ON organization_provider_links.provider_detail_id = provider_detail.provider_detail_id
+        LEFT JOIN organization ON organization_provider_links.organization_id = organization.organization_id
       WHERE provider_detail.provider_detail_id = $1
+      GROUP BY provider_detail."provider_detail_id", "user".user_id
       ORDER BY provider_detail.created_at DESC
       LIMIT 1;
     `,
