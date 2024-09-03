@@ -4,25 +4,71 @@ import { getDBPool } from "#utils/dbConfig";
 export const getProviderByUserID = async (poolCountry, user_id) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-    WITH userData AS (
+WITH userData AS (
+    SELECT provider_detail_id 
+    FROM "user"
+    WHERE user_id = $1
+    ORDER BY created_at DESC
+    LIMIT 1
+), providerData AS (
+    SELECT 
+        provider_detail.provider_detail_id, 
+        provider_detail.name, 
+        provider_detail.patronym, 
+        provider_detail.surname, 
+        provider_detail.nickname, 
+        provider_detail.email, 
+        provider_detail.phone, 
+        provider_detail.image, 
+        provider_detail.specializations, 
+        provider_detail.street, 
+        provider_detail.city, 
+        provider_detail.postcode, 
+        provider_detail.education, 
+        provider_detail.sex, 
+        provider_detail.consultation_price, 
+        provider_detail.description, 
+        provider_detail.video_link, 
+        provider_detail.status,
+        JSON_AGG(
+            json_build_object(
+                'organization_id', organization_provider_links.organization_id,
+                'name', organization.name
+            )
+        ) AS organizations
+    FROM 
+        provider_detail
+    JOIN 
+        userData ON userData.provider_detail_id = provider_detail.provider_detail_id
+    LEFT JOIN 
+        organization_provider_links ON organization_provider_links.provider_detail_id = provider_detail.provider_detail_id
+    LEFT JOIN 
+        organization ON organization_provider_links.organization_id = organization.organization_id
+    GROUP BY 
+        provider_detail.provider_detail_id, 
+        provider_detail.name, 
+        provider_detail.patronym, 
+        provider_detail.surname, 
+        provider_detail.nickname, 
+        provider_detail.email, 
+        provider_detail.phone, 
+        provider_detail.image, 
+        provider_detail.specializations, 
+        provider_detail.street, 
+        provider_detail.city, 
+        provider_detail.postcode, 
+        provider_detail.education, 
+        provider_detail.sex, 
+        provider_detail.consultation_price, 
+        provider_detail.description, 
+        provider_detail.video_link, 
+        provider_detail.status
+    ORDER BY 
+        provider_detail.created_at DESC
+    LIMIT 1
+)
+SELECT * FROM providerData;
 
-      SELECT provider_detail_id 
-      FROM "user"
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT 1
-
-    ), providerData AS (
-
-        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, status
-        FROM provider_detail
-          JOIN userData ON userData.provider_detail_id = provider_detail.provider_detail_id
-        ORDER BY provider_detail.created_at DESC
-        LIMIT 1
-
-    )
-    
-    SELECT * FROM providerData;
     `,
     [user_id]
   );
