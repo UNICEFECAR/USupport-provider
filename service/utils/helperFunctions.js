@@ -159,14 +159,20 @@ export const getSlotsForSingleWeek = async ({
         return {
           slots: [],
           campaign_slots: [],
+          organization_slots: [],
           campaigns_data: campaignsData,
           is_empty: true,
         };
       } else {
         let campaign_slots = res.rows[0].campaign_slots;
         campaign_slots = Array.isArray(campaign_slots) ? campaign_slots : [];
-
         campaign_slots = campaign_slots.flat();
+
+        let organization_slots = res.rows[0].organization_slots;
+        organization_slots = Array.isArray(organization_slots)
+          ? organization_slots
+          : [];
+        organization_slots = organization_slots.flat();
 
         const row = res.rows[0];
         return {
@@ -174,6 +180,9 @@ export const getSlotsForSingleWeek = async ({
           campaign_slots:
             campaign_slots?.filter((x) => x.time && x.campaign_id) || [],
           campaigns_data: campaignsData,
+          organization_slots:
+            organization_slots?.filter((x) => x.time && x.organization_id) ||
+            [],
         };
       }
     })
@@ -233,6 +242,11 @@ export const getSlotsForThreeWeeks = async ({
       ...nextWeek.campaign_slots,
     ],
     campaigns_data: uniqueCampaignsData,
+    organization_slots: [
+      ...previousWeek.organization_slots,
+      ...currentWeek.organization_slots,
+      ...nextWeek.organization_slots,
+    ],
   };
 };
 
@@ -357,6 +371,15 @@ export const getSlotsForSevenWeeks = async ({
       ...weekSeven.campaign_slots,
     ],
     campaigns_data: uniqueCampaignsData,
+    organization_slots: [
+      ...weekOne.organization_slots,
+      ...weekTwo.organization_slots,
+      ...weekThree.organization_slots,
+      ...weekFour.organization_slots,
+      ...weekFive.organization_slots,
+      ...weekSix.organization_slots,
+      ...weekSeven.organization_slots,
+    ],
   };
 };
 
@@ -380,7 +403,9 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
 };
 
 export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
-  const isWithCoupon = typeof slotTime === "object";
+  const isNormalSlot = typeof slotTime !== "object";
+  const isWithCoupon = !isNormalSlot && slotTime.campaign_id;
+
   const time = isWithCoupon ? slotTime.time : slotTime;
   // Check if provider is available at the time
   const startDate = getMonday(time);
@@ -393,9 +418,11 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
     throw err;
   });
 
-  const slotsToLoopThrough = isWithCoupon
+  const slotsToLoopThrough = isNormalSlot
+    ? slotsData.slots
+    : isWithCoupon
     ? slotsData.campaign_slots
-    : slotsData.slots;
+    : slotsData.organization_slots;
 
   const slot = slotsToLoopThrough.find((slot) => {
     const slotTimestamp =

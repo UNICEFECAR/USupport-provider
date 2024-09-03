@@ -21,7 +21,7 @@ export const getAvailabilitySingleWeekQuery = async ({
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT slots, campaign_slots
+      SELECT slots, campaign_slots, organization_slots
       FROM availability
       WHERE availability.provider_detail_id = $1 AND availability.start_date = to_timestamp($2)
       ORDER BY availability.created_at DESC
@@ -50,19 +50,24 @@ export const updateAvailabilitySingleSlotQuery = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
-  if (!campaignId) {
+  if (organizationId) {
     return await getDBPool("piiDb", poolCountry).query(
       `
-
+      WITH slots AS (
+        SELECT jsonb_agg(jsonb_build_object('organization_id', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ'))) as s
+        FROM availability
+        WHERE provider_detail_id = $1 AND start_date = to_timestamp($2)
+      )
       UPDATE availability
-      SET slots = (SELECT array_agg(distinct e) FROM UNNEST(slots || to_timestamp($3)) e)
+      SET organization_slots = organization_slots || (SELECT s FROM slots)
       WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
-
-    `,
-      [provider_id, startDate, slot]
+  
+      `,
+      [provider_id, startDate, slot, organizationId]
     );
-  } else {
+  } else if (campaignId) {
     return await getDBPool("piiDb", poolCountry).query(
       `
       WITH slots AS (
@@ -76,6 +81,17 @@ export const updateAvailabilitySingleSlotQuery = async ({
   
       `,
       [provider_id, startDate, slot, campaignId]
+    );
+  } else {
+    return await getDBPool("piiDb", poolCountry).query(
+      `
+
+      UPDATE availability
+      SET slots = (SELECT array_agg(distinct e) FROM UNNEST(slots || to_timestamp($3)) e)
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+
+    `,
+      [provider_id, startDate, slot]
     );
   }
 };
@@ -130,18 +146,9 @@ export const deleteAvailabilitySingleWeekQuery = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
-  if (!campaignId) {
-    return await getDBPool("piiDb", poolCountry).query(
-      `
-      UPDATE availability
-      SET slots = array_remove(slots, to_timestamp($3))
-      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
-
-    `,
-      [provider_id, startDate, slot]
-    );
-  } else {
+  if (campaignId) {
     return await getDBPool("piiDb", poolCountry).query(
       `
       UPDATE availability a
@@ -154,6 +161,29 @@ export const deleteAvailabilitySingleWeekQuery = async ({
 
       `,
       [provider_id, startDate, slot, campaignId]
+    );
+  } else if (organizationId) {
+    return await getDBPool("piiDb", poolCountry).query(
+      `
+      UPDATE availability a
+      SET organization_slots = (
+        SELECT jsonb_agg(e)
+          FILTER (WHERE e != jsonb_build_object('organization_id', $4::uuid, 'time', to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ')))
+        FROM jsonb_array_elements(organization_slots) e
+      )
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+
+      `,
+      [provider_id, startDate, slot, organizationId]
+    );
+  } else {
+    return await getDBPool("piiDb", poolCountry).query(
+      `
+      UPDATE availability
+      SET slots = array_remove(slots, to_timestamp($3))
+      WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+      `,
+      [provider_id, startDate, slot]
     );
   }
 };

@@ -43,6 +43,7 @@ export const updateAvailabilitySingleWeek = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
@@ -83,7 +84,11 @@ export const updateAvailabilitySingleWeek = async ({
     startDate,
   })
     .then(async (res) => {
-      if (res.slots.length === 0 && res.campaign_slots.length === 0) {
+      if (
+        res.slots.length === 0 &&
+        res.campaign_slots.length === 0 &&
+        res.organization_slots.length === 0
+      ) {
         await addAvailabilityRowQuery({
           poolCountry: country,
           provider_id,
@@ -95,13 +100,41 @@ export const updateAvailabilitySingleWeek = async ({
 
       // Check if the slot already exists in the availability
       // and compare the campaignId's if it's a campaign slot
-      const slotsToCheck = campaignId ? res.campaign_slots : res.slots;
+      const slotsToCheck = campaignId
+        ? res.campaign_slots
+        : organizationId
+        ? res.organization_slots
+        : res.slots;
+
       const slotExists = slotsToCheck.some((s) => {
-        const slotToCheck = campaignId
-          ? new Date(s.time).getTime()
-          : new Date(s).getTime();
-        return slotToCheck === slot * 1000 && s.campaign_id === campaignId;
+        const slotToCheck =
+          campaignId || organizationId
+            ? new Date(s.time).getTime()
+            : new Date(s).getTime();
+        return (
+          slotToCheck === slot * 1000 &&
+          ((campaignId && s.campaign_id === campaignId) ||
+            (organizationId && s.organization_id === organizationId))
+        );
       });
+
+      const slotAvailableForOrg = slotsToCheck.find((x) => {
+        const slotToCheck = new Date(x.time).getTime();
+        return slotToCheck === slot * 1000;
+      });
+
+      // If the slot is already available for another organization, delete it
+      if (slotAvailableForOrg) {
+        await deleteAvailabilitySingleWeekQuery({
+          poolCountry: country,
+          provider_id,
+          startDate,
+          slot,
+          organizationId: slotAvailableForOrg.organization_id,
+        }).catch((err) => {
+          throw err;
+        });
+      }
 
       if (slotExists) {
         throw slotAlreadyExists(language);
@@ -113,6 +146,7 @@ export const updateAvailabilitySingleWeek = async ({
         startDate,
         slot,
         campaignId,
+        organizationId,
       }).catch((err) => {
         throw err;
       });
@@ -130,6 +164,7 @@ export const deleteAvailabilitySingleWeek = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
   await deleteAvailabilitySingleWeekQuery({
     poolCountry: country,
@@ -137,6 +172,7 @@ export const deleteAvailabilitySingleWeek = async ({
     startDate,
     slot,
     campaignId,
+    organizationId,
   }).catch((err) => {
     throw err;
   });
