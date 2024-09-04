@@ -346,6 +346,7 @@ export const clearAvailabilitySlot = async ({
   startDate,
   slot,
   campaignIds,
+  organizationId,
 }) => {
   const args = {
     poolCountry: country,
@@ -362,6 +363,15 @@ export const clearAvailabilitySlot = async ({
       })
     );
   });
+
+  if (organizationId) {
+    queries.push(
+      deleteAvailabilitySingleWeekQuery({
+        ...args,
+        organizationId,
+      })
+    );
+  }
 
   await Promise.all(queries);
   return { success: true };

@@ -44,6 +44,7 @@ export const clearAvailabilitySlotSchema = yup.object().shape({
   startDate: yup.string().required(),
   slot: yup.string().required(),
   campaignIds: yup.array().of(yup.string().uuid()).required(),
+  organizationId: yup.string().uuid().nullable().notRequired(),
 });
 
 export const getAvailabilitySingleDaySchema = yup.object().shape({
