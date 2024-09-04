@@ -114,10 +114,12 @@ export const updateAvailabilitySingleWeek = async ({
         );
       });
 
-      const slotAvailableForOrg = slotsToCheck.find((x) => {
-        const slotToCheck = new Date(x.time).getTime();
-        return slotToCheck === slot * 1000;
-      });
+      const slotAvailableForOrg = organizationId
+        ? slotsToCheck.find((x) => {
+            const slotToCheck = new Date(x.time).getTime();
+            return slotToCheck === slot * 1000;
+          })
+        : null;
 
       // If the slot is already available for another organization, delete it
       if (slotAvailableForOrg) {
