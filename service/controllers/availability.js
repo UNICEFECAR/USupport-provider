@@ -84,11 +84,7 @@ export const updateAvailabilitySingleWeek = async ({
     startDate,
   })
     .then(async (res) => {
-      if (
-        res.slots.length === 0 &&
-        res.campaign_slots.length === 0 &&
-        res.organization_slots.length === 0
-      ) {
+      if (res.is_empty) {
         await addAvailabilityRowQuery({
           poolCountry: country,
           provider_id,
