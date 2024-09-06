@@ -305,19 +305,18 @@ export const getAvailabilitySingleDay = async ({
 
   const slotsToLoopThrough = campaignId
     ? threeWeeksSlots.campaign_slots
-    : threeWeeksSlots.slots;
+    : [...threeWeeksSlots.slots, ...threeWeeksSlots.organization_slots];
   // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
   // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
   slotsToLoopThrough.forEach((slot) => {
     let slotTimestamp;
-    if (campaignId) {
+    if (slot.time) {
       slotTimestamp = new Date(slot.time).getTime() / 1000;
     } else {
       slotTimestamp = new Date(slot).getTime() / 1000;
     }
-
     if (
       slotTimestamp > now &&
       slotTimestamp >= previousDayTimestamp &&
@@ -331,11 +330,18 @@ export const getAvailabilitySingleDay = async ({
   });
 
   // Sort slots in ascending order
-  if (campaignId) {
-    slots.sort((a, b) => new Date(a.time) - new Date(b.time));
-  } else {
-    slots.sort((a, b) => a - b);
-  }
+  slots.sort((a, b) => {
+    // sort by time asc
+    if (a.time && b.time) {
+      return new Date(a.time) - new Date(b.time);
+    } else if (a.time && !b.time) {
+      return new Date(a.time) - new Date(b);
+    } else if (!a.time && b.time) {
+      return new Date(a) - new Date(b.time);
+    }
+
+    return new Date(a) - new Date(b);
+  });
 
   return slots;
 };
