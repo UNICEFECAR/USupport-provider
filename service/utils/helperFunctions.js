@@ -406,7 +406,7 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
   const isNormalSlot = typeof slotTime !== "object";
   const isWithCoupon = !isNormalSlot && slotTime.campaign_id;
 
-  const time = isWithCoupon ? slotTime.time : slotTime;
+  const time = isNormalSlot ? slotTime : slotTime.time;
   // Check if provider is available at the time
   const startDate = getMonday(time);
 
@@ -426,9 +426,10 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
 
   const slot = slotsToLoopThrough.find((slot) => {
     const slotTimestamp =
-      new Date(isWithCoupon ? slot.time : slot).getTime() / 1000;
+      new Date(!isNormalSlot ? slot.time : slot).getTime() / 1000;
     return slotTimestamp === Number(time);
   });
+
   if (!slot) return false;
 
   // Check if there is not already a consultation at the time
@@ -441,7 +442,7 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
   });
 
   if (consultation.rowCount > 0) return false;
-  return true;
+  return slot;
 };
 
 export const getLatestAvailableSlot = async (
@@ -454,7 +455,12 @@ export const getLatestAvailableSlot = async (
     providerId: providerId,
   })
     .then((res) => {
-      return res.rows;
+      return res.rows.map((x) => ({
+        ...x,
+        slots: x.slots || [],
+        organization_slots: x.organization_slots || [],
+        campaign_slots: x.campaign_slots || [],
+      }));
     })
     .catch((err) => {
       throw err;
@@ -475,7 +481,9 @@ export const getLatestAvailableSlot = async (
 
   const allAvailability = upcomingAvailability
     .map((x) => {
-      return campaignId ? x.campaign_slots : x.slots;
+      return campaignId
+        ? x.campaign_slots
+        : [...x.slots, ...x.organization_slots];
     })
     .filter((x) => x);
   const allSlots = allAvailability.flat().sort((a, b) => {
@@ -487,7 +495,8 @@ export const getLatestAvailableSlot = async (
 
   let latestAvailableSlot;
   for (let l = 0; l < allSlots.length; l++) {
-    const slot = campaignId ? allSlots[l].time : allSlots[l];
+    const slot =
+      typeof allSlots[l] === "object" ? allSlots[l].time : allSlots[l];
     if (!slot) continue;
 
     const now = new Date().getTime(); // Clients cant book consultations in the past
@@ -516,7 +525,12 @@ export const getEarliestAvailableSlot = async (
     providerId: providerId,
   })
     .then((res) => {
-      return res.rows;
+      return res.rows.map((x) => ({
+        ...x,
+        slots: x.slots || [],
+        organization_slots: x.organization_slots || [],
+        campaign_slots: x.campaign_slots || [],
+      }));
     })
     .catch((err) => {
       throw err;
@@ -538,14 +552,28 @@ export const getEarliestAvailableSlot = async (
   // Find the earliest upcoming availability slot that is not already in the upcoming consultations
   for (let j = 0; j < upcomingAvailability.length; j++) {
     let availability = upcomingAvailability[j];
-    const availabilityToMap = campaignId
-      ? availability.campaign_slots
-      : availability.slots;
+    const availabilityToMap = (
+      campaignId
+        ? availability.campaign_slots
+        : [...availability.slots, ...availability.organization_slots]
+    ).sort((a, b) => {
+      // sort by time asc
+      if (a.time && b.time) {
+        return new Date(a.time) - new Date(b.time);
+      } else if (a.time && !b.time) {
+        return new Date(a.time) - new Date(b);
+      } else if (!a.time && b.time) {
+        return new Date(a) - new Date(b.time);
+      }
+
+      return new Date(a) - new Date(b);
+    });
 
     for (let k = 0; k < availabilityToMap?.length; k++) {
-      let slot = campaignId
-        ? new Date(availabilityToMap[k].time)
-        : availabilityToMap[k];
+      let slot =
+        typeof availabilityToMap[k] === "object"
+          ? new Date(availabilityToMap[k].time)
+          : availabilityToMap[k];
       const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
 
       if (
@@ -561,6 +589,7 @@ export const getEarliestAvailableSlot = async (
           }
           continue;
         }
+        console.log(slot, "slot to return");
         return slot;
       }
     }
