@@ -2,7 +2,8 @@ import * as yup from "yup";
 
 const timeCampaignSchema = yup.object().shape({
   time: yup.string().required(),
-  campaign_id: yup.string().uuid().required(),
+  campaign_id: yup.string().uuid().notRequired(),
+  organization_id: yup.string().uuid().notRequired(),
 });
 
 const timeSchema = yup.string().required();

@@ -677,6 +677,7 @@ export const addConsultationAsPending = async ({
     time: typeof time === "object" ? time.time : time,
     price: campaignId ? campaignData.price_per_coupon : consultationPrice,
     campaignId,
+    organizationId: isSlotAvailable?.organization_id || null,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {
