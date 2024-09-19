@@ -161,3 +161,9 @@ export const addProviderRatingSchema = yup.object().shape({
   rating: yup.number().min(1).max(5).required(),
   comment: yup.string().notRequired(),
 });
+
+export const removeProvidersCacheSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerIds: yup.array().of(yup.string().uuid()).required(),
+});

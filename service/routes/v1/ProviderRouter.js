@@ -21,6 +21,7 @@ import {
   deleteProviderImageSchemaAsProvider,
   deleteProviderImageSchemaAsAdmin,
   addProviderRatingSchema,
+  removeProvidersCacheSchema,
 } from "#schemas/providerSchemas";
 
 import {
@@ -39,6 +40,7 @@ import {
   updateProviderStatus,
   getProviderStatus,
   addProviderRating,
+  removeProvidersCache,
 } from "#controllers/providers";
 
 import { getUserByProviderID } from "#queries/users";
@@ -560,6 +562,24 @@ router.post("/add-rating", populateUser, async (req, res, next) => {
     .strict()
     .validate({ country, language, providerDetailId, ...payload })
     .then(addProviderRating)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.put("/remove-cache", async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/provider/remove-cache
+   * #desc    Remove cache for providers
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+  const { providerDetailIds } = req.body;
+
+  return await removeProvidersCacheSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, providerIds: providerDetailIds })
+    .then(removeProvidersCache)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });

@@ -41,7 +41,7 @@ WITH userData AS (
     JOIN 
         userData ON userData.provider_detail_id = provider_detail.provider_detail_id
     LEFT JOIN 
-        organization_provider_links ON organization_provider_links.provider_detail_id = provider_detail.provider_detail_id
+        organization_provider_links ON (organization_provider_links.provider_detail_id = provider_detail.provider_detail_id AND organization_provider_links.is_deleted = false)
     LEFT JOIN 
         organization ON organization_provider_links.organization_id = organization.organization_id
     GROUP BY 
@@ -65,7 +65,6 @@ WITH userData AS (
         provider_detail.status
     ORDER BY 
         provider_detail.created_at DESC
-    LIMIT 1
 )
 SELECT * FROM providerData;
 
