@@ -265,6 +265,7 @@ export const getAllConsultationsSingleWeek = async ({
       sponsor_image: sponsorImage,
       campaign_id: campaignId,
       sponsor_name: sponsorName,
+      organization_id: consultation.organization_id,
     });
   }
 
