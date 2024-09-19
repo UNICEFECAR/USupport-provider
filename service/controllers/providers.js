@@ -789,11 +789,7 @@ export const getActivities = async ({ country, providerId }) => {
   return activities;
 };
 
-export const getRandomProviders = async ({
-  country,
-  language,
-  numberOfProviders,
-}) => {
+export const getRandomProviders = async ({ country, numberOfProviders }) => {
   let providers = await getAllActiveProvidersQuery({
     poolCountry: country,
     limit: numberOfProviders || 3,
