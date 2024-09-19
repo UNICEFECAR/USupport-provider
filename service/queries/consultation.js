@@ -393,7 +393,7 @@ export const getConsultationsSingleDayQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
     
-        SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
+        SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, consultation.organization_id
         FROM consultation
           LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
         WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '1 day' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')

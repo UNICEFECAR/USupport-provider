@@ -355,6 +355,7 @@ export const getAllConsultationsSingleDay = async ({
       time: consultation.time,
       status: consultation.status,
       price: consultation.price,
+      organization_id: consultation.organization_id,
     };
 
     if (campaignData) {
