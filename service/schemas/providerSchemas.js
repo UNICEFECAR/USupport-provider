@@ -60,6 +60,8 @@ export const updateProviderDataSchema = yup.object().shape({
   languageIds: yup.array().of(yup.string().uuid()).notRequired(),
   currentLanguageIds: yup.array().of(yup.string().uuid()).notRequired(),
   videoLink: yup.string().notRequired(),
+  organizationIds: yup.array().of(yup.string().uuid()).notRequired(),
+  currentOrganizationIds: yup.array().of(yup.string().uuid()).notRequired(),
 });
 
 export const deleteProviderDataSchema = yup.object().shape(
@@ -158,4 +160,10 @@ export const addProviderRatingSchema = yup.object().shape({
   providerDetailId: yup.string().uuid().required(),
   rating: yup.number().min(1).max(5).required(),
   comment: yup.string().notRequired(),
+});
+
+export const removeProvidersCacheSchema = yup.object().shape({
+  country: yup.string().required(),
+  language: yup.string().required(),
+  providerIds: yup.array().of(yup.string().uuid()).required(),
 });

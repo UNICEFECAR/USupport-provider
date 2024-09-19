@@ -43,6 +43,7 @@ export const updateAvailabilitySingleWeek = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
@@ -83,7 +84,7 @@ export const updateAvailabilitySingleWeek = async ({
     startDate,
   })
     .then(async (res) => {
-      if (res.slots.length === 0 && res.campaign_slots.length === 0) {
+      if (res.is_empty) {
         await addAvailabilityRowQuery({
           poolCountry: country,
           provider_id,
@@ -95,13 +96,43 @@ export const updateAvailabilitySingleWeek = async ({
 
       // Check if the slot already exists in the availability
       // and compare the campaignId's if it's a campaign slot
-      const slotsToCheck = campaignId ? res.campaign_slots : res.slots;
+      const slotsToCheck = campaignId
+        ? res.campaign_slots
+        : organizationId
+        ? res.organization_slots
+        : res.slots;
+
       const slotExists = slotsToCheck.some((s) => {
-        const slotToCheck = campaignId
-          ? new Date(s.time).getTime()
-          : new Date(s).getTime();
-        return slotToCheck === slot * 1000 && s.campaign_id === campaignId;
+        const slotToCheck =
+          campaignId || organizationId
+            ? new Date(s.time).getTime()
+            : new Date(s).getTime();
+        return (
+          slotToCheck === slot * 1000 &&
+          ((campaignId && s.campaign_id === campaignId) ||
+            (organizationId && s.organization_id === organizationId))
+        );
       });
+
+      const slotAvailableForOrg = organizationId
+        ? slotsToCheck.find((x) => {
+            const slotToCheck = new Date(x.time).getTime();
+            return slotToCheck === slot * 1000;
+          })
+        : null;
+
+      // If the slot is already available for another organization, delete it
+      if (slotAvailableForOrg) {
+        await deleteAvailabilitySingleWeekQuery({
+          poolCountry: country,
+          provider_id,
+          startDate,
+          slot,
+          organizationId: slotAvailableForOrg.organization_id,
+        }).catch((err) => {
+          throw err;
+        });
+      }
 
       if (slotExists) {
         throw slotAlreadyExists(language);
@@ -113,6 +144,7 @@ export const updateAvailabilitySingleWeek = async ({
         startDate,
         slot,
         campaignId,
+        organizationId,
       }).catch((err) => {
         throw err;
       });
@@ -130,6 +162,7 @@ export const deleteAvailabilitySingleWeek = async ({
   startDate,
   slot,
   campaignId,
+  organizationId,
 }) => {
   await deleteAvailabilitySingleWeekQuery({
     poolCountry: country,
@@ -137,6 +170,7 @@ export const deleteAvailabilitySingleWeek = async ({
     startDate,
     slot,
     campaignId,
+    organizationId,
   }).catch((err) => {
     throw err;
   });
@@ -271,19 +305,18 @@ export const getAvailabilitySingleDay = async ({
 
   const slotsToLoopThrough = campaignId
     ? threeWeeksSlots.campaign_slots
-    : threeWeeksSlots.slots;
+    : [...threeWeeksSlots.slots, ...threeWeeksSlots.organization_slots];
   // Get slots for the day before the given day, the day, and the day after the given day
   // Exclude slots that are in the past
   // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
   slotsToLoopThrough.forEach((slot) => {
     let slotTimestamp;
-    if (campaignId) {
+    if (slot.time) {
       slotTimestamp = new Date(slot.time).getTime() / 1000;
     } else {
       slotTimestamp = new Date(slot).getTime() / 1000;
     }
-
     if (
       slotTimestamp > now &&
       slotTimestamp >= previousDayTimestamp &&
@@ -297,11 +330,18 @@ export const getAvailabilitySingleDay = async ({
   });
 
   // Sort slots in ascending order
-  if (campaignId) {
-    slots.sort((a, b) => new Date(a.time) - new Date(b.time));
-  } else {
-    slots.sort((a, b) => a - b);
-  }
+  slots.sort((a, b) => {
+    // sort by time asc
+    if (a.time && b.time) {
+      return new Date(a.time) - new Date(b.time);
+    } else if (a.time && !b.time) {
+      return new Date(a.time) - new Date(b);
+    } else if (!a.time && b.time) {
+      return new Date(a) - new Date(b.time);
+    }
+
+    return new Date(a) - new Date(b);
+  });
 
   return slots;
 };
@@ -312,6 +352,7 @@ export const clearAvailabilitySlot = async ({
   startDate,
   slot,
   campaignIds,
+  organizationId,
 }) => {
   const args = {
     poolCountry: country,
@@ -328,6 +369,15 @@ export const clearAvailabilitySlot = async ({
       })
     );
   });
+
+  if (organizationId) {
+    queries.push(
+      deleteAvailabilitySingleWeekQuery({
+        ...args,
+        organizationId,
+      })
+    );
+  }
 
   await Promise.all(queries);
   return { success: true };

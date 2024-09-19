@@ -67,6 +67,7 @@ import {
   bookingNotAllowed,
   providerNotFound,
 } from "#utils/errors";
+import { getOrganizationsByIdsQuery } from "#queries/organization";
 
 export const getAllConsultationsCount = async ({ country, providerId }) => {
   return await getAllConsultationsCountQuery({
@@ -264,6 +265,7 @@ export const getAllConsultationsSingleWeek = async ({
       sponsor_image: sponsorImage,
       campaign_id: campaignId,
       sponsor_name: sponsorName,
+      organization_id: consultation.organization_id,
     });
   }
 
@@ -353,6 +355,7 @@ export const getAllConsultationsSingleDay = async ({
       time: consultation.time,
       status: consultation.status,
       price: consultation.price,
+      organization_id: consultation.organization_id,
     };
 
     if (campaignData) {
@@ -424,6 +427,17 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
       throw err;
     });
 
+  const organizationIds = Array.from(
+    new Set(consultations.map((consultation) => consultation.organization_id))
+  );
+
+  const organizationsData = await getOrganizationsByIdsQuery({
+    poolCountry: country,
+    organizationIds,
+  }).then((res) => {
+    return res.rows || [];
+  });
+
   let response = [];
 
   for (let i = 0; i < consultations.length; i++) {
@@ -434,13 +448,19 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     const clientSurname = client.surname;
     const clientNickname = client.nickname;
     const campaignId = consultation.campaign_id;
+    const organizationId = consultation.organization_id;
 
     const campaignData = campaignCouponPrices.find(
       (x) => x.campaign_id === campaignId
     );
 
+    const organizationData = organizationsData.find(
+      (x) => x.organization_id === organizationId
+    );
+
     const couponPrice = campaignData?.price_per_coupon;
     const sponsorImage = campaignData?.image;
+    const organizationName = organizationData?.name;
 
     const oneHourBeforeNow = new Date();
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
@@ -460,6 +480,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
         time: consultation.time,
         status: consultation.status,
         price: consultation.price,
+        organization_name: organizationName,
       };
 
       if (campaignData) {
@@ -677,6 +698,7 @@ export const addConsultationAsPending = async ({
     time: typeof time === "object" ? time.time : time,
     price: campaignId ? campaignData.price_per_coupon : consultationPrice,
     campaignId,
+    organizationId: isSlotAvailable?.organization_id || null,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {

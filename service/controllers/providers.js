@@ -52,6 +52,11 @@ import {
   getLatestAvailableSlot,
 } from "#utils/helperFunctions";
 import { deleteCacheItem } from "#utils/cache";
+import {
+  assignOrganizationsToProviderQuery,
+  removeOrganizationsFromProviderQuery,
+} from "#queries/organization";
+import { getUserIdsByProviderIdsQuery } from "#queries/users";
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
@@ -305,6 +310,8 @@ export const updateProviderData = async ({
   currentWorkWithIds,
   languageIds,
   currentLanguageIds,
+  organizationIds,
+  currentOrganizationIds,
   videoLink,
 }) => {
   // Check if email is changed
@@ -407,6 +414,31 @@ export const updateProviderData = async ({
           }).catch((err) => {
             throw err;
           });
+        });
+
+        // Insert new organizations and delete missing ones
+        const organizationsToInsert = organizationIds?.filter(
+          (id) => !currentOrganizationIds.includes(id)
+        );
+
+        const organizationsToDelete = currentOrganizationIds?.filter(
+          (id) => !organizationIds.includes(id)
+        );
+
+        await assignOrganizationsToProviderQuery({
+          organizationIds: organizationsToInsert,
+          providerDetailId: provider_id,
+          poolCountry: country,
+        }).catch((err) => {
+          throw err;
+        });
+
+        await removeOrganizationsFromProviderQuery({
+          organizationIds: organizationsToDelete,
+          providerDetailId: provider_id,
+          poolCountry: country,
+        }).catch((err) => {
+          throw err;
         });
 
         const cacheKey = `provider_${country}_${user_id}`;
@@ -757,11 +789,7 @@ export const getActivities = async ({ country, providerId }) => {
   return activities;
 };
 
-export const getRandomProviders = async ({
-  country,
-  language,
-  numberOfProviders,
-}) => {
+export const getRandomProviders = async ({ country, numberOfProviders }) => {
   let providers = await getAllActiveProvidersQuery({
     poolCountry: country,
     limit: numberOfProviders || 3,
@@ -1015,4 +1043,24 @@ export const addProviderRating = async ({
     .catch((err) => {
       throw err;
     });
+};
+
+export const removeProvidersCache = async ({ country, providerIds }) => {
+  const promises = [];
+
+  const userIds = await getUserIdsByProviderIdsQuery({
+    country,
+    providerIds,
+  }).then((res) => {
+    return res.rows.map((x) => x.user_id);
+  });
+
+  userIds.forEach((userId) => {
+    const cacheKey = `provider_${country}_${userId}`;
+    promises.push(deleteCacheItem(cacheKey));
+  });
+
+  await Promise.all(promises);
+
+  return { success: true };
 };

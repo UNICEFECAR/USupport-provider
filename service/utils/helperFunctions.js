@@ -159,14 +159,20 @@ export const getSlotsForSingleWeek = async ({
         return {
           slots: [],
           campaign_slots: [],
+          organization_slots: [],
           campaigns_data: campaignsData,
           is_empty: true,
         };
       } else {
         let campaign_slots = res.rows[0].campaign_slots;
         campaign_slots = Array.isArray(campaign_slots) ? campaign_slots : [];
-
         campaign_slots = campaign_slots.flat();
+
+        let organization_slots = res.rows[0].organization_slots;
+        organization_slots = Array.isArray(organization_slots)
+          ? organization_slots
+          : [];
+        organization_slots = organization_slots.flat();
 
         const row = res.rows[0];
         return {
@@ -174,6 +180,9 @@ export const getSlotsForSingleWeek = async ({
           campaign_slots:
             campaign_slots?.filter((x) => x.time && x.campaign_id) || [],
           campaigns_data: campaignsData,
+          organization_slots:
+            organization_slots?.filter((x) => x.time && x.organization_id) ||
+            [],
         };
       }
     })
@@ -233,6 +242,11 @@ export const getSlotsForThreeWeeks = async ({
       ...nextWeek.campaign_slots,
     ],
     campaigns_data: uniqueCampaignsData,
+    organization_slots: [
+      ...previousWeek.organization_slots,
+      ...currentWeek.organization_slots,
+      ...nextWeek.organization_slots,
+    ],
   };
 };
 
@@ -357,6 +371,15 @@ export const getSlotsForSevenWeeks = async ({
       ...weekSeven.campaign_slots,
     ],
     campaigns_data: uniqueCampaignsData,
+    organization_slots: [
+      ...weekOne.organization_slots,
+      ...weekTwo.organization_slots,
+      ...weekThree.organization_slots,
+      ...weekFour.organization_slots,
+      ...weekFive.organization_slots,
+      ...weekSix.organization_slots,
+      ...weekSeven.organization_slots,
+    ],
   };
 };
 
@@ -380,8 +403,10 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
 };
 
 export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
-  const isWithCoupon = typeof slotTime === "object";
-  const time = isWithCoupon ? slotTime.time : slotTime;
+  const isNormalSlot = typeof slotTime !== "object";
+  const isWithCoupon = !isNormalSlot && slotTime.campaign_id;
+
+  const time = isNormalSlot ? slotTime : slotTime.time;
   // Check if provider is available at the time
   const startDate = getMonday(time);
 
@@ -393,15 +418,18 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
     throw err;
   });
 
-  const slotsToLoopThrough = isWithCoupon
+  const slotsToLoopThrough = isNormalSlot
+    ? slotsData.slots
+    : isWithCoupon
     ? slotsData.campaign_slots
-    : slotsData.slots;
+    : slotsData.organization_slots;
 
   const slot = slotsToLoopThrough.find((slot) => {
     const slotTimestamp =
-      new Date(isWithCoupon ? slot.time : slot).getTime() / 1000;
+      new Date(!isNormalSlot ? slot.time : slot).getTime() / 1000;
     return slotTimestamp === Number(time);
   });
+
   if (!slot) return false;
 
   // Check if there is not already a consultation at the time
@@ -414,7 +442,7 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
   });
 
   if (consultation.rowCount > 0) return false;
-  return true;
+  return slot;
 };
 
 export const getLatestAvailableSlot = async (
@@ -427,7 +455,12 @@ export const getLatestAvailableSlot = async (
     providerId: providerId,
   })
     .then((res) => {
-      return res.rows;
+      return res.rows.map((x) => ({
+        ...x,
+        slots: x.slots || [],
+        organization_slots: x.organization_slots || [],
+        campaign_slots: x.campaign_slots || [],
+      }));
     })
     .catch((err) => {
       throw err;
@@ -448,7 +481,9 @@ export const getLatestAvailableSlot = async (
 
   const allAvailability = upcomingAvailability
     .map((x) => {
-      return campaignId ? x.campaign_slots : x.slots;
+      return campaignId
+        ? x.campaign_slots
+        : [...x.slots, ...x.organization_slots];
     })
     .filter((x) => x);
   const allSlots = allAvailability.flat().sort((a, b) => {
@@ -460,7 +495,8 @@ export const getLatestAvailableSlot = async (
 
   let latestAvailableSlot;
   for (let l = 0; l < allSlots.length; l++) {
-    const slot = campaignId ? allSlots[l].time : allSlots[l];
+    const slot =
+      typeof allSlots[l] === "object" ? allSlots[l].time : allSlots[l];
     if (!slot) continue;
 
     const now = new Date().getTime(); // Clients cant book consultations in the past
@@ -489,7 +525,12 @@ export const getEarliestAvailableSlot = async (
     providerId: providerId,
   })
     .then((res) => {
-      return res.rows;
+      return res.rows.map((x) => ({
+        ...x,
+        slots: x.slots || [],
+        organization_slots: x.organization_slots || [],
+        campaign_slots: x.campaign_slots || [],
+      }));
     })
     .catch((err) => {
       throw err;
@@ -511,14 +552,28 @@ export const getEarliestAvailableSlot = async (
   // Find the earliest upcoming availability slot that is not already in the upcoming consultations
   for (let j = 0; j < upcomingAvailability.length; j++) {
     let availability = upcomingAvailability[j];
-    const availabilityToMap = campaignId
-      ? availability.campaign_slots
-      : availability.slots;
+    const availabilityToMap = (
+      campaignId
+        ? availability.campaign_slots
+        : [...availability.slots, ...availability.organization_slots]
+    ).sort((a, b) => {
+      // sort by time asc
+      if (a.time && b.time) {
+        return new Date(a.time) - new Date(b.time);
+      } else if (a.time && !b.time) {
+        return new Date(a.time) - new Date(b);
+      } else if (!a.time && b.time) {
+        return new Date(a) - new Date(b.time);
+      }
+
+      return new Date(a) - new Date(b);
+    });
 
     for (let k = 0; k < availabilityToMap?.length; k++) {
-      let slot = campaignId
-        ? new Date(availabilityToMap[k].time)
-        : availabilityToMap[k];
+      let slot =
+        typeof availabilityToMap[k] === "object"
+          ? new Date(availabilityToMap[k].time)
+          : availabilityToMap[k];
       const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
 
       if (
@@ -534,6 +589,7 @@ export const getEarliestAvailableSlot = async (
           }
           continue;
         }
+        console.log(slot, "slot to return");
         return slot;
       }
     }
