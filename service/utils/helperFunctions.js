@@ -552,10 +552,11 @@ export const getEarliestAvailableSlot = async (
   // Find the earliest upcoming availability slot that is not already in the upcoming consultations
   for (let j = 0; j < upcomingAvailability.length; j++) {
     let availability = upcomingAvailability[j];
+    const organizationSlots = availability.organization_slots || [];
     const availabilityToMap = (
       campaignId
         ? availability.campaign_slots
-        : [...availability.slots, ...availability.organization_slots]
+        : [...availability.slots, ...organizationSlots]
     ).sort((a, b) => {
       // sort by time asc
       if (a.time && b.time) {
