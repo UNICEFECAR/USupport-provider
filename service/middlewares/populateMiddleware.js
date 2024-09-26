@@ -63,6 +63,9 @@ export const populateProvider = async (req, res, next) => {
     req.provider = provider;
   }
 
+  req.provider.organizations =
+    req.provider.ogranizations?.filter((x) => !!x.organization_id) || [];
+
   return next();
 };
 
