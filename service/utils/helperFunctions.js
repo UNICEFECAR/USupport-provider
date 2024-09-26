@@ -481,9 +481,10 @@ export const getLatestAvailableSlot = async (
 
   const allAvailability = upcomingAvailability
     .map((x) => {
-      return campaignId
-        ? x.campaign_slots
-        : [...x.slots, ...x.organization_slots];
+      const organizationSlots = Array.isArray(x.organization_slots)
+        ? x.organization_slots
+        : [];
+      return campaignId ? x.campaign_slots : [...x.slots, ...organizationSlots];
     })
     .filter((x) => x);
   const allSlots = allAvailability.flat().sort((a, b) => {
