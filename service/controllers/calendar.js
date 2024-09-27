@@ -23,7 +23,6 @@ export const getCalendarFiveWeeks = async ({
   }).catch((err) => {
     throw err;
   });
-  console.log(slotsData);
 
   const organizationSlotTimes = Array.isArray(slotsData.organization_slots)
     ? slotsData.organization_slots.map((x) => x.time)
