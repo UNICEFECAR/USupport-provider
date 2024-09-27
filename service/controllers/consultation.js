@@ -481,6 +481,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
         status: consultation.status,
         price: consultation.price,
         organization_name: organizationName,
+        organization_id: organizationId,
       };
 
       if (campaignData) {
@@ -591,6 +592,7 @@ export const getAllUpcomingConsultations = async ({
         time: consultation.time,
         status: consultation.status,
         price: consultation.price,
+        organization_id: consultation.organization_id,
       };
 
       if (campaignData) {
