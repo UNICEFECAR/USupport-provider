@@ -154,9 +154,10 @@ router.put("/", populateProvider, async (req, res, next) => {
   const currentWorkWithIds = req.provider.work_with?.map(
     (workWith) => workWith.work_with_id
   );
-  const currentOrganizationIds = provider?.organizations?.map(
-    (organization) => organization.organization_id
-  );
+  const currentOrganizationIds =
+    provider?.organizations?.map(
+      (organization) => organization.organization_id
+    ) || [];
 
   const payload = req.body;
 
@@ -205,9 +206,10 @@ router.put("/by-id/admin", async (req, res, next) => {
     (workWith) => workWith.work_with_id
   );
 
-  const currentOrganizationIds = provider?.organizations?.map(
-    (organization) => organization.organization_id
-  );
+  const currentOrganizationIds =
+    provider?.organizations?.map(
+      (organization) => organization.organization_id
+    ) || [];
 
   const payload = req.body;
 
