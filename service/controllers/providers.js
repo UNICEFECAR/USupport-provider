@@ -260,6 +260,9 @@ export const getProviderById = async ({
           throw err;
         });
 
+      provider.organizations =
+        provider.organizations?.filter((x) => !!x.organization_id) || [];
+
       provider.earliest_available_slot = await getEarliestAvailableSlot(
         country,
         provider_id,
