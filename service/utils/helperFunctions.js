@@ -387,7 +387,7 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
   const invalidSlots = slots.filter((slot) => {
-    if (typeof slot === "object") {
+    if (slot.time) {
       slot = slot.time;
     }
     return (
@@ -403,7 +403,7 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
 };
 
 export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
-  const isNormalSlot = typeof slotTime !== "object";
+  const isNormalSlot = slotTime.time ? false : true;
   const isWithCoupon = !isNormalSlot && slotTime.campaign_id;
 
   const time = isNormalSlot ? slotTime : slotTime.time;
@@ -496,8 +496,7 @@ export const getLatestAvailableSlot = async (
 
   let latestAvailableSlot;
   for (let l = 0; l < allSlots.length; l++) {
-    const slot =
-      typeof allSlots[l] === "object" ? allSlots[l].time : allSlots[l];
+    const slot = allSlots.time ? allSlots[l].time : allSlots[l];
     if (!slot) continue;
 
     const now = new Date().getTime(); // Clients cant book consultations in the past
@@ -572,14 +571,11 @@ export const getEarliestAvailableSlot = async (
 
       return new Date(a) - new Date(b);
     });
-
     for (let k = 0; k < availabilityToMap?.length; k++) {
-      let slot =
-        typeof availabilityToMap[k] === "object"
-          ? new Date(availabilityToMap[k].time)
-          : availabilityToMap[k];
+      let slot = availabilityToMap[k].time
+        ? new Date(availabilityToMap[k].time)
+        : availabilityToMap[k];
       const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
-
       if (
         slot > new Date(now * 1000) &&
         !upcomingConsultations.find(
@@ -593,7 +589,6 @@ export const getEarliestAvailableSlot = async (
           }
           continue;
         }
-        console.log(slot, "slot to return");
         return slot;
       }
     }
