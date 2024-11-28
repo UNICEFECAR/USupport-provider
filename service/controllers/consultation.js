@@ -1504,7 +1504,10 @@ export const joinConsultation = async ({
       throw err;
     });
 
-  if (consultation.status !== "scheduled") {
+  if (
+    consultation.status !== "scheduled" &&
+    consultation.status !== "finished"
+  ) {
     throw consultationNotScheduled(language);
   }
 
