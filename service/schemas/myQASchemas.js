@@ -14,6 +14,8 @@ export const createAnswerSchema = baseSchema.shape({
   text: yup.string().required(),
   provider_detail_id: yup.string().uuid().required(),
   tags: yup.array().required(),
+  name: yup.string().required(),
+  surname: yup.string().required(),
 });
 
 export const archiveQuestionSchema = baseSchema.shape({

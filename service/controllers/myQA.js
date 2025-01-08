@@ -5,11 +5,13 @@ import {
   checkIsQuestionAnsweredQuery,
   getAllQuestionsQuery,
   getAllTagsQuery,
+  getQuestionByQuestionId,
 } from "#queries/myQA";
 
-import { questionCantBeArchived } from "#utils/errors";
-
 import { getMultipleProvidersDataByIDs } from "#queries/providers";
+import { clientNotFound, questionCantBeArchived } from "#utils/errors";
+import { produceRaiseNotification } from "#utils/kafkaProducers";
+import { getClientEmailAndTokenByClientDetailIdQuery } from "#queries/clients";
 
 export const createAnswer = async ({
   country,
@@ -18,6 +20,9 @@ export const createAnswer = async ({
   text,
   provider_detail_id,
   tags,
+  name,
+  surname,
+  language,
 }) => {
   const newTags = [];
   const oldTagIds = [];
@@ -28,6 +33,16 @@ export const createAnswer = async ({
     } else {
       oldTagIds.push(tag.tagId);
     }
+  });
+
+  const question = await getQuestionByQuestionId({
+    poolCountry: country,
+    questionId: question_id,
+  }).then((res) => {
+    if (!res.rowCount) {
+      throw new Error("Question not found");
+    }
+    return res.rows[0];
   });
 
   const newTagIds = await createTag({
@@ -55,10 +70,54 @@ export const createAnswer = async ({
     provider_detail_id,
     tags: tagIds,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.rowCount === 0) {
         return [];
       } else {
+        const clientDetailId = question.client_detail_id;
+
+        const client = await getClientEmailAndTokenByClientDetailIdQuery({
+          poolCountry: country,
+          clientDetailId,
+        }).then((res) => {
+          if (!res.rowCount) {
+            throw clientNotFound(language);
+          }
+          return res.rows[0];
+        });
+
+        const args = {
+          clientDetailId,
+          questionId: question_id,
+          providerName: `${name} ${surname}`,
+        };
+
+        await produceRaiseNotification({
+          channels: ["email", "push", "in-platform"],
+          emailArgs: {
+            emailType: "question-answered",
+            recipientEmail: client.email,
+            recepientUserType: "client",
+            data: args,
+            language,
+            country,
+          },
+          inPlatformArgs: {
+            notificationType: "question_answered",
+            recipientId: client.user_id,
+            data: args,
+            language,
+            country,
+          },
+          pushArgs: {
+            notificationType: "question_answered",
+            recipientId: client.user_id,
+            language,
+            country: country,
+            pushTokensArray: client.push_notification_tokens,
+            data: args,
+          },
+        });
         return { success: true };
       }
     })
