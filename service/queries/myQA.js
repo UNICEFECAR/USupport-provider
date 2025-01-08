@@ -117,3 +117,15 @@ export const getAllTagsQuery = async ({ poolCountry }) => {
     `
   );
 };
+
+export const getQuestionByQuestionId = async ({ poolCountry, questionId }) => {
+  return await getDBPool("clinicalDb", poolCountry).query(
+    `
+        SELECT * 
+        FROM 
+        question 
+        WHERE question_id = $1
+      `,
+    [questionId]
+  );
+};

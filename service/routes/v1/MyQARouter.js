@@ -46,7 +46,7 @@ router.post("/create-answer", populateProvider, async (req, res, next) => {
    */
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
-  const provider_detail_id = req.provider.provider_detail_id;
+  const { provider_detail_id, name, surname } = req.provider;
 
   const payload = req.body;
 
@@ -58,6 +58,8 @@ router.post("/create-answer", populateProvider, async (req, res, next) => {
       country,
       language,
       provider_detail_id,
+      name,
+      surname,
     })
     .then(createAnswer)
     .then((result) => res.status(200).send(result))

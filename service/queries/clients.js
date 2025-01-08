@@ -37,3 +37,18 @@ export const getMultipleClientsDataByIDs = async ({
     `,
     [clientDetailIds]
   );
+
+export const getClientEmailAndTokenByClientDetailIdQuery = async ({
+  poolCountry,
+  clientDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT email, push_notification_tokens, "user".user_id
+      FROM client_detail
+        INNER JOIN "user" ON client_detail.client_detail_id = "user".client_detail_id
+      WHERE client_detail.client_detail_id = $1
+    `,
+    [clientDetailId]
+  );
+};
