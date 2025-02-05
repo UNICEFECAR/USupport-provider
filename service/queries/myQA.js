@@ -33,20 +33,21 @@ export const createAnswerQuery = async ({
   text,
   provider_detail_id,
   tags,
+  languageId,
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
     WITH
         answer AS (
-            INSERT INTO answer (question_id, title, text, provider_detail_id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO answer (question_id, title, text, provider_detail_id, language_id)
+            VALUES ($1, $2, $3, $4, $6)
             RETURNING answer_id
         )
         INSERT INTO answer_tags_links (answer_id, tag_id)
         SELECT answer_id, unnest($5::uuid[])
         FROM answer;
     `,
-    [question_id, title, text, provider_detail_id, tags]
+    [question_id, title, text, provider_detail_id, tags, languageId]
   );
 };
 

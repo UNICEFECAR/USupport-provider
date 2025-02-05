@@ -16,6 +16,7 @@ export const createAnswerSchema = baseSchema.shape({
   tags: yup.array().required(),
   name: yup.string().required(),
   surname: yup.string().required(),
+  languageId: yup.string().uuid().required(),
 });
 
 export const archiveQuestionSchema = baseSchema.shape({

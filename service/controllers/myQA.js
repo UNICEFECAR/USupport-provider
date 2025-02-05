@@ -23,6 +23,7 @@ export const createAnswer = async ({
   name,
   surname,
   language,
+  languageId,
 }) => {
   const newTags = [];
   const oldTagIds = [];
@@ -69,6 +70,7 @@ export const createAnswer = async ({
     text,
     provider_detail_id,
     tags: tagIds,
+    languageId,
   })
     .then(async (res) => {
       if (res.rowCount === 0) {
