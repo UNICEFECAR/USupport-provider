@@ -79,6 +79,7 @@ export const getAllQuestionsQuery = async ({
   poolCountry,
   type,
   provider_detail_id,
+  languageId,
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -93,19 +94,27 @@ export const getAllQuestionsQuery = async ({
         answer.provider_detail_id,
         answer.likes,
         answer.dislikes,
+        answer.language_id,
         array_agg(tags.tag) as tags
       FROM question
           LEFT JOIN answer on question.question_id = answer.question_id
           LEFT JOIN answer_tags_links on answer_tags_links.answer_id = answer.answer_id
           LEFT JOIN tags on answer_tags_links.tag_id = tags.tag_id
-      WHERE  question.status = 'active' AND
-           CASE WHEN $1 = 'answered' THEN answer.answer_id IS NOT NULL
-                WHEN $1 = 'unanswered' THEN answer.answer_id IS NULL
-                ELSE answer.provider_detail_id = $2 END 
-      GROUP BY question.question, answer.answer_id, question.created_at, question.question_id
-      ORDER BY question.created_at DESC;
+      WHERE  question.status = 'active'
+              AND (
+                  CASE 
+                      WHEN $1 = 'answered' THEN answer.answer_id IS NOT NULL
+                      WHEN $1 = 'unanswered' THEN answer.answer_id IS NULL
+                      ELSE answer.provider_detail_id = $2
+                  END
+              )
+              AND (
+                  $3::uuid IS NULL OR answer.language_id = $3::uuid
+              )
+      GROUP BY question.question, answer.answer_id, question.created_at, question.question_id, answer.created_at, answer.title, answer.text, answer.provider_detail_id, answer.likes, answer.dislikes, answer.language_id
+      ORDER BY answer.created_at DESC;
       `,
-    [type, provider_detail_id]
+    [type, provider_detail_id, languageId === "all" ? null : languageId]
   );
 };
 

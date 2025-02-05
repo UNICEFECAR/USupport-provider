@@ -32,4 +32,5 @@ export const getAllQuestionsSchema = baseSchema.shape({
     .oneOf(["answered", "self_answered", "unanswered"])
     .required(),
   provider_detail_id: yup.string().uuid().required(),
+  languageId: yup.string().required(),
 });

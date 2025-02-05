@@ -173,11 +173,13 @@ export const getAllQuestions = async ({
   country,
   type,
   provider_detail_id,
+  languageId,
 }) => {
   const questions = await getAllQuestionsQuery({
     poolCountry: country,
     type,
     provider_detail_id,
+    languageId,
   })
     .then((res) => {
       if (res.rowCount === 0) {
