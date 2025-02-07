@@ -28,12 +28,12 @@ router.get("/questions", populateProvider, async (req, res, next) => {
 
   const provider_detail_id = req.provider.provider_detail_id;
 
-  const { type } = req.query;
+  const { type, languageId } = req.query;
 
   return await getAllQuestionsSchema
     .noUnknown(true)
     .strict(true)
-    .validate({ country, language, type, provider_detail_id })
+    .validate({ country, language, type, provider_detail_id, languageId })
     .then(getAllQuestions)
     .then((result) => res.status(200).send(result))
     .catch(next);
