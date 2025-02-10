@@ -119,28 +119,64 @@ export const getAllActiveProvidersQuery = async ({
   maxPrice = 0,
   onlyFreeConsultation = false,
   providerTypes = allProviderTypes,
-}) =>
-  await getDBPool("piiDb", poolCountry).query(
+  startDate,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
     `
-      SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, status
-      FROM provider_detail
-        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL AND "provider_detail".status = 'active'
-      WHERE 
-      (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END)
-      AND
-      (
-        ($4 = true AND consultation_price = 0) OR ($4 = false)
-      )
-      AND
-      (
-       specializations::text[] && $5::text[]
-      )
-      ORDER BY provider_detail.name ASC
+      WITH provider_filtered AS (
+        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, 
+              street, city, postcode, education, sex, consultation_price, description, video_link, status
+        FROM provider_detail
+        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id 
+                    AND "user".deleted_at IS NULL 
+                    AND "provider_detail".status = 'active'
+        WHERE 
+          (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END)
+          AND
+          (($4 = true AND consultation_price = 0) OR ($4 = false))
+          AND
+          (specializations::text[] && $5::text[])
+        ORDER BY provider_detail.name ASC
+      ), work_with_data AS (
+        SELECT pwl.provider_detail_id, w.work_with_id, w.topic
+        FROM provider_detail_work_with_links pwl
+        JOIN "work_with" w ON pwl.work_with_id = w.work_with_id
+        WHERE pwl.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+        ORDER BY pwl.created_at DESC
+      ), language_data AS (
+        SELECT pll.provider_detail_id, pll.language_id
+        FROM provider_detail_language_links pll
+        WHERE pll.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+        ORDER BY pll.created_at DESC
+      ), 
+      availability_data AS (
+          SELECT DISTINCT ON (pa.provider_detail_id) 
+                pa.provider_detail_id, 
+                pa.start_date, 
+                pa.slots, 
+                pa.availability_id
+          FROM availability pa
+          WHERE pa.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+          AND ($6::int IS NULL OR (pa.start_date >= to_timestamp($6) AND slots IS NOT NULL))
+          ORDER BY pa.provider_detail_id, pa.start_date ASC
+    )
+      SELECT 
+        pf.*, 
+        json_agg(DISTINCT jsonb_build_object('work_with_id', wd.work_with_id, 'topic', wd.topic)) AS work_with,
+        json_agg(DISTINCT ld.language_id) AS languages,
+        json_agg(DISTINCT jsonb_build_object('availability_id', av.availability_id, 'start_date', av.start_date, 'slots', av.slots)) AS availability
+      FROM provider_filtered pf
+      LEFT JOIN work_with_data wd ON pf.provider_detail_id = wd.provider_detail_id
+      LEFT JOIN language_data ld ON pf.provider_detail_id = ld.provider_detail_id
+      LEFT JOIN availability_data av ON pf.provider_detail_id = av.provider_detail_id
+          WHERE ($6::int IS NULL OR availability_id IS NOT NULL)
+      GROUP BY pf.provider_detail_id, pf.name, pf.patronym, pf.surname, pf.nickname, pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, pf.video_link, pf.status
       LIMIT $1
       OFFSET $2;
     `,
-    [limit, offset, maxPrice, onlyFreeConsultation, providerTypes]
+    [limit, offset, maxPrice, onlyFreeConsultation, providerTypes, startDate]
   );
+};
 
 export const getProviderWorkWithQuery = async (poolCountry, provider_id) =>
   await getDBPool("piiDb", poolCountry).query(
@@ -578,3 +614,14 @@ export const addProviderRatingQuery = async ({
       `,
     [providerDetailId, rating, comment]
   );
+
+export const getActiveLanguagesQuery = async () => {
+  return await getDBPool("masterDb").query(
+    `
+        SELECT language_id, name, alpha2, local_name
+        FROM language
+        WHERE is_active = true
+        ORDER BY created_at DESC
+      `
+  );
+};

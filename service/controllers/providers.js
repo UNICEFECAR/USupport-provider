@@ -25,6 +25,7 @@ import {
   getProviderUserIdByDetailIdQuery,
   getProviderStatusQuery,
   addProviderRatingQuery,
+  getActiveLanguagesQuery,
 } from "#queries/providers";
 
 import {
@@ -83,6 +84,7 @@ export const getAllProviders = async ({
   onlyFreeConsultation,
   language,
   onlyAvailable,
+  startDate,
 }) => {
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
   let filteredProviders = [];
@@ -110,6 +112,7 @@ export const getAllProviders = async ({
         maxPrice: maxPrice || 0,
         onlyFreeConsultation: onlyFreeConsultation || false,
         providerTypes: providerTypes || allProviderTypes,
+        startDate,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -117,13 +120,21 @@ export const getAllProviders = async ({
         });
     }
 
-    for (let i = 0; i < providers.length; i++) {
-      const { languages, workWith } = await getProviderLanguagesAndWorkWith({
-        country,
-        provider_detail_id: providers[i].provider_detail_id,
+    const activeLanguages = await getActiveLanguagesQuery(country)
+      .then((res) => {
+        return res.rows;
+      })
+      .catch((err) => {
+        throw err;
       });
 
-      const languageIds = languages.map((x) => x.language_id);
+    for (let i = 0; i < providers.length; i++) {
+      const provider = providers[i];
+      const languageIds = provider.languages.map((x) => x.language_id);
+
+      const languages = activeLanguages.filter((x) =>
+        languageIds.includes(x.language_id)
+      );
 
       if (language && !languageIds.includes(language)) {
         continue;
@@ -215,7 +226,6 @@ export const getAllProviders = async ({
       providers[i] = {
         ...providers[i],
         languages: languages,
-        work_with: workWith,
       };
       filteredProviders.push(providers[i]);
     }
