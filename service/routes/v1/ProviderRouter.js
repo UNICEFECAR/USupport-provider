@@ -157,7 +157,7 @@ router.put("/", populateProvider, async (req, res, next) => {
     (workWith) => workWith.work_with_id
   );
   const currentOrganizationIds =
-    provider?.organizations?.map(
+    req.provider?.organizations?.map(
       (organization) => organization.organization_id
     ) || [];
 
