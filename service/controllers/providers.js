@@ -429,30 +429,32 @@ export const updateProviderData = async ({
           });
         });
 
-        // Insert new organizations and delete missing ones
-        const organizationsToInsert = organizationIds?.filter(
-          (id) => !currentOrganizationIds.includes(id)
-        );
+        // Insert new organizations and delete missing ones if there are any provided
+        if (organizationIds) {
+          const organizationsToInsert = organizationIds?.filter(
+            (id) => !currentOrganizationIds.includes(id)
+          );
 
-        const organizationsToDelete = currentOrganizationIds?.filter(
-          (id) => !organizationIds.includes(id)
-        );
+          const organizationsToDelete = currentOrganizationIds?.filter(
+            (id) => !organizationIds.includes(id)
+          );
 
-        await assignOrganizationsToProviderQuery({
-          organizationIds: organizationsToInsert,
-          providerDetailId: provider_id,
-          poolCountry: country,
-        }).catch((err) => {
-          throw err;
-        });
+          await assignOrganizationsToProviderQuery({
+            organizationIds: organizationsToInsert,
+            providerDetailId: provider_id,
+            poolCountry: country,
+          }).catch((err) => {
+            throw err;
+          });
 
-        await removeOrganizationsFromProviderQuery({
-          organizationIds: organizationsToDelete,
-          providerDetailId: provider_id,
-          poolCountry: country,
-        }).catch((err) => {
-          throw err;
-        });
+          await removeOrganizationsFromProviderQuery({
+            organizationIds: organizationsToDelete,
+            providerDetailId: provider_id,
+            poolCountry: country,
+          }).catch((err) => {
+            throw err;
+          });
+        }
 
         const cacheKey = `provider_${country}_${user_id}`;
         await deleteCacheItem(cacheKey);
