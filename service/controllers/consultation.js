@@ -785,10 +785,10 @@ export const scheduleConsultation = async ({
     });
   }
 
-  if (consultation.campaign_id) {
+  if (consultation.campaign_id || !consultation.price) {
     await addTransactionQuery({
       poolCountry: country,
-      type: "coupon",
+      type: consultation.campaign_id ? "coupon" : "card",
       consultationId: consultationId,
       paymentIntent: null,
       paymentRefundId: null,
