@@ -16,15 +16,47 @@ spec:
         app: provider
     spec:
       containers:
-      - name: provider
-        image: 482053628475.dkr.ecr.eu-central-1.amazonaws.com/usupport-provider-api:beta
-        imagePullPolicy: Always
-        envFrom:
-        - secretRef:
-            name: provider-secrets
-        - configMapRef:
-            name: provider-config
-        ports:
-        - containerPort: 3002
+        - name: provider
+          image: 482053628475.dkr.ecr.eu-central-1.amazonaws.com/usupport-provider-api:beta
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: provider-secrets
+            - configMapRef:
+                name: provider-config
+          ports:
+            - containerPort: 3002
+          # resources:
+          #   requests:
+          #     cpu: 400m
+          #     memory: 512Mi
+          #   limits:
+          #     cpu: 2
+          #     memory: 1024Mi
       imagePullSecrets:
-      - name: regcred
+        - name: regcred
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: provider
+#   namespace: default
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: provider
+#   minReplicas: 1
+#   maxReplicas: 5  # Increase max replicas for better load handling
+#   metrics:
+#   - type: Resource
+#     resource:
+#       name: cpu
+#       target:
+#         type: Utilization
+#         averageUtilization: 40  # Scale earlier
+#   - type: Resource
+#     resource:
+#       name: memory
+#       target:
+#         type: Utilization
+#         averageUtilization: 60  # Scale on lower memory pressure
