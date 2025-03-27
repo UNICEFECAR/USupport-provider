@@ -61,7 +61,7 @@ export const updateAvailabilitySingleSlotQuery = async ({
         WHERE provider_detail_id = $1 AND start_date = to_timestamp($2)
       )
       UPDATE availability
-      SET organization_slots = organization_slots || (SELECT s FROM slots)
+      SET organization_slots = COALESCE(organization_slots, '[]'::jsonb) || (SELECT s FROM slots)
       WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
   
       `,
@@ -76,7 +76,7 @@ export const updateAvailabilitySingleSlotQuery = async ({
         WHERE provider_detail_id = $1 AND start_date = to_timestamp($2)
       )
       UPDATE availability
-      SET campaign_slots = campaign_slots || (SELECT s FROM slots)
+      SET campaign_slots = COALESCE(campaign_slots, '[]'::jsonb) || (SELECT s FROM slots)
       WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
   
       `,

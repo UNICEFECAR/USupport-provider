@@ -153,7 +153,8 @@ export const getAllActiveProvidersQuery = async ({
           SELECT DISTINCT ON (pa.provider_detail_id) 
                 pa.provider_detail_id, 
                 pa.start_date, 
-                pa.slots, 
+                pa.slots,
+                pa.campaign_slots, 
                 pa.availability_id
           FROM availability pa
           WHERE pa.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
@@ -506,29 +507,83 @@ export const getProvidersByCampaignIdQuery = async ({
   maxPrice,
   onlyFreeConsultation,
   providerTypes,
+  startDate,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
-    SELECT provider_detail."provider_detail_id", provider_detail."name", patronym, surname, nickname, email, phone, image, specializations, street, city, postcode, education, sex, consultation_price, description, video_link, price_per_coupon, campaign.campaign_id
-    FROM provider_detail
-      JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
-      JOIN campaign ON campaign.campaign_id = $1
-      JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
-    WHERE 
-      (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END)
-      AND
-      (
-        ($5 = true AND consultation_price = 0) OR ($5 = false)
-      )
-      AND
-      (
-       specializations::text[] && $6::text[]
-      )
+    WITH provider_filtered AS (
+      SELECT provider_detail."provider_detail_id", provider_detail."name", patronym, surname, 
+             nickname, email, phone, image, specializations, street, city, postcode, 
+             education, sex, consultation_price, description, video_link, 
+             price_per_coupon, campaign.campaign_id
+      FROM provider_detail
+        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id 
+          AND "user".deleted_at IS NULL
+        JOIN campaign ON campaign.campaign_id = $1
+        JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id 
+          AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
+      WHERE 
+        (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END)
+        AND
+        ($5 = false OR ($5 = true AND consultation_price = 0))
+        AND
+        (specializations::text[] && $6::text[])
       ORDER BY provider_detail.name ASC
-      LIMIT $2
-      OFFSET $3;
+    ), work_with_data AS (
+      SELECT pwl.provider_detail_id, w.work_with_id, w.topic
+      FROM provider_detail_work_with_links pwl
+      JOIN "work_with" w ON pwl.work_with_id = w.work_with_id
+      WHERE pwl.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+      ORDER BY pwl.created_at DESC
+    ), language_data AS (
+      SELECT pll.provider_detail_id, pll.language_id
+      FROM provider_detail_language_links pll
+      WHERE pll.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+      ORDER BY pll.created_at DESC
+    ), availability_data AS (
+      SELECT DISTINCT ON (pa.provider_detail_id) 
+        pa.provider_detail_id, 
+        pa.start_date, 
+        pa.slots, 
+        pa.availability_id,
+        pa.campaign_slots
+      FROM availability pa
+      WHERE pa.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
+      AND ($7::int IS NULL OR (pa.start_date >= to_timestamp($7) AND slots IS NOT NULL))
+      ORDER BY pa.provider_detail_id, pa.start_date ASC
+    )
+    SELECT 
+      pf.*, 
+      json_agg(DISTINCT jsonb_build_object('work_with_id', wd.work_with_id, 'topic', wd.topic)) AS work_with,
+      json_agg(DISTINCT ld.language_id) AS languages,
+      json_agg(DISTINCT jsonb_build_object(
+        'availability_id', av.availability_id, 
+        'start_date', av.start_date, 
+        'slots', av.slots,
+        'campaign_slots', av.campaign_slots
+      )) AS availability
+    FROM provider_filtered pf
+    LEFT JOIN work_with_data wd ON pf.provider_detail_id = wd.provider_detail_id
+    LEFT JOIN language_data ld ON pf.provider_detail_id = ld.provider_detail_id
+    LEFT JOIN availability_data av ON pf.provider_detail_id = av.provider_detail_id
+    WHERE ($7::int IS NULL OR av.availability_id IS NOT NULL)
+    GROUP BY 
+      pf.provider_detail_id, pf.name, pf.patronym, pf.surname, pf.nickname, 
+      pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, 
+      pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, 
+      pf.video_link, pf.price_per_coupon, pf.campaign_id
+    LIMIT $2
+    OFFSET $3;
     `,
-    [campaignId, limit, offset, maxPrice, onlyFreeConsultation, providerTypes]
+    [
+      campaignId,
+      limit,
+      offset,
+      maxPrice,
+      onlyFreeConsultation,
+      providerTypes,
+      startDate,
+    ]
   );
 };
 

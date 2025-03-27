@@ -130,7 +130,7 @@ export const getAllProviders = async ({
 
     for (let i = 0; i < providers.length; i++) {
       const provider = providers[i];
-      const languageIds = provider.languages.map((x) => x.language_id);
+      const languageIds = provider.languages;
 
       const languages = activeLanguages.filter((x) =>
         languageIds.includes(x.language_id)
