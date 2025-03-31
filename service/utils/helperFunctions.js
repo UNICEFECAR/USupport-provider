@@ -23,16 +23,11 @@ import {
 import {
   getCampaignDataForMultipleIdsQuery,
   getCampignByCouponCodeQuery,
-  getCampaignDataByIdQuery,
 } from "#queries/sponsors";
 
 import { getClientEmailAndUserIdQuery } from "#queries/clients";
 
-import {
-  campaignNotFound,
-  clientNotFound,
-  providerNotFound,
-} from "#utils/errors";
+import { clientNotFound, providerNotFound } from "#utils/errors";
 
 const CLIENT_LOCAL_HOST = "http://localhost:3001";
 const CLIENT_URL = process.env.CLIENT_URL;
