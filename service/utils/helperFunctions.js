@@ -932,28 +932,11 @@ export const getCampaignDataByCouponCode = async ({ country, couponCode }) => {
 };
 
 export const checkCanClientUseCoupon = async ({
-  campaignId,
+  couponCode,
   userId,
   country,
   language,
 }) => {
-  const campaignData = await getCampaignDataByIdQuery({
-    poolCountry: country,
-    campaignId,
-  })
-    .then((res) => {
-      if (res.rowCount === 0) {
-        throw campaignNotFound(language);
-      } else {
-        return res.rows[0];
-      }
-    })
-    .catch((err) => {
-      throw err;
-    });
-
-  const couponCode = campaignData.coupon_code;
-
   const response = await fetch(
     `${CLIENT_URL}/client/v1/client/check-coupon?couponCode=${couponCode}`,
     {

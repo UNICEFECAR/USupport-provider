@@ -679,7 +679,7 @@ export const addConsultationAsPending = async ({
 
     if (!rescheduleCampaignSlot) {
       const canUseCoupon = await checkCanClientUseCoupon({
-        campaignId,
+        couponCode: campaignData.coupon_code,
         country,
         language,
         userId,
