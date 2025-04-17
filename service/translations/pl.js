@@ -2,7 +2,7 @@ export default {
   provider_not_found_error: "Nie znaleziono konsultanta",
   client_not_found_error: "Nie znaleziono klienta",
   incorrect_password_error: "Podane hasło jest nieprawidłowe",
-  email_already_used_error: "Ten adres email jest już wykorzystywany",
+  email_already_used_error: "Ten adres email jest już zajęty",
   slots_not_within_week_error: "Przedziały czasowe nie mieszczą się w tygodniu",
   slot_not_available_error: "Termin jest niedostępny",
   consultation_not_found_error: "Nie znaleziono konsultacji",
