@@ -316,7 +316,7 @@ export const getAllConsultationsByProviderIdQuery = async ({
       SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, consultation.organization_id
       FROM consultation
         LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
-      WHERE provider_detail_id = $1 AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+      WHERE provider_detail_id = $1 AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished' OR status = 'canceled')
       ORDER BY time DESC;
     `,
     [providerId]

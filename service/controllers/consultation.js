@@ -466,8 +466,9 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
 
     if (
-      consultation.time < oneHourBeforeNow &&
-      consultation.status !== "suggested"
+      (consultation.time < oneHourBeforeNow &&
+        consultation.status !== "suggested") ||
+      consultation.status === "canceled"
     ) {
       const res = {
         consultation_id: consultation.consultation_id,
