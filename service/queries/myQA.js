@@ -112,7 +112,8 @@ export const getAllQuestionsQuery = async ({
                   $3::uuid IS NULL OR answer.language_id = $3::uuid
               )
       GROUP BY question.question, answer.answer_id, question.created_at, question.question_id, answer.created_at, answer.title, answer.text, answer.provider_detail_id, answer.likes, answer.dislikes, answer.language_id
-      ORDER BY answer.created_at DESC;
+      ORDER BY  answer.created_at DESC NULLS LAST, 
+                question.created_at DESC;
       `,
     [type, provider_detail_id, languageId === "all" ? null : languageId]
   );
