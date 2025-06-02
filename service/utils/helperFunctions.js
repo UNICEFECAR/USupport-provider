@@ -953,3 +953,13 @@ export const checkCanClientUseCoupon = async ({
 
   return result;
 };
+
+const countriesMap = {
+  kz: "kazakhstan",
+  pl: "poland",
+  ro: "romania",
+};
+
+export const getCountryLabelFromAlpha2 = (alpha2) => {
+  return countriesMap[alpha2.toLocaleLowerCase()];
+};

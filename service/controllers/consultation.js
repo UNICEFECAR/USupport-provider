@@ -53,6 +53,7 @@ import {
   getClientNotificationsData,
   getProviderNotificationsData,
   checkCanClientUseCoupon,
+  getCountryLabelFromAlpha2,
 } from "#utils/helperFunctions";
 
 import {
@@ -833,9 +834,11 @@ export const scheduleConsultation = async ({
       notificationType: "consultation_booking",
       country: country,
     };
+    const countryLabel = getCountryLabelFromAlpha2(country);
     const baseArgsData = {
       time: new Date(consultation.time).getTime() / 1000,
       consultationPrice: consultation.price,
+      countryLabel,
     };
 
     // Send Client Email and Internal notification
@@ -845,6 +848,9 @@ export const scheduleConsultation = async ({
         emailType: "client-consultationConfirmBooking",
         recipientEmail: clientEmail,
         recipientUserType: "client",
+        data: {
+          countryLabel,
+        },
       },
       inPlatformArgs: {
         recipientId: clientUserId,
@@ -873,6 +879,9 @@ export const scheduleConsultation = async ({
         emailType: "provider-consultationNotifyBooking",
         recipientEmail: providerEmail,
         recipientUserType: "provider",
+        data: {
+          countryLabel,
+        },
       },
       inPlatformArgs: {
         recipientId: providerUserId,
@@ -1016,6 +1025,8 @@ export const suggestConsultation = async ({
     consultationPrice: consultation.price,
   };
 
+  const countryLabel = getCountryLabelFromAlpha2(country);
+
   // Send Client Email and Internal notification
   await produceRaiseNotification({
     channels: [clientEmail ? "email" : "", "in-platform", "push"],
@@ -1023,6 +1034,9 @@ export const suggestConsultation = async ({
       emailType: "client-consultationNotifySuggestion",
       recipientEmail: clientEmail,
       recipientUserType: "client",
+      data: {
+        countryLabel,
+      },
     },
     inPlatformArgs: {
       recipientId: clientUserId,
@@ -1051,6 +1065,9 @@ export const suggestConsultation = async ({
       emailType: "provider-consultationConfirmSuggestion",
       recipientEmail: providerEmail,
       recipientUserType: "provider",
+      data: {
+        countryLabel,
+      },
     },
     inPlatformArgs: {
       notificationType: "consultation_suggestion",
@@ -1150,6 +1167,8 @@ export const acceptSuggestedConsultation = async ({
           time: new Date(consultation.time).getTime() / 1000,
         };
 
+        const countryLabel = getCountryLabelFromAlpha2(country);
+
         // Send Client Email and Internal notification
         await produceRaiseNotification({
           channels: [clientEmail ? "email" : "", "in-platform", "push"],
@@ -1157,6 +1176,9 @@ export const acceptSuggestedConsultation = async ({
             emailType: "client-consultationConfirmSuggestionBooking",
             recipientEmail: clientEmail,
             recipientUserType: "client",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             recipientId: clientUserId,
@@ -1184,6 +1206,9 @@ export const acceptSuggestedConsultation = async ({
             emailType: "provider-consultationNotifySuggestionBooking",
             recipientEmail: providerEmail,
             recipientUserType: "provider",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             recipientId: providerUserId,
@@ -1258,6 +1283,8 @@ export const rejectSuggestedConsultation = async ({
           consultation_id: consultation.consultation_id,
         };
 
+        const countryLabel = getCountryLabelFromAlpha2(country);
+
         // Send Client Email and Internal notification
         await produceRaiseNotification({
           channels: [clientEmail ? "email" : "", "in-platform", "push"],
@@ -1265,6 +1292,9 @@ export const rejectSuggestedConsultation = async ({
             emailType: "client-consultationConfirmSuggestionCancellation",
             recipientEmail: clientEmail,
             recipientUserType: "client",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             recipientId: clientUserId,
@@ -1292,6 +1322,9 @@ export const rejectSuggestedConsultation = async ({
             emailType: "provider-consultationNotifySuggestionCancellation",
             recipientEmail: providerEmail,
             recipientUserType: "provider",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             recipientId: providerUserId,
@@ -1430,6 +1463,8 @@ export const rescheduleConsultation = async ({
         new_consultation_time: newConsultationTime,
       };
 
+      const countryLabel = getCountryLabelFromAlpha2(country);
+
       // Send Client Email and Internal notification
       await produceRaiseNotification({
         channels: [clientEmail ? "email" : "", "in-platform", "push"],
@@ -1437,6 +1472,9 @@ export const rescheduleConsultation = async ({
           emailType: "client-consultationConfirmReschedule",
           recipientEmail: clientEmail,
           recipientUserType: "client",
+          data: {
+            countryLabel,
+          },
         },
         inPlatformArgs: {
           recipientId: clientUserId,
@@ -1464,6 +1502,9 @@ export const rescheduleConsultation = async ({
           emailType: "provider-consultationNotifyReschedule",
           recipientEmail: providerEmail,
           recipientUserType: "provider",
+          data: {
+            countryLabel,
+          },
         },
         inPlatformArgs: {
           recipientId: providerUserId,
@@ -1649,6 +1690,8 @@ export const cancelConsultation = async ({
           throw err;
         });
 
+        const countryLabel = getCountryLabelFromAlpha2(country);
+
         // Send Client Email and Internal notification
         await produceRaiseNotification({
           channels: [clientEmail ? "email" : "", "in-platform", "push"],
@@ -1659,6 +1702,9 @@ export const cancelConsultation = async ({
                 : "client-consultationNotifyCancellation",
             recipientEmail: clientEmail,
             recipientUserType: "client",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             notificationType:
@@ -1694,6 +1740,9 @@ export const cancelConsultation = async ({
                 : "provider-consultationConfirmCancellation",
             recipientEmail: providerEmail,
             recipientUserType: "provider",
+            data: {
+              countryLabel,
+            },
           },
           inPlatformArgs: {
             notificationType:
