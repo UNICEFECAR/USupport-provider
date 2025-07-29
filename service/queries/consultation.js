@@ -204,7 +204,10 @@ export const cancelConsultationQuery = async ({
     `
 
       UPDATE consultation
-      SET status = 'canceled'
+      SET status =  CASE
+          WHEN time < NOW() + INTERVAL '24 hours' THEN 'late-canceled'::consultation_status
+          ELSE 'canceled'::consultation_status
+        END
       WHERE consultation_id = $1
       RETURNING *;
 
