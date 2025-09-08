@@ -265,7 +265,9 @@ export const getAvailabilitySingleDay = async ({
   day,
   campaignId,
 }) => {
-  const now = new Date().getTime() / 1000; // Clients can't book appointments in the past
+  const now = new Date().getTime() / 1000;
+  const tomorrowTimestamp = now + getXDaysInSeconds(1);
+  const timeToCheck = country === "PL" ? tomorrowTimestamp : now;
 
   let slots = [];
   // let campaignData;
@@ -318,7 +320,7 @@ export const getAvailabilitySingleDay = async ({
       slotTimestamp = new Date(slot).getTime() / 1000;
     }
     if (
-      slotTimestamp > now &&
+      slotTimestamp > timeToCheck &&
       slotTimestamp >= previousDayTimestamp &&
       slotTimestamp < nextDayTimestamp &&
       !allConsultationsForDay.some(
