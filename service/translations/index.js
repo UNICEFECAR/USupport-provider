@@ -2,14 +2,14 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 const en = require('./en.json');
-const am = require('./am.json');
+const hy = require('./hy.json');
 const kk = require('./kk.json');
 const ru = require('./ru.json');
 const pl = require('./pl.json');
 const uk = require('./uk.json');
 
 const translations = {
-  am,
+  hy,
   en,
   kk,
   ru,
