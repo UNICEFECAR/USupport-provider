@@ -452,9 +452,11 @@ export const getLatestAvailableSlot = async (
     .then((res) => {
       return res.rows.map((x) => ({
         ...x,
-        slots: x.slots || [],
-        organization_slots: x.organization_slots || [],
-        campaign_slots: x.campaign_slots || [],
+        slots: Array.isArray(x.slots) ? x.slots : [],
+        organization_slots: Array.isArray(x.organization_slots)
+          ? x.organization_slots
+          : [],
+        campaign_slots: Array.isArray(x.campaign_slots) ? x.campaign_slots : [],
       }));
     })
     .catch((err) => {
@@ -467,40 +469,41 @@ export const getLatestAvailableSlot = async (
       providerId: providerId,
     }
   )
-    .then((res) => {
-      return res.rows;
-    })
+    .then((res) => res.rows)
     .catch((err) => {
       throw err;
     });
 
-  const allAvailability = upcomingAvailability
-    .map((x) => {
-      const organizationSlots = Array.isArray(x.organization_slots)
-        ? x.organization_slots
-        : [];
-      return campaignId ? x.campaign_slots : [...x.slots, ...organizationSlots];
-    })
-    .filter((x) => x);
-  const allSlots = allAvailability.flat().sort((a, b) => {
-    if (campaignId) {
-      return new Date(b.time).getTime() - new Date(a.time).getTime();
-    }
-    return new Date(b).getTime() - new Date(a).getTime();
+  const allAvailability = upcomingAvailability.map((x) => {
+    const organizationSlots = Array.isArray(x.organization_slots)
+      ? x.organization_slots
+      : [];
+    return campaignId ? x.campaign_slots : [...x.slots, ...organizationSlots];
   });
+
+  // Flatten and clean out anything that's not an object/date
+  const allSlots = allAvailability
+    .flat()
+    .filter((s) => s && (s.time || typeof s === "string" || s instanceof Date))
+    .sort((a, b) => {
+      const aTime = campaignId ? new Date(a.time) : new Date(a);
+      const bTime = campaignId ? new Date(b.time) : new Date(b);
+      return bTime - aTime; // descending
+    });
 
   let latestAvailableSlot;
   for (let l = 0; l < allSlots.length; l++) {
-    const slot = allSlots.time ? allSlots[l].time : allSlots[l];
+    const slotObj = allSlots[l];
+    const slot = slotObj?.time ? new Date(slotObj.time) : new Date(slotObj);
     if (!slot) continue;
 
-    const now = new Date().getTime(); // Clients cant book consultations in the past
+    const now = Date.now(); // ms since epoch
 
     if (
-      new Date(slot).getTime() > now &&
+      slot.getTime() > now &&
       !upcomingConsultations.find(
         (consultation) =>
-          new Date(consultation.time).getTime() === new Date(slot).getTime()
+          new Date(consultation.time).getTime() === slot.getTime()
       )
     ) {
       latestAvailableSlot = slot;
@@ -550,22 +553,23 @@ export const getEarliestAvailableSlot = async (
     const organizationSlots = Array.isArray(availability.organization_slots)
       ? availability.organization_slots
       : [];
-    const availabilityToMap = (
-      campaignId
-        ? availability.campaign_slots
-        : [...availability.slots, ...organizationSlots]
-    ).sort((a, b) => {
-      // sort by time asc
-      if (a.time && b.time) {
-        return new Date(a.time) - new Date(b.time);
-      } else if (a.time && !b.time) {
-        return new Date(a.time) - new Date(b);
-      } else if (!a.time && b.time) {
-        return new Date(a) - new Date(b.time);
-      }
 
-      return new Date(a) - new Date(b);
+    const campaignSlots = Array.isArray(availability.campaign_slots)
+      ? availability.campaign_slots
+      : [];
+
+    const slotsArray = Array.isArray(availability.slots)
+      ? availability.slots
+      : [];
+
+    const availabilityToMap = (
+      campaignId ? campaignSlots : [...slotsArray, ...organizationSlots]
+    ).sort((a, b) => {
+      const aTime = a?.time ? new Date(a.time) : new Date(a);
+      const bTime = b?.time ? new Date(b.time) : new Date(b);
+      return aTime - bTime;
     });
+
     for (let k = 0; k < availabilityToMap?.length; k++) {
       let slot = availabilityToMap[k].time
         ? new Date(availabilityToMap[k].time)
