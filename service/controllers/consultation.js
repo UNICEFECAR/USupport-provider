@@ -20,6 +20,7 @@ import {
   getAllUpcomingConsultationsByProviderIdQuery,
   getConsultationTimeQuerry,
   getClientConsultationsForSpecificTime,
+  getAllConsultationsByProviderIdQuery,
 } from "#queries/consultation";
 
 import {
@@ -41,8 +42,6 @@ import {
   getCampaignCouponPriceForMultipleIds,
   getCampaignDataByIdQuery,
 } from "#queries/sponsors";
-
-import { getAllConsultationsByProviderIdQuery } from "#queries/consultation";
 
 import { produceRaiseNotification } from "#utils/kafkaProducers";
 
