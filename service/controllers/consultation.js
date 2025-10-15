@@ -751,6 +751,7 @@ export const scheduleConsultation = async ({
     await updateConsultationStatusAsScheduledQuery({
       poolCountry: country,
       consultationId,
+      bookedFrom: consultation.booked_from,
     });
   } else {
     const consultationTime = new Date(consultation.time).getTime() / 1000;
