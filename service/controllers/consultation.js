@@ -752,19 +752,6 @@ export const scheduleConsultation = async ({
       poolCountry: country,
       consultationId,
     });
-    // add event
-    await addCountryEventRequest({
-      country,
-      language,
-      eventType: `${consultation.booked_from}_consultation_scheduled`,
-      clientDetailId: consultation.client_detail_id,
-    }).catch((err) => {
-      console.log(
-        new Date().toISOString(),
-        " - Error adding country event for consultation scheduled",
-        err
-      );
-    });
   } else {
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
@@ -812,11 +799,12 @@ export const scheduleConsultation = async ({
       campaignId: consultation.campaign_id,
     })
       .then(async () => {
-        // add event
         await addCountryEventRequest({
           country,
           language,
-          eventType: `${consultation.booked_from}_consultation_scheduled`,
+          eventType: `${
+            consultation.booked_from || "mobile"
+          }_consultation_scheduled`,
           clientDetailId: consultation.client_detail_id,
         }).catch((err) => {
           console.log(
@@ -829,6 +817,21 @@ export const scheduleConsultation = async ({
       .catch((err) => {
         throw err;
       });
+  } else if (consultation.price) {
+    await addCountryEventRequest({
+      country,
+      language,
+      eventType: `${
+        consultation.booked_from || "mobile"
+      }_consultation_scheduled`,
+      clientDetailId: consultation.client_detail_id,
+    }).catch((err) => {
+      console.log(
+        new Date().toISOString(),
+        " - Error adding country event for consultation scheduled",
+        err
+      );
+    });
   }
 
   if (shouldSendNotification) {
@@ -1161,10 +1164,13 @@ export const acceptSuggestedConsultation = async ({
       } else {
         const consultation = raw.rows[0];
 
+        console.log("Add event line 1166");
         await addCountryEventRequest({
           country,
           language,
-          eventType: `${consultation.booked_from}_consultation_scheduled`,
+          eventType: `${
+            consultation.booked_from || "mobile"
+          }_consultation_scheduled`,
           clientDetailId: consultation.client_detail_id,
         }).catch((err) => {
           console.log(

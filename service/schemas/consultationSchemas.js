@@ -14,7 +14,7 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
   rescheduleCampaignSlot: yup.boolean().notRequired(),
-  bookedFrom: yup.string().oneOf(["web", "mobile"]).notRequired().nullable(),
+  bookedFrom: yup.string().oneOf(["web", "mobile", null]).nullable(),
   time: yup.lazy((value) => {
     if (typeof value === "object") {
       return timeCampaignSchema;
