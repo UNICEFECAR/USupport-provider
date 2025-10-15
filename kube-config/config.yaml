@@ -6,9 +6,9 @@ data:
   NODE_ENV: production
   PORT: "3002"
   TZ: UTC
-  
+
   CLIENT_URL: http://client-service:3001
+  USER_URL: http://user-service:3010
   REDIS_CACHE: redis://redis-service:6379
-  
+
   KAFKAJS_NO_PARTITIONER_WARNING: "1"
-   
