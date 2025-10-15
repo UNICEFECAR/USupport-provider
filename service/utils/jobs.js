@@ -13,7 +13,7 @@ export const clearPendingConsultationsJob = async () => {
     });
 
   // Update all pending consultations for each country
-  for (let i = 0; i < countries.length; i++) {
+  for (let i = 0; i < countries?.length; i++) {
     const country = countries[i];
     const poolCountry = country.alpha2;
 

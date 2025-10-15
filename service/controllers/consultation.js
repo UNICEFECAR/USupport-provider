@@ -53,6 +53,7 @@ import {
   getProviderNotificationsData,
   checkCanClientUseCoupon,
   getCountryLabelFromAlpha2,
+  addCountryEventRequest,
 } from "#utils/helperFunctions";
 
 import {
@@ -619,6 +620,7 @@ export const addConsultationAsPending = async ({
   userId,
   rescheduleCampaignSlot = false,
   requestedBy,
+  bookedFrom,
 }) => {
   const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
   if (!isSlotAvailable) throw slotNotAvailable(language);
@@ -702,6 +704,7 @@ export const addConsultationAsPending = async ({
     price: campaignId ? campaignData.price_per_coupon : consultationPrice,
     campaignId,
     organizationId: isSlotAvailable?.organization_id || null,
+    bookedFrom,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {
@@ -749,6 +752,19 @@ export const scheduleConsultation = async ({
       poolCountry: country,
       consultationId,
     });
+    // add event
+    await addCountryEventRequest({
+      country,
+      language,
+      eventType: `${consultation.booked_from}_consultation_scheduled`,
+      clientDetailId: consultation.client_detail_id,
+    }).catch((err) => {
+      console.log(
+        new Date().toISOString(),
+        " - Error adding country event for consultation scheduled",
+        err
+      );
+    });
   } else {
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
@@ -794,9 +810,25 @@ export const scheduleConsultation = async ({
       paymentIntent: null,
       paymentRefundId: null,
       campaignId: consultation.campaign_id,
-    }).catch((err) => {
-      throw err;
-    });
+    })
+      .then(async () => {
+        // add event
+        await addCountryEventRequest({
+          country,
+          language,
+          eventType: `${consultation.booked_from}_consultation_scheduled`,
+          clientDetailId: consultation.client_detail_id,
+        }).catch((err) => {
+          console.log(
+            new Date().toISOString(),
+            " - Error adding country event for consultation scheduled",
+            err
+          );
+        });
+      })
+      .catch((err) => {
+        throw err;
+      });
   }
 
   if (shouldSendNotification) {
@@ -1088,6 +1120,7 @@ export const acceptSuggestedConsultation = async ({
   country,
   language, // language of the client
   consultationId,
+  bookedFrom,
 }) => {
   // Check if consultation exists
   const consultation = await getConsultationByIdQuery({
@@ -1120,12 +1153,26 @@ export const acceptSuggestedConsultation = async ({
   return await updateConsultationStatusAsScheduledQuery({
     poolCountry: country,
     consultationId,
+    bookedFrom,
   })
     .then(async (raw) => {
       if (raw.rowCount === 0) {
         throw consultationNotFound(language);
       } else {
         const consultation = raw.rows[0];
+
+        await addCountryEventRequest({
+          country,
+          language,
+          eventType: `${consultation.booked_from}_consultation_scheduled`,
+          clientDetailId: consultation.client_detail_id,
+        }).catch((err) => {
+          console.log(
+            new Date().toISOString(),
+            " - Error adding country event for consultation scheduled",
+            err
+          );
+        });
 
         // Get notification data for the provider
         // Note that this notification is raised when the client accepts a consultation,

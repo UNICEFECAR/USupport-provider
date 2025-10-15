@@ -32,6 +32,9 @@ import { clientNotFound, providerNotFound } from "#utils/errors";
 const CLIENT_LOCAL_HOST = "http://localhost:3001";
 const CLIENT_URL = process.env.CLIENT_URL;
 
+const USER_LOCAL_HOST = "http://localhost:3010";
+const USER_URL = process.env.USER_URL;
+
 export const getXDaysInSeconds = (x) => {
   const minute = 60;
   const hour = minute * 60;
@@ -968,4 +971,29 @@ const countriesMap = {
 
 export const getCountryLabelFromAlpha2 = (alpha2) => {
   return countriesMap[alpha2.toLocaleLowerCase()];
+};
+
+export const addCountryEventRequest = async ({
+  country,
+  language,
+  eventType,
+  clientDetailId,
+}) => {
+  const response = await fetch(`${USER_URL}/user/v1/user/country-event`, {
+    method: "POST",
+    headers: {
+      host: USER_LOCAL_HOST,
+      "Content-type": "application/json",
+      "x-client-detail-id": clientDetailId,
+      "x-country-alpha-2": country,
+      "x-language-alpha-2": language,
+    },
+    body: JSON.stringify({
+      eventType,
+    }),
+  }).catch(console.log);
+
+  const result = await response.json();
+
+  return result;
 };

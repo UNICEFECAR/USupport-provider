@@ -57,16 +57,17 @@ export const addConsultationAsPendingQuery = async ({
   price,
   campaignId,
   organizationId,
+  bookedFrom,
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price, campaign_id, organization_id)
-      VALUES ($1, $2, to_timestamp($3), 'pending', $4, $5, $6)
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price, campaign_id, organization_id, booked_from)
+      VALUES ($1, $2, to_timestamp($3), 'pending', $4, $5, $6, $7)
       RETURNING *;
 
     `,
-    [clientId, providerId, time, price, campaignId, organizationId]
+    [clientId, providerId, time, price, campaignId, organizationId, bookedFrom]
   );
 };
 
@@ -129,6 +130,7 @@ export const getConsultationByIdQuery = async ({
 export const updateConsultationStatusAsScheduledQuery = async ({
   poolCountry,
   consultationId,
+  bookedFrom,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -142,11 +144,11 @@ export const updateConsultationStatusAsScheduledQuery = async ({
       )
 
       UPDATE consultation
-      SET status = 'scheduled', chat_id = (SELECT chat_id FROM chatData)
+      SET status = 'scheduled', chat_id = (SELECT chat_id FROM chatData), booked_from = $2
       WHERE consultation_id = $1
       RETURNING *;
     `,
-    [consultationId]
+    [consultationId, bookedFrom]
   );
 
 export const updateConsultationStatusAsSuggestedQuery = async ({

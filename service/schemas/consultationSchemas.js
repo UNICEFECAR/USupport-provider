@@ -14,6 +14,7 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   clientId: yup.string().uuid().required(),
   providerId: yup.string().uuid().required(),
   rescheduleCampaignSlot: yup.boolean().notRequired(),
+  bookedFrom: yup.string().oneOf(["web", "mobile"]).notRequired().nullable(),
   time: yup.lazy((value) => {
     if (typeof value === "object") {
       return timeCampaignSchema;
@@ -41,6 +42,7 @@ export const acceptSuggestedConsultationSchema = yup.object().shape({
   country: yup.string().required(),
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
+  bookedFrom: yup.string().oneOf(["web", "mobile"]).notRequired().nullable(),
 });
 
 export const rejectSuggestedConsultationSchema = yup.object().shape({
