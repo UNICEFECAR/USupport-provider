@@ -519,7 +519,8 @@ export const getLatestAvailableSlot = async (
 export const getEarliestAvailableSlot = async (
   country,
   providerId,
-  campaignId = null
+  campaignId = null,
+  minLeadHours
 ) => {
   const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
     poolCountry: country,
@@ -579,7 +580,11 @@ export const getEarliestAvailableSlot = async (
         : availabilityToMap[k];
       const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
       const tomorrowTimestamp = now + getXDaysInSeconds(1);
-      const timeToCheck = country === "PL" ? tomorrowTimestamp : now;
+      const defaultTimeToCheck = country === "PL" ? tomorrowTimestamp : now;
+      const timeToCheck =
+        typeof minLeadHours === "number"
+          ? now + minLeadHours * 60 * 60
+          : defaultTimeToCheck;
       if (
         slot > new Date(timeToCheck * 1000) &&
         !upcomingConsultations.find(

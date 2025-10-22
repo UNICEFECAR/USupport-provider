@@ -165,7 +165,8 @@ export const getAllProviders = async ({
       providers[i].earliest_available_slot = await getEarliestAvailableSlot(
         country,
         providers[i].provider_detail_id,
-        providers[i].campaign_id
+        providers[i].campaign_id,
+        24 // Minimum 24 hours lead time for slots
       );
 
       providers[i].latest_available_slot = await getLatestAvailableSlot(

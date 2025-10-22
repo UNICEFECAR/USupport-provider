@@ -267,7 +267,8 @@ export const getAvailabilitySingleDay = async ({
 }) => {
   const now = new Date().getTime() / 1000;
   const tomorrowTimestamp = now + getXDaysInSeconds(1);
-  const timeToCheck = country === "PL" ? tomorrowTimestamp : now;
+  // const timeToCheck = country === "PL" ? tomorrowTimestamp : now;
+  const timeToCheck = tomorrowTimestamp;
 
   let slots = [];
   // let campaignData;
