@@ -363,6 +363,7 @@ export const clearAvailabilitySlot = async ({
     startDate,
     slot,
   };
+  console.log(args, "args");
   const queries = [deleteAvailabilitySingleWeekQuery(args)];
   campaignIds.forEach((campaignId) => {
     queries.push(
@@ -373,13 +374,22 @@ export const clearAvailabilitySlot = async ({
     );
   });
 
-  if (organizationId) {
+  if (organizationId && typeof organizationId === "string") {
     queries.push(
       deleteAvailabilitySingleWeekQuery({
         ...args,
         organizationId,
       })
     );
+  } else if (organizationId && Array.isArray(organizationId)) {
+    organizationId.forEach((id) => {
+      queries.push(
+        deleteAvailabilitySingleWeekQuery({
+          ...args,
+          organizationId: id,
+        })
+      );
+    });
   }
 
   await Promise.all(queries);

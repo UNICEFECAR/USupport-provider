@@ -44,7 +44,23 @@ export const clearAvailabilitySlotSchema = yup.object().shape({
   startDate: yup.string().required(),
   slot: yup.string().required(),
   campaignIds: yup.array().of(yup.string().uuid()).required(),
-  organizationId: yup.string().uuid().nullable().notRequired(),
+  organizationId: yup
+    .mixed()
+    .test(
+      "organizationId-validation",
+      "organizationId must be either a UUID string or an array of UUID strings",
+      (value) => {
+        if (value === null || value === undefined) return true;
+        if (typeof value === "string") {
+          return yup.string().uuid().isValidSync(value);
+        }
+        if (Array.isArray(value)) {
+          return yup.array().of(yup.string().uuid()).isValidSync(value);
+        }
+        return false;
+      }
+    )
+    .notRequired(),
 });
 
 export const getAvailabilitySingleDaySchema = yup.object().shape({
