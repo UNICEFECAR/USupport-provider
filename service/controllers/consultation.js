@@ -800,39 +800,44 @@ export const scheduleConsultation = async ({
       campaignId: consultation.campaign_id,
     })
       .then(async () => {
-        await addCountryEventRequest({
-          country,
-          language,
-          eventType: `${
-            consultation.booked_from || "mobile"
-          }_consultation_scheduled`,
-          clientDetailId: consultation.client_detail_id,
-        }).catch((err) => {
-          console.log(
-            new Date().toISOString(),
-            " - Error adding country event for consultation scheduled",
-            err
-          );
-        });
+        if (shouldSendNotification) {
+          await addCountryEventRequest({
+            country,
+            language,
+            eventType: `${
+              consultation.booked_from || "mobile"
+            }_consultation_scheduled`,
+            clientDetailId: consultation.client_detail_id,
+          }).catch((err) => {
+            console.log(
+              new Date().toISOString(),
+              " - Error adding country event for consultation scheduled",
+              err
+            );
+          });
+        }
       })
       .catch((err) => {
         throw err;
       });
   } else if (consultation.price) {
-    await addCountryEventRequest({
-      country,
-      language,
-      eventType: `${
-        consultation.booked_from || "mobile"
-      }_consultation_scheduled`,
-      clientDetailId: consultation.client_detail_id,
-    }).catch((err) => {
-      console.log(
-        new Date().toISOString(),
-        " - Error adding country event for consultation scheduled",
-        err
-      );
-    });
+    // The separate if statement is on purpose
+    if (shouldSendNotification) {
+      await addCountryEventRequest({
+        country,
+        language,
+        eventType: `${
+          consultation.booked_from || "mobile"
+        }_consultation_scheduled`,
+        clientDetailId: consultation.client_detail_id,
+      }).catch((err) => {
+        console.log(
+          new Date().toISOString(),
+          " - Error adding country event for consultation scheduled",
+          err
+        );
+      });
+    }
   }
 
   if (shouldSendNotification) {
@@ -1714,6 +1719,27 @@ export const cancelConsultation = async ({
         throw consultationNotFound(language);
       } else {
         const consultation = raw.rows[0];
+
+        // Add country event for consultation cancellation
+        const eventType =
+          consultation.status === "canceled"
+            ? `${consultation.booked_from || "mobile"}_consultation_canceled`
+            : `${
+                consultation.booked_from || "mobile"
+              }_consultation_late_canceled`;
+
+        await addCountryEventRequest({
+          country,
+          language,
+          eventType,
+          clientDetailId: consultation.client_detail_id,
+        }).catch((err) => {
+          console.log(
+            new Date().toISOString(),
+            " - Error adding country event for consultation cancellation",
+            err
+          );
+        });
 
         // Get notification data for the provider
         const {
