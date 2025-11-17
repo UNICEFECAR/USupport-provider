@@ -158,7 +158,7 @@ export const getAllActiveProvidersQuery = async ({
                 pa.availability_id
           FROM availability pa
           WHERE pa.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
-          AND ($6::int IS NULL OR (pa.start_date >= to_timestamp($6) AND slots IS NOT NULL))
+          AND ($6::int IS NULL OR (pa.start_date >= to_timestamp($6)))
           ORDER BY pa.provider_detail_id, pa.start_date ASC
     )
       SELECT 
