@@ -26,7 +26,8 @@ export const updateAvailabilityByTemplateSchema = yup.object().shape({
       slots: yup.array().of(yup.string().required()).required(),
     })
   ),
-  campaignId: yup.string().uuid().notRequired(),
+  campaignIds: yup.array().of(yup.string().uuid()).notRequired(),
+  organizationIds: yup.array().of(yup.string().uuid()).notRequired(),
 });
 
 export const deleteAvailabilitySingleWeekSchema = yup.object().shape({

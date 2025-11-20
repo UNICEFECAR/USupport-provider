@@ -4,6 +4,7 @@
   "incorrect_password_error": "The provided password is incorrect",
   "email_already_used_error": "This email is already used",
   "slots_not_within_week_error": "Slots are not within the week",
+  "expired_campaign_error": "You can't add slots to an expired campaign",
   "slot_not_available_error": "Slot is not available",
   "consultation_not_found_error": "Consultation not found",
   "provider_has_future_consultations_error": "Provider has future consultations",
@@ -16,5 +17,7 @@
   "provider_inactive_error": "The provider is inactive",
   "question_cant_be_archived_error": "The question can't be archived",
   "client_cant_book_error": "Client already has a consultation booked for this time",
-  "booking_not_allowed_error": "You already have a consultation booked for this time"
+  "booking_not_allowed_error": "You already have a consultation booked for this time",
+  "campaign_or_organization_required_error": "At least one campaign or organization must be provided",
+  "country_not_found_error": "Country not found"
 }

@@ -48,6 +48,14 @@ export const slotsNotWithinWeek = (language) => {
   return error;
 };
 
+export const expiredCampaign = (language) => {
+  const error = new Error();
+  error.message = t("expired_campaign_error", language);
+  error.name = "EXPIRED CAMPAIGN";
+  error.status = 400;
+  return error;
+};
+
 export const slotNotAvailable = (language) => {
   const error = new Error();
   error.message = t("slot_not_available_error", language);
@@ -149,5 +157,21 @@ export const clientCantBook = (language) => {
   error.message = t("client_cant_book_error", language);
   error.name = "CLIENT CANT BOOK";
   error.status = 400;
+  return error;
+};
+
+export const campaignOrOrganizationRequired = (language) => {
+  const error = new Error();
+  error.message = t("campaign_or_organization_required_error", language);
+  error.name = "CAMPAIGN OR ORGANIZATION REQUIRED";
+  error.status = 400;
+  return error;
+};
+
+export const countryNotFound = (language) => {
+  const error = new Error();
+  error.message = t("country_not_found_error", language);
+  error.name = "COUNTRY NOT FOUND";
+  error.status = 404;
   return error;
 };

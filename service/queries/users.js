@@ -35,3 +35,13 @@ export const getUserIdsByProviderIdsQuery = async ({ country, providerIds }) =>
       `,
     [providerIds]
   );
+
+export const getCountryDetailsByAlpha2Query = async (alpha2) =>
+  await getDBPool("masterDb").query(
+    `
+        SELECT *
+        FROM "country"
+        WHERE alpha2 = $1;
+      `,
+    [alpha2]
+  );

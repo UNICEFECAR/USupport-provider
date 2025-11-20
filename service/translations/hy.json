@@ -4,6 +4,7 @@
   "incorrect_password_error": "Տրամադրված գաղտնաբառը սխալ է",
   "email_already_used_error": "Էլեկտրոնային փոստի այս հասցեն արդեն օգտագործվում է",
   "slots_not_within_week_error": "Մեկ շաբաթվա կտրվածքով ժամանակահատվածներ առկա չեն",
+  "expired_campaign_error": "Դուք չեք կարող ժամկետանց արշավին ավելացնել ժամանակահատվածներ",
   "slot_not_available_error": "Ժամանակահատված առկա չէ",
   "consultation_not_found_error": "Խորհրդատվությունը չի գտնվել",
   "provider_has_future_consultations_error": "Խորհրդատուն առաջիկայում ունի խորհրդատվություններ",
@@ -16,5 +17,7 @@
   "provider_inactive_error": "Խորհրդատուն ակտիվ չէ",
   "question_cant_be_archived_error": "Հարցը չի կարող արխիվացվել",
   "client_cant_book_error": "Հաճախորդը արդեն ունի այս ժամի համար պատվիրված խորհրդատվություն։",
-  "booking_not_allowed_error": "Դուք արդեն ունեք այս ժամի համար պատվիրված խորհրդատվություն։"
+  "booking_not_allowed_error": "Դուք արդեն ունեք այս ժամի համար պատվիրված խորհրդատվություն։",
+  "campaign_or_organization_required_error": "Պետք է տրամադրվի առնվազն մեկ արշավ կամ կազմակերպություն",
+  "country_not_found_error": "Երկիրը չի գտնվել"
 }

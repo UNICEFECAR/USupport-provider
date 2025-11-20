@@ -4,6 +4,7 @@
   "incorrect_password_error": "Podane hasło jest nieprawidłowe",
   "email_already_used_error": "Ten adres email jest już wykorzystywany",
   "slots_not_within_week_error": "Przedziały czasowe nie mieszczą się w tygodniu",
+  "expired_campaign_error": "Nie możesz dodać przedziałów czasowych do wygasłej kampanii",
   "slot_not_available_error": "Termin jest niedostępny",
   "consultation_not_found_error": "Nie znaleziono konsultacji",
   "provider_has_future_consultations_error": "Konsultant/ka ma przyszłe konsultacje",
@@ -16,5 +17,7 @@
   "provider_inactive_error": "Konsultant/ka jest nieaktywny/a",
   "question_cant_be_archived_error": "Pytanie nie może zostać zarchiwizowane",
   "client_cant_book_error": "Klient/ka ma już zarezerwowaną konsultację na ten czas",
-  "booking_not_allowed_error": "Masz już zarezerwowaną konsultację na ten czas"
+  "booking_not_allowed_error": "Masz już zarezerwowaną konsultację na ten czas",
+  "campaign_or_organization_required_error": "Należy podać co najmniej jedną kampanię lub organizację",
+  "country_not_found_error": "Nie znaleziono kraju"
 }
