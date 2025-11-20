@@ -3,6 +3,8 @@ import {
   updateAvailabilitySingleSlotQuery,
   updateAvailabilityMultipleSlotsQuery,
   deleteAvailabilitySingleWeekQuery,
+  deleteAvailabilitySingleWeekAllCampaignsQuery,
+  deleteAvailabilitySingleWeekAllOrganizationsQuery,
 } from "#queries/availability";
 
 import { getConsultationsForDayQuery } from "#queries/consultation";
@@ -210,17 +212,23 @@ export const updateAvailabilityByTemplate = async ({
     });
 
   const hasNormalSlots = !!countryDetails.has_normal_slots;
-  console.log(countryDetails, "countryDetails");
-
   const hasCampaigns =
     Array.isArray(campaignIds) && campaignIds.filter(Boolean).length > 0;
   const hasOrganizations =
     Array.isArray(organizationIds) &&
     organizationIds.filter(Boolean).length > 0;
+  const hasAnySlotsInTemplate =
+    Array.isArray(template) &&
+    template.some(
+      (t) => Array.isArray(t.slots) && t.slots.filter(Boolean).length > 0
+    );
 
-  // If the country does NOT support normal slots, we must still require
-  // at least one campaign or organization (old behavior).
-  if (!hasNormalSlots && !hasCampaigns && !hasOrganizations) {
+  if (
+    !hasNormalSlots &&
+    !hasCampaigns &&
+    !hasOrganizations &&
+    hasAnySlotsInTemplate
+  ) {
     throw campaignOrOrganizationRequired(language);
   }
 
@@ -486,17 +494,33 @@ export const clearAvailabilitySlot = async ({
     startDate,
     slot,
   };
-  console.log(args, "args");
-  const queries = [deleteAvailabilitySingleWeekQuery(args)];
-  campaignIds.forEach((campaignId) => {
-    queries.push(
-      deleteAvailabilitySingleWeekQuery({
-        ...args,
-        campaignId,
-      })
-    );
-  });
 
+  const queries = [];
+
+  // Always clear the "normal" slot entry (if any)
+  queries.push(deleteAvailabilitySingleWeekQuery(args));
+
+  // Clear campaign slots:
+  // - If specific campaignIds are provided, clear only those
+  // - If none are provided, clear the slot from ALL campaigns (used when
+  //   marking a day fully unavailable without specifying campaigns)
+  if (Array.isArray(campaignIds) && campaignIds.length > 0) {
+    campaignIds.forEach((campaignId) => {
+      queries.push(
+        deleteAvailabilitySingleWeekQuery({
+          ...args,
+          campaignId,
+        })
+      );
+    });
+  } else {
+    queries.push(deleteAvailabilitySingleWeekAllCampaignsQuery(args));
+  }
+
+  // Clear organization slots:
+  // - If a string/array of ids is provided, clear only those
+  // - If nothing is provided, clear the slot from ALL organizations (used when
+  //   marking a day fully unavailable without specifying organizations)
   if (organizationId && typeof organizationId === "string") {
     queries.push(
       deleteAvailabilitySingleWeekQuery({
@@ -513,6 +537,8 @@ export const clearAvailabilitySlot = async ({
         })
       );
     });
+  } else {
+    queries.push(deleteAvailabilitySingleWeekAllOrganizationsQuery(args));
   }
 
   await Promise.all(queries);
