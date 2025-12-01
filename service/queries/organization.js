@@ -55,3 +55,27 @@ export const getOrganizationsByIdsQuery = async ({
     [organizationIds]
   );
 };
+
+export const checkProvidersFutureConsultationsForOrgQuery = async ({
+  providerDetailIds,
+  organizationId,
+  poolCountry,
+}) => {
+  return await getDBPool("clinicalDb", poolCountry).query(
+    `
+      SELECT 
+          provider_detail_id,
+          COUNT(DISTINCT consultation_id) AS count
+      FROM 
+          consultation
+      WHERE 
+          organization_id = $1 
+          AND provider_detail_id = ANY($2::uuid[])
+          AND status = 'scheduled'
+          AND time > NOW()
+      GROUP BY 
+          provider_detail_id;
+    `,
+    [organizationId, providerDetailIds]
+  );
+};
