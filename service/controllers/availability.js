@@ -3,9 +3,13 @@ import {
   updateAvailabilitySingleSlotQuery,
   updateAvailabilityMultipleSlotsQuery,
   deleteAvailabilitySingleWeekQuery,
+  deleteAvailabilitySingleWeekAllCampaignsQuery,
+  deleteAvailabilitySingleWeekAllOrganizationsQuery,
 } from "#queries/availability";
 
 import { getConsultationsForDayQuery } from "#queries/consultation";
+
+import { getCountryDetailsByAlpha2Query } from "#queries/users";
 
 import { getCampaignDataByIdQuery } from "#queries/sponsors";
 
@@ -13,6 +17,9 @@ import {
   campaignNotFound,
   slotsNotWithinWeek,
   slotAlreadyExists,
+  expiredCampaign,
+  campaignOrOrganizationRequired,
+  countryNotFound,
 } from "#utils/errors";
 
 import {
@@ -48,7 +55,7 @@ export const updateAvailabilitySingleWeek = async ({
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
 
-  // If the campaignId is provided, get the data for that campaign
+  let campaignStartDate;
   let campaignEndDate;
   const today = new Date().getTime();
   if (campaignId) {
@@ -66,12 +73,17 @@ export const updateAvailabilitySingleWeek = async ({
       .catch((err) => {
         throw err;
       });
+    campaignStartDate = new Date(campaignData.campaign_start_date).getTime();
     campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
   }
 
   if (campaignId) {
     if (today > campaignEndDate) {
-      throw slotsNotWithinWeek(language);
+      throw expiredCampaign(language);
+    }
+    const slotMs = Number(slot) * 1000;
+    if (slotMs < campaignStartDate || slotMs > campaignEndDate) {
+      throw expiredCampaign(language);
     }
   }
 
@@ -184,32 +196,74 @@ export const updateAvailabilityByTemplate = async ({
   provider_id,
   template,
   countryId,
-  campaignId,
+  campaignIds,
+  organizationIds,
 }) => {
-  // If the campaignId is provided, get the data for that campaign
-  let campaignEndDate;
-  const today = new Date().getTime();
-  if (campaignId) {
-    const campaignData = await getCampaignDataByIdQuery({
-      poolCountry: country,
-      campaignId,
+  const countryDetails = await getCountryDetailsByAlpha2Query(country)
+    .then((res) => {
+      if (res.rowCount === 0) {
+        throw countryNotFound(language);
+      } else {
+        return res.rows[0];
+      }
     })
-      .then((res) => {
-        if (res.rowCount === 0) {
-          throw campaignNotFound(language);
-        } else {
-          return res.rows[0];
-        }
-      })
-      .catch((err) => {
-        throw err;
-      });
-    campaignEndDate = new Date(campaignData.campaign_end_date).getTime();
+    .catch((err) => {
+      throw err;
+    });
+
+  const hasNormalSlots = !!countryDetails.has_normal_slots;
+  const hasCampaigns =
+    Array.isArray(campaignIds) && campaignIds.filter(Boolean).length > 0;
+  const hasOrganizations =
+    Array.isArray(organizationIds) &&
+    organizationIds.filter(Boolean).length > 0;
+  const hasAnySlotsInTemplate =
+    Array.isArray(template) &&
+    template.some(
+      (t) => Array.isArray(t.slots) && t.slots.filter(Boolean).length > 0
+    );
+
+  if (
+    !hasNormalSlots &&
+    !hasCampaigns &&
+    !hasOrganizations &&
+    hasAnySlotsInTemplate
+  ) {
+    throw campaignOrOrganizationRequired(language);
   }
 
-  if (campaignId) {
-    if (today > campaignEndDate) {
-      throw slotsNotWithinWeek(language);
+  let campaignRanges = null;
+  if (hasCampaigns) {
+    const today = new Date().getTime();
+    campaignRanges = new Map();
+    for (const campaignId of campaignIds) {
+      const campaignData = await getCampaignDataByIdQuery({
+        poolCountry: country,
+        campaignId,
+      })
+        .then((res) => {
+          if (res.rowCount === 0) {
+            throw campaignNotFound(language);
+          } else {
+            return res.rows[0];
+          }
+        })
+        .catch((err) => {
+          throw err;
+        });
+      const campaignStartDate = new Date(
+        campaignData.campaign_start_date
+      ).getTime();
+      const campaignEndDate = new Date(
+        campaignData.campaign_end_date
+      ).getTime();
+      campaignRanges.set(campaignId, {
+        startMs: campaignStartDate,
+        endMs: campaignEndDate,
+      });
+      if (today > campaignEndDate) {
+        throw expiredCampaign(language);
+      }
     }
   }
 
@@ -236,20 +290,97 @@ export const updateAvailabilityByTemplate = async ({
           });
         }
 
-        slots.forEach((element, index) => {
-          slots[index] = new Date(element * 1000);
-        });
+        if (hasCampaigns) {
+          const campaignFormattedSlots = slots.map(
+            (element) => new Date(element * 1000)
+          );
+          for (const campaignId of campaignIds) {
+            if (campaignRanges && campaignRanges.has(campaignId)) {
+              const { startMs, endMs } = campaignRanges.get(campaignId);
+              const hasOutOfRange = campaignFormattedSlots.some((d) => {
+                const ms = d.getTime();
+                return ms < startMs || ms > endMs;
+              });
+              if (hasOutOfRange) {
+                throw expiredCampaign(language);
+              }
+            }
+            await updateAvailabilityMultipleSlotsQuery({
+              poolCountry: country,
+              provider_id,
+              startDate,
+              slots: campaignFormattedSlots,
+              countryId,
+              campaignId,
+            }).catch((err) => {
+              throw err;
+            });
+          }
+        }
 
-        return await updateAvailabilityMultipleSlotsQuery({
-          poolCountry: country,
-          provider_id,
-          startDate,
-          slots,
-          countryId,
-          campaignId,
-        }).catch((err) => {
-          throw err;
-        });
+        if (hasOrganizations) {
+          for (const rawSlot of slots) {
+            const slotSeconds = Number(rawSlot);
+            // If the slot is already available for another organization, delete it
+            const occupiedSlot =
+              res.organization_slots &&
+              res.organization_slots.find((x) => {
+                const time = new Date(x.time).getTime() / 1000;
+                return time === slotSeconds;
+              });
+
+            if (occupiedSlot) {
+              if (!organizationIds.includes(occupiedSlot.organization_id)) {
+                await deleteAvailabilitySingleWeekQuery({
+                  poolCountry: country,
+                  provider_id,
+                  startDate,
+                  slot: slotSeconds,
+                  organizationId: occupiedSlot.organization_id,
+                }).catch((err) => {
+                  throw err;
+                });
+              } else {
+                // If the slot is already assigned to the same organization we intend to add for,
+                // skip re-adding to avoid duplicates.
+                continue;
+              }
+            }
+
+            // Assign the slot to the first provided organization (one slot can belong to only one organization)
+            const targetOrganizationId = organizationIds[0];
+            await updateAvailabilitySingleSlotQuery({
+              poolCountry: country,
+              provider_id,
+              startDate,
+              slot: slotSeconds,
+              organizationId: targetOrganizationId,
+            }).catch((err) => {
+              throw err;
+            });
+          }
+        }
+
+        // If the country supports normal slots and no campaign/organization was
+        // provided, fall back to adding "normal" availability slots (legacy behavior).
+        const isNormalSlotsMode =
+          hasNormalSlots && !hasCampaigns && !hasOrganizations;
+
+        if (isNormalSlotsMode) {
+          const normalFormattedSlots = slots.map(
+            (element) => new Date(element * 1000)
+          );
+          await updateAvailabilityMultipleSlotsQuery({
+            poolCountry: country,
+            provider_id,
+            startDate,
+            slots: normalFormattedSlots,
+          }).catch((err) => {
+            throw err;
+          });
+        }
+
+        return;
       })
       .catch((err) => {
         throw err;
@@ -363,17 +494,33 @@ export const clearAvailabilitySlot = async ({
     startDate,
     slot,
   };
-  console.log(args, "args");
-  const queries = [deleteAvailabilitySingleWeekQuery(args)];
-  campaignIds.forEach((campaignId) => {
-    queries.push(
-      deleteAvailabilitySingleWeekQuery({
-        ...args,
-        campaignId,
-      })
-    );
-  });
 
+  const queries = [];
+
+  // Always clear the "normal" slot entry (if any)
+  queries.push(deleteAvailabilitySingleWeekQuery(args));
+
+  // Clear campaign slots:
+  // - If specific campaignIds are provided, clear only those
+  // - If none are provided, clear the slot from ALL campaigns (used when
+  //   marking a day fully unavailable without specifying campaigns)
+  if (Array.isArray(campaignIds) && campaignIds.length > 0) {
+    campaignIds.forEach((campaignId) => {
+      queries.push(
+        deleteAvailabilitySingleWeekQuery({
+          ...args,
+          campaignId,
+        })
+      );
+    });
+  } else {
+    queries.push(deleteAvailabilitySingleWeekAllCampaignsQuery(args));
+  }
+
+  // Clear organization slots:
+  // - If a string/array of ids is provided, clear only those
+  // - If nothing is provided, clear the slot from ALL organizations (used when
+  //   marking a day fully unavailable without specifying organizations)
   if (organizationId && typeof organizationId === "string") {
     queries.push(
       deleteAvailabilitySingleWeekQuery({
@@ -390,6 +537,8 @@ export const clearAvailabilitySlot = async ({
         })
       );
     });
+  } else {
+    queries.push(deleteAvailabilitySingleWeekAllOrganizationsQuery(args));
   }
 
   await Promise.all(queries);

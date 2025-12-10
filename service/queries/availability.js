@@ -187,3 +187,87 @@ export const deleteAvailabilitySingleWeekQuery = async ({
     );
   }
 };
+
+/**
+ * Delete a slot from ALL campaign_slots for the given provider/week,
+ * regardless of campaign_id (used when marking a day fully unavailable
+ * without specifying particular campaigns).
+ */
+export const deleteAvailabilitySingleWeekAllCampaignsQuery = async ({
+  poolCountry,
+  provider_id,
+  startDate,
+  slot,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+    UPDATE availability a
+    SET campaign_slots = (
+      SELECT jsonb_agg(e)
+      FROM jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(campaign_slots) = 'array'
+          THEN campaign_slots
+          ELSE '[]'::jsonb
+        END
+      ) e
+      WHERE e->>'time' != to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ')
+    )
+    WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+    `,
+    [provider_id, startDate, slot]
+  );
+
+/**
+ * Delete a slot from ALL organization_slots for the given provider/week,
+ * regardless of organization_id (used when marking a day fully unavailable
+ * without specifying particular organizations).
+ */
+export const deleteAvailabilitySingleWeekAllOrganizationsQuery = async ({
+  poolCountry,
+  provider_id,
+  startDate,
+  slot,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+    UPDATE availability a
+    SET organization_slots = (
+      SELECT jsonb_agg(e)
+      FROM jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(organization_slots) = 'array'
+          THEN organization_slots
+          ELSE '[]'::jsonb
+        END
+      ) e
+      WHERE e->>'time' != to_char(to_timestamp($3), 'YYYY-MM-DD HH24:MI:SS TZ')
+    )
+    WHERE provider_detail_id = $1 AND start_date = to_timestamp($2);
+    `,
+    [provider_id, startDate, slot]
+  );
+
+export const checkProviderFutureOrganizationSlotsQuery = async ({
+  providerDetailId,
+  organizationId,
+  poolCountry,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT COUNT(*) AS count
+      FROM availability a
+      CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(a.organization_slots) = 'array'
+          THEN a.organization_slots
+          ELSE '[]'::jsonb
+        END
+      ) e
+      WHERE a.provider_detail_id = $1
+        AND (e->>'organization_id')::uuid = $2
+        AND (e->>'time')::timestamptz > NOW();
+    `,
+    [providerDetailId, organizationId]
+  );
+};

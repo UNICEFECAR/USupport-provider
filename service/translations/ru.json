@@ -4,6 +4,7 @@
   "incorrect_password_error": "Предоставленный пароль неверен",
   "email_already_used_error": "Этот электронный адрес уже используется",
   "slots_not_within_week_error": "Временной промежуток выходит за рамки недели",
+  "expired_campaign_error": "Вы не можете добавить временные промежутки к истекшей кампании",
   "slot_not_available_error": "Время недоступно",
   "consultation_not_found_error": "Консультация не найдена",
   "provider_has_future_consultations_error": "У консультанта есть будущие консультации",
@@ -16,5 +17,7 @@
   "provider_inactive_error": "Консультант неактивен",
   "question_cant_be_archived_error": "Вопрос не может быть заархивирован",
   "client_cant_book_error": "Клиент уже забронировал консультацию на это время",
-  "booking_not_allowed_error": "У Вас уже забронирована консультация на это время"
+  "booking_not_allowed_error": "У Вас уже забронирована консультация на это время",
+  "campaign_or_organization_required_error": "Необходимо указать как минимум одну кампанию или организацию",
+  "country_not_found_error": "Страна не найдена"
 }

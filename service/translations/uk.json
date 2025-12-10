@@ -4,6 +4,7 @@
   "incorrect_password_error": "Наданий пароль є невірним",
   "email_already_used_error": "Ця електронна адреса вже використовується",
   "slots_not_within_week_error": "Часові слоти не в межах тижня",
+  "expired_campaign_error": "Не можна додати часові слоти до простроченої кампанії",
   "slot_not_available_error": "Часовий слот недоступний",
   "consultation_not_found_error": "Консультації не знайдено",
   "provider_has_future_consultations_error": "Консультант/ка має майбутні консультації",
@@ -16,5 +17,7 @@
   "provider_inactive_error": "Консультант/ка неактивний/а",
   "question_cant_be_archived_error": "Запитання не може бути заархівовано",
   "client_cant_book_error": "Клієнт/ка вже забронював/ла консультацію на цей час",
-  "booking_not_allowed_error": "На цей час ти вже маєш заброньовану консультацію"
+  "booking_not_allowed_error": "На цей час ти вже маєш заброньовану консультацію",
+  "campaign_or_organization_required_error": "Потрібно вказати принаймні одну кампанію або організацію",
+  "country_not_found_error": "Країни не знайдено"
 }
