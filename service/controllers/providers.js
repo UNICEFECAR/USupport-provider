@@ -56,7 +56,9 @@ import { deleteCacheItem } from "#utils/cache";
 import {
   assignOrganizationsToProviderQuery,
   removeOrganizationsFromProviderQuery,
+  checkProvidersFutureConsultationsForOrgQuery,
 } from "#queries/organization";
+import { checkProviderFutureOrganizationSlotsQuery } from "#queries/availability";
 import { getUserIdsByProviderIdsQuery } from "#queries/users";
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
@@ -439,6 +441,46 @@ export const updateProviderData = async ({
           const organizationsToDelete = currentOrganizationIds?.filter(
             (id) => !organizationIds.includes(id)
           );
+
+          // Check for future consultations and slots before removing organizations
+          if (organizationsToDelete && organizationsToDelete.length > 0) {
+            for (const organizationId of organizationsToDelete) {
+              const futureConsultationsForProvider =
+                await checkProvidersFutureConsultationsForOrgQuery({
+                  providerDetailIds: [provider_id],
+                  organizationId,
+                  poolCountry: country,
+                })
+                  .then((res) => {
+                    const row = res.rows[0];
+                    return row ? Number(row.count || 0) : 0;
+                  })
+                  .catch((err) => {
+                    throw err;
+                  });
+
+              const futureOrganizationSlotsForProvider =
+                await checkProviderFutureOrganizationSlotsQuery({
+                  providerDetailId: provider_id,
+                  organizationId,
+                  poolCountry: country,
+                })
+                  .then((res) => {
+                    const row = res.rows[0];
+                    return row ? Number(row.count || 0) : 0;
+                  })
+                  .catch((err) => {
+                    throw err;
+                  });
+
+              if (
+                futureConsultationsForProvider > 0 ||
+                futureOrganizationSlotsForProvider > 0
+              ) {
+                throw providerHasFutureConsultations(language);
+              }
+            }
+          }
 
           await assignOrganizationsToProviderQuery({
             organizationIds: organizationsToInsert,
