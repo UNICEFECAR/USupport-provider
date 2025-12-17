@@ -972,6 +972,8 @@ const countriesMap = {
   kz: "kazakhstan",
   pl: "poland",
   ro: "romania",
+  am: "armenia",
+  ps: "playandheal",
 };
 
 export const getCountryLabelFromAlpha2 = (alpha2) => {
