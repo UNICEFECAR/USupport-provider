@@ -1,4 +1,7 @@
-import { updateStatusOfAllPendingConsultationsToTimeoutQuery } from "#queries/consultation";
+import {
+  cancelNotAcceptedSuggestedConsultationsQuery,
+  updateStatusOfAllPendingConsultationsToTimeoutQuery,
+} from "#queries/consultation";
 
 import { getAllActiveCountries } from "#queries/countries";
 
@@ -24,4 +27,13 @@ export const clearPendingConsultationsJob = async () => {
       console.log("Error in updating pending consultations", err);
     });
   }
+};
+
+// Get all consultations that are suggested and not accepted after 24 hours and cancel them
+export const cancelNotAcceptedSuggestedConsultationsJob = async () => {
+  await cancelNotAcceptedSuggestedConsultationsQuery({
+    poolCountry: "PL",
+  }).catch((err) => {
+    console.log("Error in canceling not accepted suggested consultations", err);
+  });
 };

@@ -469,3 +469,14 @@ export const getClientConsultationsForSpecificTime = async ({
     [clientId, time]
   );
 };
+
+export const cancelNotAcceptedSuggestedConsultationsQuery = async ({
+  poolCountry = "PL",
+}) =>
+  await getDBPool("clinicalDb", poolCountry).query(
+    `
+      UPDATE consultation
+      SET status = 'canceled'
+      WHERE status = 'suggested' AND created_at < NOW() - INTERVAL '24 hours';
+    `
+  );

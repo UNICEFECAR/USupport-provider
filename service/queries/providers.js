@@ -550,7 +550,7 @@ export const getProvidersByCampaignIdQuery = async ({
         pa.campaign_slots
       FROM availability pa
       WHERE pa.provider_detail_id IN (SELECT provider_detail_id FROM provider_filtered)
-      AND ($7::int IS NULL OR (pa.start_date >= to_timestamp($7) AND slots IS NOT NULL))
+      AND ($7::int IS NULL OR (pa.start_date >= to_timestamp($7)))
       ORDER BY pa.provider_detail_id, pa.start_date ASC
     )
     SELECT 
