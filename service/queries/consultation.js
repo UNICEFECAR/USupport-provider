@@ -477,6 +477,6 @@ export const cancelNotAcceptedSuggestedConsultationsQuery = async ({
     `
       UPDATE consultation
       SET status = 'canceled'
-      WHERE status = 'suggested' AND created_at < NOW() - INTERVAL '24 hours';
+      WHERE status = 'suggested' AND time < NOW() + INTERVAL '24 hours';
     `
   );
