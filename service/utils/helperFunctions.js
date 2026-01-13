@@ -972,6 +972,7 @@ const countriesMap = {
   kz: "kazakhstan",
   pl: "poland",
   ro: "romania",
+  cy: "cyprus",
   am: "armenia",
   ps: "playandheal",
 };

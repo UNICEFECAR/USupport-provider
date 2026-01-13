@@ -729,6 +729,9 @@ export const getAllClients = async ({ country, providerId }) => {
 
       // For each consultation, add it to the clients array in the right place
       for (let i = 0; i < consultations.length; i++) {
+        if (consultations[i].status === "canceled") {
+          continue;
+        }
         const consultation = consultations[i];
         const consultationTime = consultation.time;
         const clientDetailId = consultation.client_detail_id;
