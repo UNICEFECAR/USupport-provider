@@ -175,3 +175,11 @@ export const countryNotFound = (language) => {
   error.status = 404;
   return error;
 };
+
+export const consultationAlreadyStarted = (language) => {
+  const error = new Error();
+  error.message = t("consultation_already_started_error", language);
+  error.name = "CONSULTATION ALREADY STARTED";
+  error.status = 400;
+  return error;
+};

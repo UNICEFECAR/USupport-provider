@@ -19,5 +19,6 @@
   "client_cant_book_error": "Клиент бұл уақытқа консультацияға тапсырыс берген",
   "booking_not_allowed_error": "Сіз бұл уақытқа консультацияға жазылғансыз",
   "campaign_or_organization_required_error": "Кем дегенде бір науқан немесе ұйым көрсетілуі тиіс",
-  "country_not_found_error": "Ел табылмады"
+  "country_not_found_error": "Ел табылмады",
+  "consultation_already_started_error": "Консультация басталған"
 }

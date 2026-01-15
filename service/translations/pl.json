@@ -19,5 +19,6 @@
   "client_cant_book_error": "Klient/ka ma już zarezerwowaną konsultację na ten czas",
   "booking_not_allowed_error": "Masz już zarezerwowaną konsultację na ten czas",
   "campaign_or_organization_required_error": "Należy podać co najmniej jedną kampanię lub organizację",
-  "country_not_found_error": "Nie znaleziono kraju"
+  "country_not_found_error": "Nie znaleziono kraju",
+  "consultation_already_started_error": "Konsultacja już się rozpoczęła"
 }
