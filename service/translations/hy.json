@@ -19,5 +19,6 @@
   "client_cant_book_error": "Հաճախորդը արդեն ունի այս ժամի համար պատվիրված խորհրդատվություն։",
   "booking_not_allowed_error": "Դուք արդեն ունեք այս ժամի համար պատվիրված խորհրդատվություն։",
   "campaign_or_organization_required_error": "Պետք է տրամադրվի առնվազն մեկ արշավ կամ կազմակերպություն",
-  "country_not_found_error": "Երկիրը չի գտնվել"
+  "country_not_found_error": "Երկիրը չի գտնվել",
+  "consultation_already_started_error": "Խորհրդատվությունն արդեն սկսվել է"
 }

@@ -19,5 +19,6 @@
   "client_cant_book_error": "Client already has a consultation booked for this time",
   "booking_not_allowed_error": "You already have a consultation booked for this time",
   "campaign_or_organization_required_error": "At least one campaign or organization must be provided",
-  "country_not_found_error": "Country not found"
+  "country_not_found_error": "Country not found",
+  "consultation_already_started_error": "Consultation has already started"
 }

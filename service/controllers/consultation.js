@@ -67,6 +67,7 @@ import {
   clientCantBook,
   bookingNotAllowed,
   providerNotFound,
+  consultationAlreadyStarted,
 } from "#utils/errors";
 import { getOrganizationsByIdsQuery } from "#queries/organization";
 
@@ -1710,6 +1711,23 @@ export const cancelConsultation = async ({
   consultationId,
   canceledBy,
 }) => {
+  const consultation = await getConsultationByIdQuery({
+    poolCountry: country,
+    consultationId,
+  }).then((res) => {
+    if (res.rowCount === 0) {
+      throw consultationNotFound(language);
+    }
+    return res.rows[0];
+  });
+
+  const now = new Date();
+  const consultationTime = new Date(consultation.time);
+
+  if (consultationTime <= now) {
+    throw consultationAlreadyStarted(language);
+  }
+
   return await cancelConsultationQuery({
     poolCountry: country,
     consultationId,
