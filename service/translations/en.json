@@ -20,5 +20,6 @@
   "booking_not_allowed_error": "You already have a consultation booked for this time",
   "campaign_or_organization_required_error": "At least one campaign or organization must be provided",
   "country_not_found_error": "Country not found",
-  "consultation_already_started_error": "Consultation has already started"
+  "consultation_already_started_error": "Consultation has already started",
+  "cannot_reschedule_less_than_24_hours_error": "You cannot reschedule a consultation less than 24 hours before it starts"
 }

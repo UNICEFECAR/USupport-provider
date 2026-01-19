@@ -183,3 +183,11 @@ export const consultationAlreadyStarted = (language) => {
   error.status = 400;
   return error;
 };
+
+export const cannotRescheduleLessThan24Hours = (language) => {
+  const error = new Error();
+  error.message = t("cannot_reschedule_less_than_24_hours_error", language);
+  error.name = "CANNOT RESCHEDULE LESS THAN 24 HOURS";
+  error.status = 400;
+  return error;
+};

@@ -20,5 +20,6 @@
   "booking_not_allowed_error": "Masz już zarezerwowaną konsultację na ten czas",
   "campaign_or_organization_required_error": "Należy podać co najmniej jedną kampanię lub organizację",
   "country_not_found_error": "Nie znaleziono kraju",
-  "consultation_already_started_error": "Konsultacja już się rozpoczęła"
+  "consultation_already_started_error": "Konsultacja już się rozpoczęła",
+  "cannot_reschedule_less_than_24_hours_error": "Nie możesz przełożyć konsultacji mniej niż 24 godziny przed jej rozpoczęciem"
 }
