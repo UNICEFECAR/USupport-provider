@@ -20,5 +20,6 @@
   "expired_campaign_error": "Δεν μπορείτε να προσθέσετε διαθέσιμα ραντεβού σε μια εκστρατεία που έχει λήξει",
   "campaign_or_organization_required_error": "Πρέπει να δοθεί τουλάχιστον μία εκστρατεία ή οργανισμός",
   "country_not_found_error": "Δεν βρέθηκε χώρα",
-  "consultation_already_started_error": "Η συνεδρία έχει ήδη ξεκινήσει"
+  "consultation_already_started_error": "Η συνεδρία έχει ήδη ξεκινήσει",
+  "cannot_reschedule_less_than_24_hours_error": "Δεν μπορείτε να προγραμματίσετε εκ νέου μια συνεδρία λιγότερο από 24 ώρες πριν ξεκινήσει"
 }

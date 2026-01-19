@@ -20,5 +20,6 @@
   "booking_not_allowed_error": "На цей час ти вже маєш заброньовану консультацію",
   "campaign_or_organization_required_error": "Потрібно вказати принаймні одну кампанію або організацію",
   "country_not_found_error": "Країни не знайдено",
-  "consultation_already_started_error": "Консультація вже почалася"
+  "consultation_already_started_error": "Консультація вже почалася",
+  "cannot_reschedule_less_than_24_hours_error": "Ви не можете перенести консультацію менш ніж за 24 години до її початку"
 }

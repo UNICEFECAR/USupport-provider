@@ -20,5 +20,6 @@
   "booking_not_allowed_error": "Դուք արդեն ունեք այս ժամի համար պատվիրված խորհրդատվություն։",
   "campaign_or_organization_required_error": "Պետք է տրամադրվի առնվազն մեկ արշավ կամ կազմակերպություն",
   "country_not_found_error": "Երկիրը չի գտնվել",
-  "consultation_already_started_error": "Խորհրդատվությունն արդեն սկսվել է"
+  "consultation_already_started_error": "Խորհրդատվությունն արդեն սկսվել է",
+  "cannot_reschedule_less_than_24_hours_error": "Դուք չեք կարող վերակարգավորել խորհրդատվությունը 24 ժամից պակաս ժամանակում մինչև դրա սկսվելը"
 }

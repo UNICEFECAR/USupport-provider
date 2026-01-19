@@ -20,5 +20,6 @@
   "booking_not_allowed_error": "Сіз бұл уақытқа консультацияға жазылғансыз",
   "campaign_or_organization_required_error": "Кем дегенде бір науқан немесе ұйым көрсетілуі тиіс",
   "country_not_found_error": "Ел табылмады",
-  "consultation_already_started_error": "Консультация басталған"
+  "consultation_already_started_error": "Консультация басталған",
+  "cannot_reschedule_less_than_24_hours_error": "Сіз консультацияны оның басталуына 24 сағаттан аз қалғанда қайта жоспарлай алмайсыз"
 }
