@@ -68,7 +68,7 @@ import {
   bookingNotAllowed,
   providerNotFound,
   consultationAlreadyStarted,
-  cannotRescheduleLessThan24Hours
+  cannotRescheduleLessThan24Hours,
 } from "#utils/errors";
 import { getOrganizationsByIdsQuery } from "#queries/organization";
 
@@ -1411,7 +1411,6 @@ export const rescheduleConsultation = async ({
   consultationId,
   newConsultationId,
 }) => {
-
   const consultation = await getConsultationByIdQuery({
     poolCountry: country,
     consultationId,
@@ -1423,7 +1422,10 @@ export const rescheduleConsultation = async ({
   });
 
   // Dont allow consultation rescheduling less than 24 hours before it starts
-  if (new Date(consultation.time).getTime() < new Date().getTime() + 24 * 60 * 60 * 1000) {
+  if (
+    new Date(consultation.time).getTime() <
+    new Date().getTime() + 24 * 60 * 60 * 1000
+  ) {
     throw cannotRescheduleLessThan24Hours(language);
   }
 
@@ -1748,6 +1750,7 @@ export const cancelConsultation = async ({
   return await cancelConsultationQuery({
     poolCountry: country,
     consultationId,
+    canceledBy,
   })
     .then(async (raw) => {
       if (raw.rowCount === 0) {
