@@ -201,20 +201,23 @@ export const rescheduleConsultationQuery = async ({
 export const cancelConsultationQuery = async ({
   poolCountry,
   consultationId,
+  canceledBy,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
       UPDATE consultation
       SET status =  CASE
-          WHEN time < NOW() + INTERVAL '24 hours' THEN 'late-canceled'::consultation_status
+          WHEN time < NOW() + INTERVAL '24 hours' AND $2 = 'client' THEN 'late-canceled'::consultation_status
           ELSE 'canceled'::consultation_status
-        END
+        END,
+        canceled_by = $2,
+        canceled_at = NOW()
       WHERE consultation_id = $1
       RETURNING *;
 
     `,
-    [consultationId]
+    [consultationId, canceledBy]
   );
 
 export const joinConsultationClientQuery = async ({
