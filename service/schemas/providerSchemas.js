@@ -26,6 +26,11 @@ export const getAllProvidersSchema = yup.object().shape({
   language: yup.string().notRequired().nullable(),
   onlyAvailable: yup.boolean().notRequired().nullable(),
   startDate: yup.string().notRequired().nullable(),
+  billingType: yup
+    .string()
+    .oneOf(["paid", "coupon", "free", "all"])
+    .notRequired()
+    .nullable(),
 });
 
 export const getProviderByIdSchema = yup.object().shape({
