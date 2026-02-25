@@ -87,6 +87,7 @@ export const getAllProviders = async ({
   language,
   onlyAvailable,
   startDate,
+  billingType,
 }) => {
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
   let filteredProviders = [];
@@ -99,7 +100,9 @@ export const getAllProviders = async ({
         limit,
         offset: newOffset,
         maxPrice: maxPrice || 0,
-        onlyFreeConsultation: onlyFreeConsultation || false,
+        onlyFreeConsultation:
+          billingType === "free" ? true : onlyFreeConsultation || false,
+        showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
       })
         .then((res) => res.rows)
@@ -112,7 +115,9 @@ export const getAllProviders = async ({
         limit,
         offset: newOffset,
         maxPrice: maxPrice || 0,
-        onlyFreeConsultation: onlyFreeConsultation || false,
+        onlyFreeConsultation:
+          billingType === "free" ? true : onlyFreeConsultation || false,
+        showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
         startDate,
       })

@@ -120,6 +120,7 @@ export const getAllActiveProvidersQuery = async ({
   onlyFreeConsultation = false,
   providerTypes = allProviderTypes,
   startDate,
+  showOnlyPaid,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
@@ -131,7 +132,7 @@ export const getAllActiveProvidersQuery = async ({
                     AND "user".deleted_at IS NULL 
                     AND "provider_detail".status = 'active'
         WHERE 
-          (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END)
+          (CASE WHEN $7 = true THEN consultation_price > 0 ELSE (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END) END)
           AND
           (($4 = true AND consultation_price = 0) OR ($4 = false))
           AND
@@ -175,7 +176,15 @@ export const getAllActiveProvidersQuery = async ({
       LIMIT $1
       OFFSET $2;
     `,
-    [limit, offset, maxPrice, onlyFreeConsultation, providerTypes, startDate]
+    [
+      limit,
+      offset,
+      maxPrice,
+      onlyFreeConsultation,
+      providerTypes,
+      startDate,
+      showOnlyPaid,
+    ]
   );
 };
 
@@ -508,6 +517,7 @@ export const getProvidersByCampaignIdQuery = async ({
   onlyFreeConsultation,
   providerTypes,
   startDate,
+  showOnlyPaid,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
@@ -524,9 +534,9 @@ export const getProvidersByCampaignIdQuery = async ({
         JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id 
           AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
       WHERE 
-        (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END)
+          (CASE WHEN $8 = true THEN consultation_price > 0 ELSE (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END) END)
         AND
-        ($5 = false OR ($5 = true AND consultation_price = 0))
+        (($5 = false OR ($5 = true AND consultation_price = 0)) AND ($8 = false OR $8 = true))
         AND
         (specializations::text[] && $6::text[])
       ORDER BY provider_detail.name ASC
@@ -584,6 +594,7 @@ export const getProvidersByCampaignIdQuery = async ({
       onlyFreeConsultation,
       providerTypes,
       startDate,
+      showOnlyPaid,
     ]
   );
 };

@@ -110,6 +110,7 @@ router.get("/all", async (req, res, next) => {
     onlyFreeConsultation,
     language,
     startDate,
+    billingType,
   } = req.query;
 
   const onlyAvailable = req.query === "true" ? true : false;
@@ -133,6 +134,7 @@ router.get("/all", async (req, res, next) => {
       offset: Number(offset),
       onlyAvailable,
       startDate: startDate || null,
+      billingType: billingType || "all",
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))
