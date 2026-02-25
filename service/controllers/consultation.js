@@ -1078,6 +1078,7 @@ export const suggestConsultation = async ({
       recipientUserType: "client",
       data: {
         countryLabel,
+        bookingDate: new Date(consultation.time).toISOString(),
       },
     },
     inPlatformArgs: {
