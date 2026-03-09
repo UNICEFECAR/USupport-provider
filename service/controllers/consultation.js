@@ -944,6 +944,7 @@ export const suggestConsultation = async ({
   language, // Language of the provider
   consultationId,
   providerDetailId,
+  isSuggestingNewTime,
 }) => {
   const providerStatus = await getProviderStatusQuery({
     poolCountry: country,
@@ -1079,6 +1080,8 @@ export const suggestConsultation = async ({
       data: {
         countryLabel,
         bookingDate: new Date(consultation.time).toISOString(),
+        providerName,
+        isSuggestingNewTime,
       },
     },
     inPlatformArgs: {
@@ -1730,6 +1733,7 @@ export const cancelConsultation = async ({
   language,
   consultationId,
   canceledBy,
+  isSuggesting = false,
 }) => {
   const consultation = await getConsultationByIdQuery({
     poolCountry: country,
@@ -1780,102 +1784,105 @@ export const cancelConsultation = async ({
           );
         });
 
-        // Get notification data for the provider
-        const {
-          email: providerEmail,
-          userId: providerUserId,
-          fullName: providerName,
-          language: providerLanguage,
-        } = await getProviderNotificationsData({
-          language,
-          country,
-          providerId: consultation.provider_detail_id,
-        }).catch((err) => {
-          throw err;
-        });
+        // If the consultation is canceled in order to suggest a new time, don't send emails
+        if (!isSuggesting) {
+          // Get notification data for the provider
+          const {
+            email: providerEmail,
+            userId: providerUserId,
+            fullName: providerName,
+            language: providerLanguage,
+          } = await getProviderNotificationsData({
+            language,
+            country,
+            providerId: consultation.provider_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
 
-        // Get notification data for the client
-        const {
-          email: clientEmail,
-          userId: clientUserId,
-          pushTokensArray,
-          language: clientLanguage,
-        } = await getClientNotificationsData({
-          language,
-          country,
-          clientId: consultation.client_detail_id,
-        }).catch((err) => {
-          throw err;
-        });
-
-        const countryLabel = getCountryLabelFromAlpha2(country);
-
-        // Send Client Email and Internal notification
-        await produceRaiseNotification({
-          channels: [clientEmail ? "email" : "", "in-platform", "push"],
-          emailArgs: {
-            emailType:
-              canceledBy === "client"
-                ? "client-consultationConfirmCancellation"
-                : "client-consultationNotifyCancellation",
-            recipientEmail: clientEmail,
-            recipientUserType: "client",
-            data: {
-              countryLabel,
-            },
-          },
-          inPlatformArgs: {
-            notificationType:
-              canceledBy === "client"
-                ? "consultation_cancellation"
-                : "consultation_cancellation_provider",
-            recipientId: clientUserId,
-            country: country,
-            data: {
-              provider_detail_id: consultation.provider_detail_id,
-              time: new Date(consultation.time).getTime() / 1000,
-            },
-          },
-          pushArgs: {
-            notificationType: "consultation_cancellation",
+          // Get notification data for the client
+          const {
+            email: clientEmail,
+            userId: clientUserId,
             pushTokensArray,
-            data: {
-              providerName,
-              time: new Date(consultation.time).getTime() / 1000,
-              canceledBy,
-            },
-          },
-          language: clientLanguage,
-        }).catch(console.log);
+            language: clientLanguage,
+          } = await getClientNotificationsData({
+            language,
+            country,
+            clientId: consultation.client_detail_id,
+          }).catch((err) => {
+            throw err;
+          });
 
-        // Send Provider Email and Internal notification
-        await produceRaiseNotification({
-          channels: ["email", "in-platform"],
-          emailArgs: {
-            emailType:
-              canceledBy === "client"
-                ? "provider-consultationNotifyCancellation"
-                : "provider-consultationConfirmCancellation",
-            recipientEmail: providerEmail,
-            recipientUserType: "provider",
-            data: {
-              countryLabel,
+          const countryLabel = getCountryLabelFromAlpha2(country);
+
+          // Send Client Email and Internal notification
+          await produceRaiseNotification({
+            channels: [clientEmail ? "email" : "", "in-platform", "push"],
+            emailArgs: {
+              emailType:
+                canceledBy === "client"
+                  ? "client-consultationConfirmCancellation"
+                  : "client-consultationNotifyCancellation",
+              recipientEmail: clientEmail,
+              recipientUserType: "client",
+              data: {
+                countryLabel,
+              },
             },
-          },
-          inPlatformArgs: {
-            notificationType:
-              canceledBy === "client"
-                ? "consultation_cancellation"
-                : "consultation_cancellation_provider",
-            recipientId: providerUserId,
-            country: country,
-            data: {
-              client_detail_id: consultation.client_detail_id,
-              time: new Date(consultation.time).getTime() / 1000,
+            inPlatformArgs: {
+              notificationType:
+                canceledBy === "client"
+                  ? "consultation_cancellation"
+                  : "consultation_cancellation_provider",
+              recipientId: clientUserId,
+              country: country,
+              data: {
+                provider_detail_id: consultation.provider_detail_id,
+                time: new Date(consultation.time).getTime() / 1000,
+              },
             },
-          },
-          language: providerLanguage,
-        }).catch(console.log);
+            pushArgs: {
+              notificationType: "consultation_cancellation",
+              pushTokensArray,
+              data: {
+                providerName,
+                time: new Date(consultation.time).getTime() / 1000,
+                canceledBy,
+              },
+            },
+            language: clientLanguage,
+          }).catch(console.log);
+
+          // Send Provider Email and Internal notification
+          await produceRaiseNotification({
+            channels: ["email", "in-platform"],
+            emailArgs: {
+              emailType:
+                canceledBy === "client"
+                  ? "provider-consultationNotifyCancellation"
+                  : "provider-consultationConfirmCancellation",
+              recipientEmail: providerEmail,
+              recipientUserType: "provider",
+              data: {
+                countryLabel,
+              },
+            },
+            inPlatformArgs: {
+              notificationType:
+                canceledBy === "client"
+                  ? "consultation_cancellation"
+                  : "consultation_cancellation_provider",
+              recipientId: providerUserId,
+              country: country,
+              data: {
+                client_detail_id: consultation.client_detail_id,
+                time: new Date(consultation.time).getTime() / 1000,
+              },
+            },
+            language: providerLanguage,
+          }).catch(console.log);
+        }
         return { success: true };
       }
     })
