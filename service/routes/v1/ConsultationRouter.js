@@ -264,11 +264,18 @@ router.put("/suggest", populateProvider, async (req, res, next) => {
   const providerDetailId = req.provider.provider_detail_id;
 
   const payload = req.body;
+  const isSuggestingNewTime = payload.isSuggestingNewTime || false;
 
   return await suggestConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, providerDetailId, ...payload })
+    .validate({
+      country,
+      language,
+      providerDetailId,
+      ...payload,
+      isSuggestingNewTime,
+    })
     .then(suggestConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
@@ -382,11 +389,12 @@ router.route("/cancel").put(populateUser, async (req, res, next) => {
   const canceledBy = req.user.type;
 
   const payload = req.body;
+  const isSuggesting = payload.isSuggesting || false;
 
   return await cancelConsultationSchema
     .noUnknown(true)
     .strict()
-    .validate({ country, language, canceledBy, ...payload })
+    .validate({ country, language, canceledBy, ...payload, isSuggesting })
     .then(cancelConsultation)
     .then((result) => res.status(200).send(result))
     .catch(next);
