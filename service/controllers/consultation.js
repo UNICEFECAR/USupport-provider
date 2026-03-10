@@ -936,7 +936,39 @@ export const scheduleConsultation = async ({
       language: providerLanguage,
     }).catch(console.log);
   }
-  return { success: true, consultation };
+
+  const providerData = await getProviderByIdQuery({
+    poolCountry: country,
+    provider_id: consultation.provider_detail_id,
+  })
+    .then((raw) => {
+      if (raw.rowCount === 0) {
+        return {
+          name: "DELETED",
+          surname: "DELETED",
+          patronym: null,
+          image: "default",
+        };
+      } else {
+        return raw.rows[0];
+      }
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  const providerFullName = providerData.patronym
+    ? `${providerData.name} ${providerData.patronym} ${providerData.surname}`
+    : `${providerData.name} ${providerData.surname}`;
+
+  return {
+    success: true,
+    consultation: {
+      ...consultation,
+      provider_name: providerFullName,
+      provider_image: providerData.image,
+    },
+  };
 };
 
 export const suggestConsultation = async ({
