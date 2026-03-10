@@ -36,6 +36,7 @@ export const suggestConsultationSchema = yup.object().shape({
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
   providerDetailId: yup.string().uuid().required(),
+  isSuggestingNewTime: yup.boolean().notRequired().default(false),
 });
 
 export const acceptSuggestedConsultationSchema = yup.object().shape({
@@ -63,6 +64,7 @@ export const cancelConsultationSchema = yup.object().shape({
   language: yup.string().required(),
   consultationId: yup.string().uuid().required(),
   canceledBy: yup.string().oneOf(["client", "provider"]).required(),
+  isSuggesting: yup.boolean().notRequired().default(false),
 });
 
 export const joinConsultationSchema = yup.object().shape({
