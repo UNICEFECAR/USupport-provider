@@ -1,4 +1,7 @@
-import { getProviderByUserID } from "#queries/providers";
+import {
+  getProviderByUserID,
+  getLanguageIdByAlpha2Query,
+} from "#queries/providers";
 import { getAllConsultationsCountQuery } from "#queries/consultation";
 import { getUserByID } from "#queries/users";
 
@@ -13,14 +16,21 @@ import {
 
 export const populateProvider = async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
   const user_id = req.header("x-user-id");
 
-  const cacheKey = `provider_${country}_${user_id}`;
+  const cacheKey = `provider_${country}_${user_id}_${language}`;
   const cachedProviderData = await getCacheItem(cacheKey);
 
   if (cachedProviderData) req.provider = cachedProviderData;
   else {
-    let provider = await getProviderByUserID(country, user_id)
+    const languageId = language
+      ? await getLanguageIdByAlpha2Query(language).then(
+          (res) => res.rows[0]?.language_id ?? null
+        )
+      : null;
+
+    let provider = await getProviderByUserID(country, user_id, languageId)
       .then((res) => res.rows[0])
       .catch((err) => {
         throw err;

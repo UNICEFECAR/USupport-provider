@@ -652,6 +652,7 @@ export const addConsultationAsPending = async ({
   const providerData = await getProviderByIdQuery({
     poolCountry: country,
     provider_id: providerId,
+    languageId: null,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {

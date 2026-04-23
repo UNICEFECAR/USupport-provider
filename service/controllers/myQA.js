@@ -200,6 +200,7 @@ export const getAllQuestions = async ({
     const providersDetails = await getMultipleProvidersDataByIDs({
       poolCountry: country,
       providerDetailIds: providerIds,
+      languageId: null,
     }).then((res) => {
       if (res.rowCount === 0) {
         return [];
