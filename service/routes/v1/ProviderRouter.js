@@ -27,6 +27,7 @@ import {
 import {
   getAllProviders,
   getProviderById,
+  getProviderTranslations,
   updateProviderData,
   deleteProviderData,
   updateProviderImage,
@@ -99,6 +100,7 @@ router.get("/all", async (req, res, next) => {
    */
 
   const country = req.header("x-country-alpha-2");
+  const headerLanguage = req.header("x-language-alpha-2");
 
   const {
     campaignId,
@@ -135,6 +137,7 @@ router.get("/all", async (req, res, next) => {
       onlyAvailable,
       startDate: startDate || null,
       billingType: billingType || "all",
+      headerLanguage,
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))
@@ -163,7 +166,9 @@ router.put("/", populateProvider, async (req, res, next) => {
       (organization) => organization.organization_id
     ) || [];
 
-  const payload = req.body;
+  const { translations } = req.body;
+  const payload = { ...req.body };
+  delete payload.translations;
 
   return await updateProviderDataSchema
     .noUnknown(true)
@@ -179,7 +184,33 @@ router.put("/", populateProvider, async (req, res, next) => {
       currentOrganizationIds,
       ...payload,
     })
-    .then(updateProviderData)
+    .then((validated) => updateProviderData({ ...validated, translations }))
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/translations", async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/translations
+   * #desc    Get all translations for a provider
+   */
+  const country = req.header("x-country-alpha-2");
+  const { providerId } = req.query;
+
+  return await getProviderTranslations({ country, provider_id: providerId })
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.get("/translations/self", populateProvider, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/provider/translations/self
+   * #desc    Get all translations for the current provider
+   */
+  const country = req.header("x-country-alpha-2");
+  const providerId = req.provider?.provider_detail_id;
+
+  return await getProviderTranslations({ country, provider_id: providerId })
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
@@ -192,7 +223,7 @@ router.put("/by-id/admin", async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const language = req.header("x-language-alpha-2");
 
-  const { providerId } = req.body;
+  const { providerId, translations } = req.body;
 
   const provider = await getProviderById({
     country,
@@ -215,11 +246,11 @@ router.put("/by-id/admin", async (req, res, next) => {
       (organization) => organization.organization_id
     ) || [];
 
-  const payload = req.body;
-
+  const payload = { ...req.body };
   delete payload.providerId;
+  delete payload.translations;
 
-  return await updateProviderDataSchema
+  const result = await updateProviderDataSchema
     .noUnknown(true)
     .strict()
     .validate({
@@ -233,9 +264,10 @@ router.put("/by-id/admin", async (req, res, next) => {
       currentOrganizationIds,
       ...payload,
     })
-    .then(updateProviderData)
-    .then((result) => res.status(200).send(result))
+    .then((validated) => updateProviderData({ ...validated, translations }))
     .catch(next);
+
+  return res.status(200).send(result);
 });
 
 router.delete("/", populateProvider, populateUser, async (req, res, next) => {
