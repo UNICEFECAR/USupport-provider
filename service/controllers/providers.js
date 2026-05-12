@@ -26,6 +26,9 @@ import {
   getProviderStatusQuery,
   addProviderRatingQuery,
   getActiveLanguagesQuery,
+  getLanguageIdByAlpha2Query,
+  upsertProviderTranslationQuery,
+  getProviderTranslationsQuery,
 } from "#queries/providers";
 
 import {
@@ -88,11 +91,19 @@ export const getAllProviders = async ({
   onlyAvailable,
   startDate,
   billingType,
+  headerLanguage,
 }) => {
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
   let filteredProviders = [];
   let providers;
   try {
+    console.log(language, "language");
+    const languageId = headerLanguage
+      ? await getLanguageIdByAlpha2Query(headerLanguage).then(
+          (res) => res.rows[0]?.language_id ?? null
+        )
+      : null;
+
     if (campaignId) {
       providers = await getProvidersByCampaignIdQuery({
         poolCountry: country,
@@ -104,6 +115,7 @@ export const getAllProviders = async ({
           billingType === "free" ? true : onlyFreeConsultation || false,
         showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
+        languageId,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -120,6 +132,7 @@ export const getAllProviders = async ({
         showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
         startDate,
+        languageId,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -143,7 +156,7 @@ export const getAllProviders = async ({
         languageIds.includes(x.language_id)
       );
 
-      if (language && !languageIds.includes(language)) {
+      if (language && !languages.some((x) => x.alpha2 === language)) {
         continue;
       }
 
@@ -250,7 +263,17 @@ export const getProviderById = async ({
   isRequestedByAdmin,
   campaignId,
 }) => {
-  return await getProviderByIdQuery({ poolCountry: country, provider_id })
+  const languageId = language
+    ? await getLanguageIdByAlpha2Query(language).then(
+        (res) => res.rows[0]?.language_id ?? null
+      )
+    : null;
+
+  return await getProviderByIdQuery({
+    poolCountry: country,
+    provider_id,
+    languageId,
+  })
     .then(async (res) => {
       if (res.rowCount === 0) {
         throw providerNotFound(language);
@@ -307,6 +330,28 @@ export const getProviderById = async ({
     });
 };
 
+export const getProviderTranslations = async ({ country, provider_id }) => {
+  const result = await getProviderTranslationsQuery({
+    poolCountry: country,
+    provider_id,
+  });
+
+  const translationsMap = {};
+  for (const row of result.rows) {
+    translationsMap[row.language_id] = {
+      name: row.name,
+      patronym: row.patronym,
+      surname: row.surname,
+      nickname: row.nickname,
+      description: row.description,
+      education: row.education,
+      city: row.city,
+      street: row.street,
+    };
+  }
+  return translationsMap;
+};
+
 export const updateProviderData = async ({
   country,
   language,
@@ -334,6 +379,7 @@ export const updateProviderData = async ({
   organizationIds,
   currentOrganizationIds,
   videoLink,
+  translations,
 }) => {
   // Check if email is changed
   if (email !== currentEmail) {
@@ -352,23 +398,37 @@ export const updateProviderData = async ({
       });
   }
 
+  if (translations?.length) {
+    for (const translation of translations) {
+      const langId = translation.languageId;
+      if (!langId) continue;
+      await upsertProviderTranslationQuery({
+        poolCountry: country,
+        provider_id,
+        languageId: langId,
+        name: translation.name,
+        patronym: translation.patronym,
+        surname: translation.surname,
+        nickname: translation.nickname,
+        description: translation.description,
+        education: translation.education,
+        city: translation.city,
+        street: translation.street,
+      }).catch((err) => {
+        throw err;
+      });
+    }
+  }
+
   return await updateProviderDataQuery({
     poolCountry: country,
     provider_id,
-    name,
-    patronym,
-    surname,
-    nickname,
     email,
     phone,
     specializations,
-    street,
-    city,
     postcode,
-    education,
     sex,
     consultationPrice,
-    description,
     videoLink,
   })
     .then(async (res) => {
@@ -860,6 +920,7 @@ export const getRandomProviders = async ({ country, numberOfProviders }) => {
     poolCountry: country,
     limit: numberOfProviders || 3,
     offset: 1,
+    languageId: null,
   })
     .then((res) => {
       if (res.rowCount === 0) {

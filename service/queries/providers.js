@@ -1,34 +1,34 @@
 import { allProviderTypes } from "#controllers/providers";
 import { getDBPool } from "#utils/dbConfig";
 
-export const getProviderByUserID = async (poolCountry, user_id) =>
+export const getProviderByUserID = async (poolCountry, user_id, languageId) =>
   await getDBPool("piiDb", poolCountry).query(
     `
 WITH userData AS (
-    SELECT provider_detail_id 
+    SELECT provider_detail_id
     FROM "user"
     WHERE user_id = $1
     ORDER BY created_at DESC
     LIMIT 1
 ), providerData AS (
-    SELECT 
-        provider_detail.provider_detail_id, 
-        provider_detail.name, 
-        provider_detail.patronym, 
-        provider_detail.surname, 
-        provider_detail.nickname, 
-        provider_detail.email, 
-        provider_detail.phone, 
-        provider_detail.image, 
-        provider_detail.specializations, 
-        provider_detail.street, 
-        provider_detail.city, 
-        provider_detail.postcode, 
-        provider_detail.education, 
-        provider_detail.sex, 
-        provider_detail.consultation_price, 
-        provider_detail.description, 
-        provider_detail.video_link, 
+    SELECT
+        provider_detail.provider_detail_id,
+        COALESCE(pdt.name, provider_detail.name) AS name,
+        COALESCE(pdt.patronym, provider_detail.patronym) AS patronym,
+        COALESCE(pdt.surname, provider_detail.surname) AS surname,
+        COALESCE(pdt.nickname, provider_detail.nickname) AS nickname,
+        provider_detail.email,
+        provider_detail.phone,
+        provider_detail.image,
+        provider_detail.specializations,
+        COALESCE(pdt.street, provider_detail.street) AS street,
+        COALESCE(pdt.city, provider_detail.city) AS city,
+        provider_detail.postcode,
+        COALESCE(pdt.education, provider_detail.education) AS education,
+        provider_detail.sex,
+        provider_detail.consultation_price,
+        COALESCE(pdt.description, provider_detail.description) AS description,
+        provider_detail.video_link,
         provider_detail.status,
         JSON_AGG(
             json_build_object(
@@ -36,40 +36,45 @@ WITH userData AS (
                 'name', organization.name
             )
         ) AS organizations
-    FROM 
+    FROM
         provider_detail
-    JOIN 
+    JOIN
         userData ON userData.provider_detail_id = provider_detail.provider_detail_id
-    LEFT JOIN 
+    LEFT JOIN
+        provider_detail_translations pdt
+        ON pdt.provider_detail_id = provider_detail.provider_detail_id
+        AND pdt.language_id = $2::UUID
+    LEFT JOIN
         organization_provider_links ON (organization_provider_links.provider_detail_id = provider_detail.provider_detail_id AND organization_provider_links.is_deleted = false)
-    LEFT JOIN 
+    LEFT JOIN
         organization ON organization_provider_links.organization_id = organization.organization_id
-    GROUP BY 
-        provider_detail.provider_detail_id, 
-        provider_detail.name, 
-        provider_detail.patronym, 
-        provider_detail.surname, 
-        provider_detail.nickname, 
-        provider_detail.email, 
-        provider_detail.phone, 
-        provider_detail.image, 
-        provider_detail.specializations, 
-        provider_detail.street, 
-        provider_detail.city, 
-        provider_detail.postcode, 
-        provider_detail.education, 
-        provider_detail.sex, 
-        provider_detail.consultation_price, 
-        provider_detail.description, 
-        provider_detail.video_link, 
+    GROUP BY
+        provider_detail.provider_detail_id,
+        pdt.provider_detail_id,
+        provider_detail.name, pdt.name,
+        provider_detail.patronym, pdt.patronym,
+        provider_detail.surname, pdt.surname,
+        provider_detail.nickname, pdt.nickname,
+        provider_detail.email,
+        provider_detail.phone,
+        provider_detail.image,
+        provider_detail.specializations,
+        provider_detail.street, pdt.street,
+        provider_detail.city, pdt.city,
+        provider_detail.postcode,
+        provider_detail.education, pdt.education,
+        provider_detail.sex,
+        provider_detail.consultation_price,
+        provider_detail.description, pdt.description,
+        provider_detail.video_link,
         provider_detail.status
-    ORDER BY 
+    ORDER BY
         provider_detail.created_at DESC
 )
 SELECT * FROM providerData;
 
     `,
-    [user_id]
+    [user_id, languageId]
   );
 
 export const getProviderEmailAndUserIdQuery = async ({
@@ -87,13 +92,27 @@ export const getProviderEmailAndUserIdQuery = async ({
     [providerId]
   );
 
-export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
+export const getProviderByIdQuery = async ({
+  poolCountry,
+  provider_id,
+  languageId,
+}) =>
   await getDBPool("piiDb", poolCountry).query(
     `
       SELECT provider_detail."provider_detail_id",
-             provider_detail."name", patronym, surname, nickname, provider_detail.email, provider_detail.phone,
-             image, provider_detail.specializations, provider_detail.street, provider_detail.city, provider_detail.postcode, education,
-             sex, consultation_price, provider_detail.description, video_link, "user".user_id,
+             COALESCE(pdt.name, provider_detail."name") AS name,
+             COALESCE(pdt.patronym, provider_detail.patronym) AS patronym,
+             COALESCE(pdt.surname, provider_detail.surname) AS surname,
+             COALESCE(pdt.nickname, provider_detail.nickname) AS nickname,
+             provider_detail.email, provider_detail.phone,
+             provider_detail.image, provider_detail.specializations,
+             COALESCE(pdt.street, provider_detail.street) AS street,
+             COALESCE(pdt.city, provider_detail.city) AS city,
+             provider_detail.postcode,
+             COALESCE(pdt.education, provider_detail.education) AS education,
+             provider_detail.sex, provider_detail.consultation_price,
+             COALESCE(pdt.description, provider_detail.description) AS description,
+             video_link, "user".user_id,
              JSON_AGG(
                 json_build_object(
                   'organization_id', organization_provider_links.organization_id,
@@ -102,14 +121,19 @@ export const getProviderByIdQuery = async ({ poolCountry, provider_id }) =>
              ) as organizations
       FROM provider_detail
         JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id AND "user".deleted_at IS NULL
+        LEFT JOIN provider_detail_translations pdt
+          ON pdt.provider_detail_id = provider_detail.provider_detail_id
+          AND pdt.language_id = $2::UUID
         LEFT JOIN organization_provider_links ON organization_provider_links.provider_detail_id = provider_detail.provider_detail_id
         LEFT JOIN organization ON organization_provider_links.organization_id = organization.organization_id
       WHERE provider_detail.provider_detail_id = $1
-      GROUP BY provider_detail."provider_detail_id", "user".user_id
+      GROUP BY provider_detail."provider_detail_id", "user".user_id,
+               pdt.provider_detail_id,
+               pdt.name, pdt.patronym, pdt.surname, pdt.nickname, pdt.education, pdt.description, pdt.city, pdt.street
       ORDER BY provider_detail.created_at DESC
       LIMIT 1;
     `,
-    [provider_id]
+    [provider_id, languageId]
   );
 
 export const getAllActiveProvidersQuery = async ({
@@ -121,17 +145,32 @@ export const getAllActiveProvidersQuery = async ({
   providerTypes = allProviderTypes,
   startDate,
   showOnlyPaid,
+  languageId,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
       WITH provider_filtered AS (
-        SELECT provider_detail."provider_detail_id", "name", patronym, surname, nickname, email, phone, image, specializations, 
-              street, city, postcode, education, sex, consultation_price, description, video_link, status
+        SELECT provider_detail."provider_detail_id",
+               COALESCE(pdt.name, provider_detail."name") AS name,
+               COALESCE(pdt.patronym, provider_detail.patronym) AS patronym,
+               COALESCE(pdt.surname, provider_detail.surname) AS surname,
+               COALESCE(pdt.nickname, provider_detail.nickname) AS nickname,
+               provider_detail.email, provider_detail.phone, provider_detail.image, provider_detail.specializations,
+               COALESCE(pdt.street, provider_detail.street) AS street,
+               COALESCE(pdt.city, provider_detail.city) AS city,
+               provider_detail.postcode,
+               COALESCE(pdt.education, provider_detail.education) AS education,
+               provider_detail.sex, provider_detail.consultation_price,
+               COALESCE(pdt.description, provider_detail.description) AS description,
+               provider_detail.video_link, provider_detail.status
         FROM provider_detail
-        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id 
-                    AND "user".deleted_at IS NULL 
+        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id
+                    AND "user".deleted_at IS NULL
                     AND "provider_detail".status = 'active'
-        WHERE 
+        LEFT JOIN provider_detail_translations pdt
+          ON pdt.provider_detail_id = provider_detail.provider_detail_id
+          AND pdt.language_id = $8::UUID
+        WHERE
           (CASE WHEN $7 = true THEN consultation_price > 0 ELSE (CASE WHEN $3 > 0 THEN consultation_price <= $3 ELSE consultation_price >= 0 END) END)
           AND
           (($4 = true AND consultation_price = 0) OR ($4 = false))
@@ -184,6 +223,7 @@ export const getAllActiveProvidersQuery = async ({
       providerTypes,
       startDate,
       showOnlyPaid,
+      languageId,
     ]
   );
 };
@@ -247,60 +287,89 @@ export const checkIfEmailIsUsedQuery = async ({ country, email }) =>
 export const updateProviderDataQuery = async ({
   poolCountry,
   provider_id,
-  name,
-  patronym,
-  surname,
-  nickname,
   email,
   phone,
   specializations,
-  street,
-  city,
   postcode,
-  education,
   sex,
   consultationPrice,
-  description,
   videoLink,
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
       UPDATE provider_detail
-      SET name = $1,
-          patronym = $2,
-          surname = $3,
-          nickname = $4,
-          email = $5,
-          phone = $6,
-          specializations = $7,
-          street = $8,
-          city = $9,
-          postcode= $10,
-          education= $11,
-          sex= $12,
-          consultation_price= $13,
-          description= $14,
-          video_link= $15
-      WHERE provider_detail_id = $16
+      SET email = $1,
+          phone = $2,
+          specializations = $3,
+          postcode = $4,
+          sex = $5,
+          consultation_price = $6,
+          video_link = $7
+      WHERE provider_detail_id = $8
       RETURNING *;
     `,
     [
+      email,
+      phone,
+      specializations,
+      postcode,
+      sex,
+      consultationPrice,
+      videoLink,
+      provider_id,
+    ]
+  );
+
+export const upsertProviderTranslationQuery = async ({
+  poolCountry,
+  provider_id,
+  languageId,
+  name,
+  patronym,
+  surname,
+  nickname,
+  description,
+  education,
+  city,
+  street,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+      INSERT INTO provider_detail_translations
+        (provider_detail_id, language_id, name, patronym, surname, nickname, description, education, city, street)
+      VALUES (
+        $1, $2,
+        COALESCE($3, (SELECT name FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($4, (SELECT patronym FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($5, (SELECT surname FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($6, (SELECT nickname FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($7, (SELECT description FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($8, (SELECT education FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($9, (SELECT city FROM provider_detail WHERE provider_detail_id = $1)),
+        COALESCE($10, (SELECT street FROM provider_detail WHERE provider_detail_id = $1))
+      )
+      ON CONFLICT (provider_detail_id, language_id) DO UPDATE SET
+        name = COALESCE(EXCLUDED.name, provider_detail_translations.name),
+        patronym = COALESCE(EXCLUDED.patronym, provider_detail_translations.patronym),
+        surname = COALESCE(EXCLUDED.surname, provider_detail_translations.surname),
+        nickname = COALESCE(EXCLUDED.nickname, provider_detail_translations.nickname),
+        description = COALESCE(EXCLUDED.description, provider_detail_translations.description),
+        education = COALESCE(EXCLUDED.education, provider_detail_translations.education),
+        city = COALESCE(EXCLUDED.city, provider_detail_translations.city),
+        street = COALESCE(EXCLUDED.street, provider_detail_translations.street)
+      RETURNING *;
+    `,
+    [
+      provider_id,
+      languageId,
       name,
       patronym,
       surname,
       nickname,
-      email,
-      phone,
-      specializations,
-      street,
-      city,
-      postcode,
-      education,
-      sex,
-      consultationPrice,
       description,
-      videoLink,
-      provider_id,
+      education,
+      city,
+      street,
     ]
   );
 
@@ -518,22 +587,35 @@ export const getProvidersByCampaignIdQuery = async ({
   providerTypes,
   startDate,
   showOnlyPaid,
+  languageId,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
     WITH provider_filtered AS (
-      SELECT provider_detail."provider_detail_id", provider_detail."name", patronym, surname, 
-             nickname, provider_detail.email, provider_detail.phone, image, specializations, street, 
-             provider_detail.city, postcode, 
-             education, sex, consultation_price, provider_detail.description, video_link, 
+      SELECT provider_detail."provider_detail_id",
+             COALESCE(pdt.name, provider_detail."name") AS name,
+             COALESCE(pdt.patronym, provider_detail.patronym) AS patronym,
+             COALESCE(pdt.surname, provider_detail.surname) AS surname,
+             COALESCE(pdt.nickname, provider_detail.nickname) AS nickname,
+             provider_detail.email, provider_detail.phone, provider_detail.image, provider_detail.specializations,
+             COALESCE(pdt.street, provider_detail.street) AS street,
+             COALESCE(pdt.city, provider_detail.city) AS city,
+             provider_detail.postcode,
+             COALESCE(pdt.education, provider_detail.education) AS education,
+             provider_detail.sex, provider_detail.consultation_price,
+             COALESCE(pdt.description, provider_detail.description) AS description,
+             provider_detail.video_link,
              price_per_coupon, campaign.campaign_id
       FROM provider_detail
-        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id 
+        JOIN "user" ON "user".provider_detail_id = provider_detail.provider_detail_id
           AND "user".deleted_at IS NULL
         JOIN campaign ON campaign.campaign_id = $1
-        JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id 
+        JOIN provider_campaign_links ON provider_campaign_links.campaign_id = campaign.campaign_id
           AND provider_campaign_links.provider_detail_id = provider_detail.provider_detail_id
-      WHERE 
+        LEFT JOIN provider_detail_translations pdt
+          ON pdt.provider_detail_id = provider_detail.provider_detail_id
+          AND pdt.language_id = $9::UUID
+      WHERE
           (CASE WHEN $8 = true THEN consultation_price > 0 ELSE (CASE WHEN $4 > 0 THEN consultation_price <= $4 ELSE consultation_price >= 0 END) END)
         AND
         (($5 = false OR ($5 = true AND consultation_price = 0)) AND ($8 = false OR $8 = true))
@@ -595,6 +677,7 @@ export const getProvidersByCampaignIdQuery = async ({
       providerTypes,
       startDate,
       showOnlyPaid,
+      languageId,
     ]
   );
 };
@@ -657,14 +740,24 @@ export const getProviderStatusQuery = async ({
 export const getMultipleProvidersDataByIDs = async ({
   poolCountry,
   providerDetailIds,
+  languageId,
 }) =>
   await getDBPool("piiDb", poolCountry).query(
     `
-        SELECT name, surname, patronym, email, provider_detail_id, image
+        SELECT
+          provider_detail.provider_detail_id,
+          COALESCE(pdt.name, provider_detail.name) AS name,
+          COALESCE(pdt.surname, provider_detail.surname) AS surname,
+          COALESCE(pdt.patronym, provider_detail.patronym) AS patronym,
+          provider_detail.email,
+          provider_detail.image
         FROM provider_detail
-        WHERE provider_detail_id = ANY($1);
+        LEFT JOIN provider_detail_translations pdt
+          ON pdt.provider_detail_id = provider_detail.provider_detail_id
+          AND pdt.language_id = $2::UUID
+        WHERE provider_detail.provider_detail_id = ANY($1);
       `,
-    [providerDetailIds]
+    [providerDetailIds, languageId]
   );
 
 export const addProviderRatingQuery = async ({
@@ -692,3 +785,22 @@ export const getActiveLanguagesQuery = async () => {
       `
   );
 };
+
+export const getLanguageIdByAlpha2Query = async (alpha2) =>
+  await getDBPool("masterDb").query(
+    `SELECT language_id FROM language WHERE alpha2 = $1 LIMIT 1`,
+    [alpha2]
+  );
+
+export const getProviderTranslationsQuery = async ({
+  poolCountry,
+  provider_id,
+}) =>
+  await getDBPool("piiDb", poolCountry).query(
+    `
+      SELECT language_id, name, patronym, surname, nickname, description, education, city, street
+      FROM provider_detail_translations
+      WHERE provider_detail_id = $1
+    `,
+    [provider_id]
+  );
