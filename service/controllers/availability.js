@@ -27,7 +27,24 @@ import {
   checkSlotsWithinWeek,
   getXDaysInSeconds,
   getSlotsForThreeWeeks,
+  getSlotsForCalendarPeriod,
 } from "#utils/helperFunctions";
+
+export const getAvailabilityForPeriod = async ({
+  country,
+  provider_id,
+  startDate,
+  period,
+}) => {
+  return await getSlotsForCalendarPeriod({
+    country,
+    provider_id,
+    startDate,
+    period,
+  }).catch((err) => {
+    throw err;
+  });
+};
 
 export const getAvailabilitySingleWeek = async ({
   country,
