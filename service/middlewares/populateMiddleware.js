@@ -26,7 +26,7 @@ export const populateProvider = async (req, res, next) => {
   else {
     const languageId = language
       ? await getLanguageIdByAlpha2Query(language).then(
-          (res) => res.rows[0]?.language_id ?? null
+          (res) => res.rows[0]?.language_id ?? null,
         )
       : null;
 
@@ -60,7 +60,7 @@ export const populateProvider = async (req, res, next) => {
 
     provider.earliest_available_slot = await getEarliestAvailableSlot(
       country,
-      provider.provider_detail_id
+      provider.provider_detail_id,
     );
 
     provider = {
@@ -82,6 +82,7 @@ export const populateProvider = async (req, res, next) => {
 export const populateUser = async (req, res, next) => {
   const country = req.header("x-country-alpha-2");
   const user_id = req.header("x-user-id");
+  console.log("populateUser user_id", user_id);
 
   const cacheKey = `user_${country}_${user_id}`;
   const cachedUserData = await getCacheItem(cacheKey);
@@ -96,6 +97,7 @@ export const populateUser = async (req, res, next) => {
 
     await setCacheItem(cacheKey, user, 60 * 60); // cache data for 1 hour
     req.user = user;
+    console.log("populateUser user", user);
   }
 
   return next();
