@@ -924,6 +924,7 @@ export const scheduleConsultation = async ({
         recipientUserType: "provider",
         data: {
           countryLabel,
+          time: new Date(consultation.time).getTime() / 1000,
         },
       },
       inPlatformArgs: {
