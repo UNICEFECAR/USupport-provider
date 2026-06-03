@@ -26,7 +26,7 @@ export const populateProvider = async (req, res, next) => {
   else {
     const languageId = language
       ? await getLanguageIdByAlpha2Query(language).then(
-          (res) => res.rows[0]?.language_id ?? null
+          (res) => res.rows[0]?.language_id ?? null,
         )
       : null;
 
@@ -60,7 +60,9 @@ export const populateProvider = async (req, res, next) => {
 
     provider.earliest_available_slot = await getEarliestAvailableSlot(
       country,
-      provider.provider_detail_id
+      provider.provider_detail_id,
+      null,
+      24,
     );
 
     provider = {
