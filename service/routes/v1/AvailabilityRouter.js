@@ -4,6 +4,7 @@ import { populateUser } from "#middlewares/populateMiddleware";
 
 import {
   getAvailabilitySingleWeekSchema,
+  getAvailabilityForPeriodSchema,
   updateAvailabilitySingleWeekSchema,
   deleteAvailabilitySingleWeekSchema,
   updateAvailabilityByTemplateSchema,
@@ -13,6 +14,7 @@ import {
 
 import {
   getAvailabilitySingleWeek,
+  getAvailabilityForPeriod,
   updateAvailabilitySingleWeek,
   deleteAvailabilitySingleWeek,
   updateAvailabilityByTemplate,
@@ -21,6 +23,25 @@ import {
 } from "#controllers/availability";
 
 const router = express.Router();
+
+router.get("/", populateUser, async (req, res, next) => {
+  /**
+   * #route   GET /provider/v1/availability
+   * #desc    Get provider availability for a calendar period (day, week, or month)
+   */
+  const country = req.header("x-country-alpha-2");
+  const provider_id = req.user.provider_detail_id;
+  const startDate = req.query.startDate;
+  const period = req.query.period;
+
+  return await getAvailabilityForPeriodSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate({ country, provider_id, startDate, period })
+    .then(getAvailabilityForPeriod)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
 
 router
   .route("/single-week")

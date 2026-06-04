@@ -893,6 +893,7 @@ export const scheduleConsultation = async ({
         recipientUserType: "client",
         data: {
           countryLabel,
+          time: new Date(consultation.time).getTime() / 1000,
         },
       },
       inPlatformArgs: {
@@ -924,6 +925,7 @@ export const scheduleConsultation = async ({
         recipientUserType: "provider",
         data: {
           countryLabel,
+          time: new Date(consultation.time).getTime() / 1000,
         },
       },
       inPlatformArgs: {

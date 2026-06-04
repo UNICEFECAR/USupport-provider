@@ -381,6 +381,90 @@ export const getSlotsForSevenWeeks = async ({
   };
 };
 
+/** Monday 00:00 UTC for the week containing startDate (unix seconds). */
+export const getUtcWeekStartUnix = (startDate) => {
+  const d = new Date(Number(startDate) * 1000);
+  const day = d.getUTCDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate() + mondayOffset,
+      0,
+      0,
+      0,
+      0
+    )
+  );
+  return Math.floor(monday.getTime() / 1000);
+};
+
+/** Week start timestamps (unix seconds) for each week that intersects the UTC calendar month. */
+export const getWeekStartsIntersectingUtcMonth = (startDate) => {
+  const anchor = new Date(Number(startDate) * 1000);
+  const y = anchor.getUTCFullYear();
+  const m = anchor.getUTCMonth();
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const starts = new Set();
+
+  for (let d = 1; d <= lastDay; d += 1) {
+    starts.add(
+      getUtcWeekStartUnix(Math.floor(Date.UTC(y, m, d) / 1000))
+    );
+  }
+
+  return Array.from(starts).sort((a, b) => a - b);
+};
+
+export const mergeAvailabilityWeekResults = (weekResults) => {
+  const campaigns_data = weekResults.flatMap((w) => w.campaigns_data || []);
+  const uniqueCampaignsData = getUniqueCampaignsData(campaigns_data);
+
+  return {
+    slots: weekResults.flatMap((w) => w.slots || []),
+    campaign_slots: weekResults.flatMap((w) => w.campaign_slots || []),
+    campaigns_data: uniqueCampaignsData,
+    organization_slots: weekResults.flatMap((w) => w.organization_slots || []),
+  };
+};
+
+export const getSlotsForCalendarPeriod = async ({
+  country,
+  provider_id,
+  startDate,
+  period,
+}) => {
+  const start = Number(startDate);
+
+  if (period === "week" || period === "day") {
+    const weekStart = getUtcWeekStartUnix(start);
+    return getSlotsForThreeWeeks({
+      country,
+      provider_id,
+      startDate: weekStart,
+    });
+  }
+
+  if (period === "month") {
+    const weekStarts = getWeekStartsIntersectingUtcMonth(start);
+    const weeks = await Promise.all(
+      weekStarts.map((weekStart) =>
+        getSlotsForSingleWeek({
+          country,
+          provider_id,
+          startDate: weekStart,
+        })
+      )
+    );
+    return mergeAvailabilityWeekResults(weeks);
+  }
+
+  const error = new Error(`Invalid availability period: ${period}`);
+  error.status = 400;
+  throw error;
+};
+
 export const checkSlotsWithinWeek = (startDate, slots) => {
   const nextStartDate = Number(startDate) + getXDaysInSeconds(7);
 
