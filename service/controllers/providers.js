@@ -92,8 +92,9 @@ export const getAllProviders = async ({
   startDate,
   billingType,
   headerLanguage,
+  randomSeed,
 }) => {
-  const IS_ARMENIA = country === "AM";
+  const IS_ARMENIA = country?.toUpperCase() === "AM";
 
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
   const providerShuffleSeed = IS_ARMENIA
@@ -107,7 +108,7 @@ export const getAllProviders = async ({
         language,
         startDate,
         billingType,
-        new Date().toISOString().slice(0, 10),
+        randomSeed || Date.now(),
       ].join("|")
     : null;
   let filteredProviders = [];
@@ -268,7 +269,7 @@ export const getAllProviders = async ({
       };
       filteredProviders.push(providers[i]);
     }
-    return filteredProviders;
+    return IS_ARMENIA ? shuffleArray(filteredProviders) : filteredProviders;
   } catch (err) {
     throw err;
   }
