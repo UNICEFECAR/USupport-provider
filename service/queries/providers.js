@@ -217,6 +217,11 @@ export const getAllActiveProvidersQuery = async ({
       LEFT JOIN availability_data av ON pf.provider_detail_id = av.provider_detail_id
           WHERE ($6::int IS NULL OR availability_id IS NOT NULL)
       GROUP BY pf.provider_detail_id, pf.name, pf.patronym, pf.surname, pf.nickname, pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, pf.video_link, pf.status
+      ORDER BY CASE
+        WHEN $9::text IS NOT NULL AND $9::text <> ''
+        THEN md5(pf.provider_detail_id::text || $9::text)
+        ELSE pf.name
+      END ASC
       LIMIT $1
       OFFSET $2;
     `,
@@ -676,6 +681,11 @@ export const getProvidersByCampaignIdQuery = async ({
       pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, 
       pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, 
       pf.video_link, pf.price_per_coupon, pf.campaign_id
+    ORDER BY CASE
+      WHEN $10::text IS NOT NULL AND $10::text <> ''
+      THEN md5(pf.provider_detail_id::text || $10::text)
+      ELSE pf.name
+    END ASC
     LIMIT $2
     OFFSET $3;
     `,
