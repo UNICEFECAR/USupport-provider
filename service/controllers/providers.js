@@ -93,7 +93,23 @@ export const getAllProviders = async ({
   billingType,
   headerLanguage,
 }) => {
+  const IS_ARMENIA = country === "AM";
+
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
+  const providerShuffleSeed = IS_ARMENIA
+    ? [
+        campaignId,
+        maxPrice,
+        availableBefore,
+        onlyFreeConsultation,
+        (providerTypes || []).join(","),
+        (sex || []).join(","),
+        language,
+        startDate,
+        billingType,
+        new Date().toISOString().slice(0, 10),
+      ].join("|")
+    : null;
   let filteredProviders = [];
   let providers;
   try {
@@ -116,6 +132,7 @@ export const getAllProviders = async ({
         showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
         languageId,
+        shuffleSeed: providerShuffleSeed,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -133,6 +150,7 @@ export const getAllProviders = async ({
         providerTypes: providerTypes || allProviderTypes,
         startDate,
         languageId,
+        shuffleSeed: providerShuffleSeed,
       })
         .then((res) => res.rows)
         .catch((err) => {
