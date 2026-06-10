@@ -113,6 +113,7 @@ router.get("/all", async (req, res, next) => {
     language,
     startDate,
     billingType,
+    randomSeed,
   } = req.query;
 
   const onlyAvailable = req.query === "true" ? true : false;
@@ -138,6 +139,7 @@ router.get("/all", async (req, res, next) => {
       startDate: startDate || null,
       billingType: billingType || "all",
       headerLanguage,
+      randomSeed: randomSeed || null,
     })
     .then(getAllProviders)
     .then((result) => res.status(200).send(result))

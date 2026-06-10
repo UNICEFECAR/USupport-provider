@@ -92,6 +92,7 @@ export const getAllProviders = async ({
   startDate,
   billingType,
   headerLanguage,
+  randomSeed,
 }) => {
   const IS_ARMENIA = country?.toUpperCase() === "AM";
 
@@ -107,7 +108,7 @@ export const getAllProviders = async ({
         language,
         startDate,
         billingType,
-        new Date().toISOString().slice(0, 10),
+        randomSeed || Date.now(),
       ].join("|")
     : null;
   let filteredProviders = [];

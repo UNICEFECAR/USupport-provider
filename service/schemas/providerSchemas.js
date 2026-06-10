@@ -32,6 +32,7 @@ export const getAllProvidersSchema = yup.object().shape({
     .notRequired()
     .nullable(),
   headerLanguage: yup.string().notRequired().nullable(),
+  randomSeed: yup.string().notRequired().nullable(),
 });
 
 export const getProviderByIdSchema = yup.object().shape({
