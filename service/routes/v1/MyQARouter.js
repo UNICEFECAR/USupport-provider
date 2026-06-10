@@ -105,7 +105,7 @@ router.get("/tags", async (req, res, next) => {
     .strict(true)
     .validate({
       country,
-      languageId,
+      languageId: languageId || "all",
     })
     .then(getAllTags)
     .then((result) => res.status(200).send(result))
