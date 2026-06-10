@@ -13,7 +13,7 @@ import {
   getAllQuestionsSchema,
   createAnswerSchema,
   archiveQuestionSchema,
-  countrySchema,
+  getTagsSchema,
 } from "#schemas/myQASchemas";
 
 const router = express.Router();
@@ -95,15 +95,17 @@ router.post("/archive-question", populateProvider, async (req, res, next) => {
 router.get("/tags", async (req, res, next) => {
   /**
    * #route   GET /provider/v1/my-qa/tags
-   * #desc    Get all existing tags
+   * #desc    Get tags filtered by language
    */
   const country = req.header("x-country-alpha-2");
+  const { languageId } = req.query;
 
-  return await countrySchema
+  return await getTagsSchema
     .noUnknown(true)
     .strict(true)
     .validate({
       country,
+      languageId,
     })
     .then(getAllTags)
     .then((result) => res.status(200).send(result))
