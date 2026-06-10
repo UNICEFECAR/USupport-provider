@@ -223,9 +223,10 @@ export const getAllQuestions = async ({
   return questions;
 };
 
-export const getAllTags = async ({ country }) => {
+export const getAllTags = async ({ country, languageId }) => {
   return await getAllTagsQuery({
     poolCountry: country,
+    languageId: languageId === "all" ? null : languageId,
   })
     .then((res) => {
       if (res.rowCount === 0) {

@@ -119,13 +119,17 @@ export const getAllQuestionsQuery = async ({
   );
 };
 
-export const getAllTagsQuery = async ({ poolCountry }) => {
+export const getAllTagsQuery = async ({ poolCountry, languageId }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT tag_id, tag
-      FROM tags
-      ORDER BY tag ASC;
-    `
+      SELECT DISTINCT t.tag_id, t.tag
+      FROM tags t
+      INNER JOIN answer_tags_links atl ON t.tag_id = atl.tag_id
+      INNER JOIN answer a ON atl.answer_id = a.answer_id
+      WHERE ($1::uuid IS NULL OR a.language_id = $1::uuid)
+      ORDER BY t.tag ASC;
+    `,
+    [languageId || null]
   );
 };
 

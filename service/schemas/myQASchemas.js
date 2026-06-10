@@ -26,6 +26,10 @@ export const archiveQuestionSchema = baseSchema.shape({
   additionalText: yup.string().nullable().notRequired(),
 });
 
+export const getTagsSchema = countrySchema.shape({
+  languageId: yup.string().required(),
+});
+
 export const getAllQuestionsSchema = baseSchema.shape({
   type: yup
     .string()
