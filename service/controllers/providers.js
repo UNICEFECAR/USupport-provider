@@ -92,8 +92,25 @@ export const getAllProviders = async ({
   startDate,
   billingType,
   headerLanguage,
+  randomSeed,
 }) => {
+  const IS_ARMENIA = country?.toUpperCase() === "AM";
+
   const newOffset = offset === 1 ? 0 : (offset - 1) * limit;
+  const providerShuffleSeed = IS_ARMENIA
+    ? [
+        campaignId,
+        maxPrice,
+        availableBefore,
+        onlyFreeConsultation,
+        (providerTypes || []).join(","),
+        (sex || []).join(","),
+        language,
+        startDate,
+        billingType,
+        randomSeed || Date.now(),
+      ].join("|")
+    : null;
   let filteredProviders = [];
   let providers;
   try {
@@ -116,6 +133,7 @@ export const getAllProviders = async ({
         showOnlyPaid: billingType === "paid" ? true : false,
         providerTypes: providerTypes || allProviderTypes,
         languageId,
+        shuffleSeed: providerShuffleSeed,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -133,6 +151,7 @@ export const getAllProviders = async ({
         providerTypes: providerTypes || allProviderTypes,
         startDate,
         languageId,
+        shuffleSeed: providerShuffleSeed,
       })
         .then((res) => res.rows)
         .catch((err) => {
@@ -250,7 +269,7 @@ export const getAllProviders = async ({
       };
       filteredProviders.push(providers[i]);
     }
-    return filteredProviders;
+    return IS_ARMENIA ? shuffleArray(filteredProviders) : filteredProviders;
   } catch (err) {
     throw err;
   }

@@ -146,6 +146,7 @@ export const getAllActiveProvidersQuery = async ({
   startDate,
   showOnlyPaid,
   languageId,
+  shuffleSeed = null,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
@@ -176,7 +177,11 @@ export const getAllActiveProvidersQuery = async ({
           (($4 = true AND consultation_price = 0) OR ($4 = false))
           AND
           (specializations::text[] && $5::text[])
-        ORDER BY provider_detail.name ASC
+        ORDER BY CASE
+          WHEN $9::text IS NOT NULL AND $9::text <> ''
+          THEN md5(provider_detail.provider_detail_id::text || $9::text)
+          ELSE provider_detail.name
+        END ASC
       ), work_with_data AS (
         SELECT pwl.provider_detail_id, w.work_with_id, w.topic
         FROM provider_detail_work_with_links pwl
@@ -212,6 +217,11 @@ export const getAllActiveProvidersQuery = async ({
       LEFT JOIN availability_data av ON pf.provider_detail_id = av.provider_detail_id
           WHERE ($6::int IS NULL OR availability_id IS NOT NULL)
       GROUP BY pf.provider_detail_id, pf.name, pf.patronym, pf.surname, pf.nickname, pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, pf.video_link, pf.status
+      ORDER BY CASE
+        WHEN $9::text IS NOT NULL AND $9::text <> ''
+        THEN md5(pf.provider_detail_id::text || $9::text)
+        ELSE pf.name
+      END ASC
       LIMIT $1
       OFFSET $2;
     `,
@@ -224,6 +234,7 @@ export const getAllActiveProvidersQuery = async ({
       startDate,
       showOnlyPaid,
       languageId,
+      shuffleSeed,
     ]
   );
 };
@@ -588,6 +599,7 @@ export const getProvidersByCampaignIdQuery = async ({
   startDate,
   showOnlyPaid,
   languageId,
+  shuffleSeed = null,
 }) => {
   return await getDBPool("piiDb", poolCountry).query(
     `
@@ -621,7 +633,11 @@ export const getProvidersByCampaignIdQuery = async ({
         (($5 = false OR ($5 = true AND consultation_price = 0)) AND ($8 = false OR $8 = true))
         AND
         (specializations::text[] && $6::text[])
-      ORDER BY provider_detail.name ASC
+      ORDER BY CASE
+        WHEN $10::text IS NOT NULL AND $10::text <> ''
+        THEN md5(provider_detail.provider_detail_id::text || $10::text)
+        ELSE provider_detail.name
+      END ASC
     ), work_with_data AS (
       SELECT pwl.provider_detail_id, w.work_with_id, w.topic
       FROM provider_detail_work_with_links pwl
@@ -665,6 +681,11 @@ export const getProvidersByCampaignIdQuery = async ({
       pf.email, pf.phone, pf.image, pf.specializations, pf.street, pf.city, 
       pf.postcode, pf.education, pf.sex, pf.consultation_price, pf.description, 
       pf.video_link, pf.price_per_coupon, pf.campaign_id
+    ORDER BY CASE
+      WHEN $10::text IS NOT NULL AND $10::text <> ''
+      THEN md5(pf.provider_detail_id::text || $10::text)
+      ELSE pf.name
+    END ASC
     LIMIT $2
     OFFSET $3;
     `,
@@ -678,6 +699,7 @@ export const getProvidersByCampaignIdQuery = async ({
       startDate,
       showOnlyPaid,
       languageId,
+      shuffleSeed,
     ]
   );
 };
