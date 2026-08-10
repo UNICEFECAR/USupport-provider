@@ -55,7 +55,7 @@ import {
   shuffleArray,
   getLatestAvailableSlot,
 } from "#utils/helperFunctions";
-import { deleteCacheItem } from "#utils/cache";
+import { deleteCacheItemsByPattern } from "#utils/cache";
 import {
   assignOrganizationsToProviderQuery,
   removeOrganizationsFromProviderQuery,
@@ -584,8 +584,9 @@ export const updateProviderData = async ({
           });
         }
 
-        const cacheKey = `provider_${country}_${user_id}`;
-        await deleteCacheItem(cacheKey);
+        // Delete every language variant of the cached provider data,
+        // since the cache key is suffixed with the request language
+        await deleteCacheItemsByPattern(`provider_${country}_${user_id}_*`);
 
         return res.rows[0];
       }
@@ -668,8 +669,9 @@ export const deleteProviderData = async ({
           }
         }
 
-        const cacheKey = `provider_${country}_${user_id}`;
-        await deleteCacheItem(cacheKey);
+        // Delete every language variant of the cached provider data,
+        // since the cache key is suffixed with the request language
+        await deleteCacheItemsByPattern(`provider_${country}_${user_id}_*`);
 
         return res.rows[0];
       }
@@ -695,8 +697,9 @@ export const updateProviderImage = async ({
       if (res.rowCount === 0) {
         throw providerNotFound(language);
       } else {
-        const cacheKey = `provider_${country}_${user_id}`;
-        await deleteCacheItem(cacheKey);
+        // Delete every language variant of the cached provider data,
+        // since the cache key is suffixed with the request language
+        await deleteCacheItemsByPattern(`provider_${country}_${user_id}_*`);
 
         return res.rows[0];
       }
@@ -720,8 +723,9 @@ export const deleteProviderImage = async ({
       if (res.rowCount === 0) {
         throw providerNotFound(language);
       } else {
-        const cacheKey = `provider_${country}_${user_id}`;
-        await deleteCacheItem(cacheKey);
+        // Delete every language variant of the cached provider data,
+        // since the cache key is suffixed with the request language
+        await deleteCacheItemsByPattern(`provider_${country}_${user_id}_*`);
 
         return res.rows[0];
       }
@@ -1136,8 +1140,9 @@ export const updateProviderStatus = async ({
           }
         });
 
-        const cacheKey = `provider_${country}_${user_id}`;
-        await deleteCacheItem(cacheKey);
+        // Delete every language variant of the cached provider data,
+        // since the cache key is suffixed with the request language
+        await deleteCacheItemsByPattern(`provider_${country}_${user_id}_*`);
         return { success: true, newStatus: providerData.status };
       }
     })
@@ -1203,8 +1208,9 @@ export const removeProvidersCache = async ({ country, providerIds }) => {
   });
 
   userIds.forEach((userId) => {
-    const cacheKey = `provider_${country}_${userId}`;
-    promises.push(deleteCacheItem(cacheKey));
+    promises.push(
+      deleteCacheItemsByPattern(`provider_${country}_${userId}_*`),
+    );
   });
 
   await Promise.all(promises);

@@ -21,6 +21,21 @@ export const deleteCacheItem = async (key) => {
   return deletedItem ? true : false;
 };
 
+export const deleteCacheItemsByPattern = async (pattern) => {
+  let cursor = 0;
+
+  do {
+    const res = await redisClient.scan(cursor, { MATCH: pattern, COUNT: 100 });
+    cursor = res.cursor;
+
+    if (res.keys.length) {
+      await redisClient.del(res.keys);
+    }
+  } while (cursor !== 0);
+
+  return { success: true };
+};
+
 export const clearCache = async () => {
   const cacheKeys = await redisClient.keys("*");
 
