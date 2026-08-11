@@ -1,5 +1,3 @@
-import twilio from "twilio";
-
 import {
   addConsultationAsPendingQuery,
   addConsultationAsScheduledQuery,
@@ -125,7 +123,7 @@ export const getAllPastConsultationsByClientId = async ({
   let response = [];
 
   const campaignIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.campaign_id))
+    new Set(consultations.map((consultation) => consultation.campaign_id)),
   );
 
   const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
@@ -151,7 +149,7 @@ export const getAllPastConsultationsByClientId = async ({
     const campaignId = consultation.campaign_id;
 
     const campaignData = campaignCouponPrices.find(
-      (x) => x.campaign_id === campaignId
+      (x) => x.campaign_id === campaignId,
     );
 
     const couponPrice = campaignData?.price_per_coupon;
@@ -197,7 +195,7 @@ export const getAllConsultationsSingleWeek = async ({
 
   // Get all clients ids
   const clientDetailIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.client_detail_id))
+    new Set(consultations.map((consultation) => consultation.client_detail_id)),
   );
 
   let clientsDetails = await getMultipleClientsDataByIDs({
@@ -216,7 +214,7 @@ export const getAllConsultationsSingleWeek = async ({
     });
 
   const campaignIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.campaign_id))
+    new Set(consultations.map((consultation) => consultation.campaign_id)),
   );
 
   const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
@@ -246,7 +244,7 @@ export const getAllConsultationsSingleWeek = async ({
     const campaignId = consultation.campaign_id;
 
     const campaignData = campaignCouponPrices.find(
-      (x) => x.campaign_id === campaignId
+      (x) => x.campaign_id === campaignId,
     );
 
     const couponPrice = campaignData?.price_per_coupon;
@@ -290,7 +288,7 @@ export const getAllConsultationsSingleDay = async ({
 
   // Get all clients ids
   const clientDetailIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.client_detail_id))
+    new Set(consultations.map((consultation) => consultation.client_detail_id)),
   );
 
   // Fetch all the client data at once
@@ -310,7 +308,7 @@ export const getAllConsultationsSingleDay = async ({
     });
 
   const campaignIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.campaign_id))
+    new Set(consultations.map((consultation) => consultation.campaign_id)),
   );
 
   const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
@@ -340,7 +338,7 @@ export const getAllConsultationsSingleDay = async ({
     const campaignId = consultation.campaign_id;
 
     const campaignData = campaignCouponPrices.find(
-      (x) => x.campaign_id === campaignId
+      (x) => x.campaign_id === campaignId,
     );
 
     const couponPrice = campaignData?.price_per_coupon;
@@ -392,7 +390,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
 
   // Get all clients ids
   const clientDetailIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.client_detail_id))
+    new Set(consultations.map((consultation) => consultation.client_detail_id)),
   );
 
   // Fetch the data for the clients at once
@@ -412,7 +410,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     });
 
   const campaignIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.campaign_id))
+    new Set(consultations.map((consultation) => consultation.campaign_id)),
   );
 
   const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
@@ -431,7 +429,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     });
 
   const organizationIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.organization_id))
+    new Set(consultations.map((consultation) => consultation.organization_id)),
   );
 
   const organizationsData = await getOrganizationsByIdsQuery({
@@ -454,11 +452,11 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     const organizationId = consultation.organization_id;
 
     const campaignData = campaignCouponPrices.find(
-      (x) => x.campaign_id === campaignId
+      (x) => x.campaign_id === campaignId,
     );
 
     const organizationData = organizationsData.find(
-      (x) => x.organization_id === organizationId
+      (x) => x.organization_id === organizationId,
     );
 
     const couponPrice = campaignData?.price_per_coupon;
@@ -526,7 +524,7 @@ export const getAllUpcomingConsultations = async ({
 
   // Get all clients ids
   const clientDetailIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.client_detail_id))
+    new Set(consultations.map((consultation) => consultation.client_detail_id)),
   );
   let clientsDetails = await getMultipleClientsDataByIDs({
     poolCountry: country,
@@ -544,7 +542,7 @@ export const getAllUpcomingConsultations = async ({
     });
 
   const campaignIds = Array.from(
-    new Set(consultations.map((consultation) => consultation.campaign_id))
+    new Set(consultations.map((consultation) => consultation.campaign_id)),
   );
 
   const campaignCouponPrices = await getCampaignCouponPriceForMultipleIds({
@@ -574,7 +572,7 @@ export const getAllUpcomingConsultations = async ({
     const campaignId = consultation.campaign_id;
 
     const campaignData = campaignCouponPrices.find(
-      (x) => x.campaign_id === campaignId
+      (x) => x.campaign_id === campaignId,
     );
 
     const couponPrice = campaignData?.price_per_coupon;
@@ -763,7 +761,7 @@ export const scheduleConsultation = async ({
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,
-      consultationTime
+      consultationTime,
     );
     if (!isSlotAvailable) throw slotNotAvailable(language);
 
@@ -815,7 +813,7 @@ export const scheduleConsultation = async ({
             console.log(
               new Date().toISOString(),
               " - Error adding country event for consultation scheduled",
-              err
+              err,
             );
           });
         }
@@ -837,7 +835,7 @@ export const scheduleConsultation = async ({
         console.log(
           new Date().toISOString(),
           " - Error adding country event for consultation scheduled",
-          err
+          err,
         );
       });
     }
@@ -1048,7 +1046,7 @@ export const suggestConsultation = async ({
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,
-      consultationTime
+      consultationTime,
     );
     if (!isSlotAvailable) throw slotNotAvailable(language);
 
@@ -1223,7 +1221,7 @@ export const acceptSuggestedConsultation = async ({
           console.log(
             new Date().toISOString(),
             " - Error adding country event for consultation scheduled",
-            err
+            err,
           );
         });
 
@@ -1745,20 +1743,20 @@ export const leaveConsultation = async ({
     });
   }
 
-  const client = new twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  );
+  // const client = new twilio(
+  //   process.env.TWILIO_ACCOUNT_SID,
+  //   process.env.TWILIO_AUTH_TOKEN
+  // );
 
-  client.video
-    .rooms(consultationId)
-    .participants(userId)
-    .update({
-      status: "disconnected",
-    })
-    .catch((err) => {
-      throw err;
-    });
+  // client.video
+  //   .rooms(consultationId)
+  //   .participants(userId)
+  //   .update({
+  //     status: "disconnected",
+  //   })
+  //   .catch((err) => {
+  //     throw err;
+  //   });
 
   return { success: true };
 };
@@ -1815,7 +1813,7 @@ export const cancelConsultation = async ({
           console.log(
             new Date().toISOString(),
             " - Error adding country event for consultation cancellation",
-            err
+            err,
           );
         });
 
