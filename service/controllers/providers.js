@@ -1,5 +1,9 @@
 /* eslint-disable no-useless-catch */
-import AWS from "aws-sdk";
+import {
+  S3Client,
+  ListObjectVersionsCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import bcrypt from "bcryptjs";
 
 import {
@@ -639,29 +643,30 @@ export const deleteProviderData = async ({
       } else {
         if (image !== "default") {
           try {
-            const s3 = new AWS.S3({
-              accessKeyId: AWS_ACCESS_KEY_ID,
-              secretAccessKey: AWS_SECRET_ACCESS_KEY,
+            const s3 = new S3Client({
               region: AWS_REGION,
+              credentials: {
+                accessKeyId: AWS_ACCESS_KEY_ID,
+                secretAccessKey: AWS_SECRET_ACCESS_KEY,
+              },
             });
 
-            const params = {
-              Bucket: AWS_BUCKET_NAME,
-              Prefix: image,
-            };
-
-            const objectVersions = await s3
-              .listObjectVersions(params)
-              .promise();
-
-            const versions = objectVersions.Versions.map((version) => {
-              const deleteParams = {
+            const objectVersions = await s3.send(
+              new ListObjectVersionsCommand({
                 Bucket: AWS_BUCKET_NAME,
-                Key: version.Key,
-                VersionId: version.VersionId,
-              };
-              return s3.deleteObject(deleteParams).promise();
-            });
+                Prefix: image,
+              })
+            );
+
+            const versions = (objectVersions.Versions || []).map((version) =>
+              s3.send(
+                new DeleteObjectCommand({
+                  Bucket: AWS_BUCKET_NAME,
+                  Key: version.Key,
+                  VersionId: version.VersionId,
+                })
+              )
+            );
 
             await Promise.all(versions);
           } catch (err) {
