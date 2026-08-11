@@ -1,4 +1,4 @@
-FROM node:20-bullseye-slim
+FROM node:20-alpine
 
 WORKDIR /home/node/app
 COPY ./service/ .
