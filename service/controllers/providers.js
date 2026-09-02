@@ -67,18 +67,17 @@ import {
 } from "#queries/organization";
 import { checkProviderFutureOrganizationSlotsQuery } from "#queries/availability";
 import { getUserIdsByProviderIdsQuery } from "#queries/users";
+import {
+  BASE_PROVIDER_SPECIALIZATIONS,
+  getAllProviderTypes,
+} from "#utils/specializations";
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_REGION = process.env.AWS_REGION;
 const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME;
 
-export const allProviderTypes = [
-  "psychologist",
-  "psychotherapist",
-  "psychiatrist",
-  "coach",
-];
+export { getAllProviderTypes };
 
 export const getAllProviders = async ({
   country,
@@ -135,7 +134,7 @@ export const getAllProviders = async ({
         onlyFreeConsultation:
           billingType === "free" ? true : onlyFreeConsultation || false,
         showOnlyPaid: billingType === "paid" ? true : false,
-        providerTypes: providerTypes || allProviderTypes,
+        providerTypes: providerTypes || getAllProviderTypes(country),
         languageId,
         shuffleSeed: providerShuffleSeed,
       })
@@ -152,7 +151,7 @@ export const getAllProviders = async ({
         onlyFreeConsultation:
           billingType === "free" ? true : onlyFreeConsultation || false,
         showOnlyPaid: billingType === "paid" ? true : false,
-        providerTypes: providerTypes || allProviderTypes,
+        providerTypes: providerTypes || getAllProviderTypes(country),
         startDate,
         languageId,
         shuffleSeed: providerShuffleSeed,
@@ -950,6 +949,7 @@ export const getRandomProviders = async ({ country, numberOfProviders }) => {
     limit: numberOfProviders || 3,
     offset: 1,
     languageId: null,
+    providerTypes: BASE_PROVIDER_SPECIALIZATIONS,
   })
     .then((res) => {
       if (res.rowCount === 0) {

@@ -1,4 +1,4 @@
-import { allProviderTypes } from "#controllers/providers";
+import { BASE_PROVIDER_SPECIALIZATIONS } from "#utils/specializations";
 import { getDBPool } from "#utils/dbConfig";
 
 export const getProviderByUserID = async (poolCountry, user_id, languageId) =>
@@ -142,7 +142,7 @@ export const getAllActiveProvidersQuery = async ({
   offset,
   maxPrice = 0,
   onlyFreeConsultation = false,
-  providerTypes = allProviderTypes,
+  providerTypes = BASE_PROVIDER_SPECIALIZATIONS,
   startDate,
   showOnlyPaid,
   languageId,

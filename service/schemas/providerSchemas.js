@@ -1,16 +1,60 @@
 import * as yup from "yup";
 
+import {
+  getProviderSpecializationsForCountry,
+  PEER_SUPPORT,
+} from "#utils/specializations";
+
 const sexTypeSchema = yup
   .string()
   .oneOf(["male", "female", "unspecified", "notMentioned"]);
 
-const specializationsTypeSchema = yup
-  .array()
-  .of(
-    yup
-      .string()
-      .oneOf(["psychologist", "psychotherapist", "psychiatrist", "coach"])
-  );
+const resolveCountry = (getCountry, context) => {
+  if (typeof getCountry === "function") {
+    const resolved = getCountry(context);
+    if (resolved) {
+      return resolved;
+    }
+  } else if (typeof getCountry === "string") {
+    return getCountry;
+  }
+
+  const root = context.from?.[context.from.length - 1]?.value;
+  return root?.country ?? context.parent?.country;
+};
+
+const createSpecializationsTypeSchema = (getCountry) =>
+  yup
+    .array()
+    .of(
+      yup.string().test("allowed-specialization", function (value) {
+        if (!value) {
+          return true;
+        }
+
+        const country = resolveCountry(getCountry, this);
+        const allowed = getProviderSpecializationsForCountry(country);
+
+        if (!allowed.includes(value)) {
+          return this.createError({
+            message: `must be one of the following values: ${allowed.join(", ")}`,
+          });
+        }
+
+        return true;
+      })
+    )
+    .test(
+      "peer-support-exclusive",
+      `${PEER_SUPPORT} must be the only specialization when selected`,
+      function (value) {
+        if (!value?.length) {
+          return true;
+        }
+
+        return !(value.includes(PEER_SUPPORT) && value.length > 1);
+      }
+    );
 
 export const getAllProvidersSchema = yup.object().shape({
   country: yup.string().required(),
@@ -21,7 +65,18 @@ export const getAllProvidersSchema = yup.object().shape({
   availableAfter: yup.string().notRequired().nullable(),
   availableBefore: yup.string().notRequired().nullable(),
   onlyFreeConsultation: yup.boolean().notRequired().nullable(),
-  providerTypes: yup.array().notRequired().nullable(),
+  providerTypes: yup
+    .array()
+    .notRequired()
+    .nullable()
+    .test("valid-provider-types", "Invalid provider types", function (value) {
+      if (!value?.length) {
+        return true;
+      }
+
+      const allowed = getProviderSpecializationsForCountry(this.parent.country);
+      return value.every((providerType) => allowed.includes(providerType));
+    }),
   sex: yup.array().notRequired().nullable(),
   language: yup.string().notRequired().nullable(),
   onlyAvailable: yup.boolean().notRequired().nullable(),
@@ -55,7 +110,11 @@ export const updateProviderDataSchema = yup.object().shape({
   email: yup.string().email().required(),
   currentEmail: yup.string().email().required(),
   phone: yup.string().notRequired(),
-  specializations: specializationsTypeSchema.notRequired(),
+  specializations: createSpecializationsTypeSchema(
+    (context) =>
+      context.from?.[context.from.length - 1]?.value?.country ??
+      context.parent?.country
+  ).notRequired(),
   street: yup.string().notRequired(),
   city: yup.string().notRequired(),
   postcode: yup.string().notRequired(),
