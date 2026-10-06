@@ -14,11 +14,20 @@ import {
 } from "#queries/providers";
 
 import {
-  getConsultationByTimeAndProviderIdQuery,
+  getOverlappingConsultationByProviderIdQuery,
   getUpcomingConsultationsByProviderIdQuery,
   getConsultationsSingleWeekQuery,
   getConsultationsSingleDayQuery,
 } from "#queries/consultation";
+
+import {
+  DEFAULT_SLOT_MINUTES,
+  doSlotsOverlap,
+  getSlotDuration,
+  getSlotTimestamp,
+  indexSlotsByStart,
+  getBookableDurations,
+} from "#utils/slotDuration";
 
 import {
   getCampaignDataForMultipleIdsQuery,
@@ -62,7 +71,7 @@ export const getProviderLanguagesAndWorkWith = async ({
 }) => {
   const providerLanguageIds = await getProviderLanguageIdsQuery(
     country,
-    provider_detail_id
+    provider_detail_id,
   )
     .then((res) => res.rows)
     .catch((err) => {
@@ -70,7 +79,7 @@ export const getProviderLanguagesAndWorkWith = async ({
     });
 
   const providerLanguages = await getProviderLanguagesQuery(
-    providerLanguageIds.map((language) => language.language_id)
+    providerLanguageIds.map((language) => language.language_id),
   )
     .then((res) => res.rows)
     .catch((err) => {
@@ -80,7 +89,7 @@ export const getProviderLanguagesAndWorkWith = async ({
   // Get the work with areas of the provider from the provider_detail_work_with_links table
   const providerWorkWith = await getProviderWorkWithQuery(
     country,
-    provider_detail_id
+    provider_detail_id,
   )
     .then((res) => res.rows)
     .catch((err) => {
@@ -150,7 +159,7 @@ export const getSlotsForSingleWeek = async ({
     .then(async (res) => {
       const campaignsData = await getProviderCampaignsData(
         country,
-        provider_id
+        provider_id,
       );
 
       if (res.rowCount === 0) {
@@ -158,6 +167,7 @@ export const getSlotsForSingleWeek = async ({
           slots: [],
           campaign_slots: [],
           organization_slots: [],
+          slot_durations: {},
           campaigns_data: campaignsData,
           is_empty: true,
         };
@@ -181,6 +191,8 @@ export const getSlotsForSingleWeek = async ({
           organization_slots:
             organization_slots?.filter((x) => x.time && x.organization_id) ||
             [],
+          // Shared across all three pools: an absent key means 60 minutes.
+          slot_durations: row?.slot_durations || {},
         };
       }
     })
@@ -245,6 +257,11 @@ export const getSlotsForThreeWeeks = async ({
       ...currentWeek.organization_slots,
       ...nextWeek.organization_slots,
     ],
+    slot_durations: {
+      ...previousWeek.slot_durations,
+      ...currentWeek.slot_durations,
+      ...nextWeek.slot_durations,
+    },
   };
 };
 
@@ -378,6 +395,15 @@ export const getSlotsForSevenWeeks = async ({
       ...weekSix.organization_slots,
       ...weekSeven.organization_slots,
     ],
+    slot_durations: {
+      ...weekOne.slot_durations,
+      ...weekTwo.slot_durations,
+      ...weekThree.slot_durations,
+      ...weekFour.slot_durations,
+      ...weekFive.slot_durations,
+      ...weekSix.slot_durations,
+      ...weekSeven.slot_durations,
+    },
   };
 };
 
@@ -394,8 +420,8 @@ export const getUtcWeekStartUnix = (startDate) => {
       0,
       0,
       0,
-      0
-    )
+      0,
+    ),
   );
   return Math.floor(monday.getTime() / 1000);
 };
@@ -409,9 +435,7 @@ export const getWeekStartsIntersectingUtcMonth = (startDate) => {
   const starts = new Set();
 
   for (let d = 1; d <= lastDay; d += 1) {
-    starts.add(
-      getUtcWeekStartUnix(Math.floor(Date.UTC(y, m, d) / 1000))
-    );
+    starts.add(getUtcWeekStartUnix(Math.floor(Date.UTC(y, m, d) / 1000)));
   }
 
   return Array.from(starts).sort((a, b) => a - b);
@@ -426,6 +450,11 @@ export const mergeAvailabilityWeekResults = (weekResults) => {
     campaign_slots: weekResults.flatMap((w) => w.campaign_slots || []),
     campaigns_data: uniqueCampaignsData,
     organization_slots: weekResults.flatMap((w) => w.organization_slots || []),
+    // Keys are absolute instants, so weeks never collide and a plain merge is safe.
+    slot_durations: Object.assign(
+      {},
+      ...weekResults.map((w) => w.slot_durations || {}),
+    ),
   };
 };
 
@@ -454,8 +483,8 @@ export const getSlotsForCalendarPeriod = async ({
           country,
           provider_id,
           startDate: weekStart,
-        })
-      )
+        }),
+      ),
     );
     return mergeAvailabilityWeekResults(weeks);
   }
@@ -484,15 +513,46 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
   return true;
 };
 
-export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
-  const isNormalSlot = slotTime.time ? false : true;
-  const isWithCoupon = !isNormalSlot && slotTime.campaign_id;
+/**
+ * Is `slotTime` bookable with this provider?
+ *
+ * Returns the matching slot (annotated with the length actually booked) or
+ * `false`.
+ *
+ * A client may ask for a length via `requestedDurationMinutes` - that is how
+ * booking 01:00-02:00 works when the provider opened 01:00 and 01:30 as two
+ * separate half-hour slots. The request is validated, never trusted: the length
+ * has to be tiled exactly by the provider's own contiguous open slots in the
+ * same pool. Ask for nothing and you get the slot's own length, which is what
+ * every caller did before combining was possible.
+ *
+ * Which pool a slot belongs to is decided by `campaign_id` / `organization_id`,
+ * not by whether the payload happens to be an object: slot payloads are objects
+ * for every pool now.
+ *
+ * @param {string} country
+ * @param {string} providerId
+ * @param {number|string|{time: number|string, campaign_id?: string, organization_id?: string}} slotTime
+ * @param {number} [requestedDurationMinutes]
+ * @returns {Promise<false|object>}
+ */
+export const checkIsSlotAvailable = async (
+  country,
+  providerId,
+  slotTime,
+  requestedDurationMinutes,
+) => {
+  const isWithCoupon = !!slotTime?.campaign_id;
+  const isOrganizationSlot = !!slotTime?.organization_id;
+  const isNormalSlot = !isWithCoupon && !isOrganizationSlot;
 
-  const time = isNormalSlot ? slotTime : slotTime.time;
-  // Check if provider is available at the time
+  const time = Number(getSlotTimestamp(slotTime));
+  // Check if provider is available at the time.
+  // Three weeks rather than one: an hour starting at 23:30 on a Sunday is tiled
+  // by a slot that lives in the next week's availability row.
   const startDate = getMonday(time);
 
-  const slotsData = await getSlotsForSingleWeek({
+  const slotsData = await getSlotsForThreeWeeks({
     country,
     provider_id: providerId,
     startDate,
@@ -506,31 +566,78 @@ export const checkIsSlotAvailable = async (country, providerId, slotTime) => {
     ? slotsData.campaign_slots
     : slotsData.organization_slots;
 
-  const slot = slotsToLoopThrough.find((slot) => {
-    const slotTimestamp =
-      new Date(!isNormalSlot ? slot.time : slot).getTime() / 1000;
-    return slotTimestamp === Number(time);
-  });
+  const slot = slotsToLoopThrough.find(
+    (slot) => getSlotTimestamp(slot) === time,
+  );
 
   if (!slot) return false;
 
-  // Check if there is not already a consultation at the time
-  const consultation = await getConsultationByTimeAndProviderIdQuery({
+  // Which lengths this start time can support, given what the provider has open.
+  const slotsByStart = indexSlotsByStart(
+    slotsToLoopThrough.map((entry) => {
+      const entryTime = getSlotTimestamp(entry);
+      return {
+        time: entryTime,
+        duration_minutes: getSlotDuration(entryTime, slotsData.slot_durations),
+        campaign_id: entry?.campaign_id || null,
+        organization_id: entry?.organization_id || null,
+      };
+    }),
+  );
+  const bookableDurations = getBookableDurations(time, slotsByStart);
+
+  const durationMinutes =
+    requestedDurationMinutes == null
+      ? getSlotDuration(time, slotsData.slot_durations)
+      : Number(requestedDurationMinutes);
+
+  if (!bookableDurations.includes(durationMinutes)) return false;
+
+  // Check that no consultation of this provider overlaps the slot. Not just one
+  // starting at the same instant: a 60-minute consultation at 16:00 also blocks
+  // a 30-minute slot at 16:30.
+  const consultation = await getOverlappingConsultationByProviderIdQuery({
     poolCountry: country,
     providerId,
     time,
+    durationMinutes,
   }).catch((err) => {
     throw err;
   });
 
   if (consultation.rowCount > 0) return false;
-  return slot;
+
+  // Bare timestamps come out of the normal pool; always hand back an object so
+  // callers have one shape to deal with.
+  const slotObject =
+    typeof slot === "object" && slot !== null ? slot : { time: slot };
+  return { ...slotObject, duration_minutes: durationMinutes };
+};
+
+/**
+ * Earliest instant a client may still book, in unix seconds.
+ *
+ * `getAvailabilitySingleDay` and `getEarliestAvailableSlot` used to compute this
+ * separately and disagree, which let a provider's "earliest available slot" point
+ * at a day whose slot list came back empty. One rule now, called by both.
+ *
+ * @param {string} country
+ * @param {number} [minLeadHours] explicit lead time in hours, when the caller has one
+ * @returns {number}
+ */
+export const getMinBookableTimestamp = (country, minLeadHours) => {
+  const now = new Date().getTime() / 1000;
+  if (typeof minLeadHours === "number") {
+    return now + minLeadHours * 60 * 60;
+  }
+  // Clients cannot book less than a day ahead.
+  return now + getXDaysInSeconds(1);
 };
 
 export const getLatestAvailableSlot = async (
   country,
   providerId,
-  campaignId = null
+  campaignId = null,
 ) => {
   const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
     poolCountry: country,
@@ -544,6 +651,7 @@ export const getLatestAvailableSlot = async (
           ? x.organization_slots
           : [],
         campaign_slots: Array.isArray(x.campaign_slots) ? x.campaign_slots : [],
+        slot_durations: x.slot_durations || {},
       }));
     })
     .catch((err) => {
@@ -554,7 +662,7 @@ export const getLatestAvailableSlot = async (
     {
       poolCountry: country,
       providerId: providerId,
-    }
+    },
   )
     .then((res) => res.rows)
     .catch((err) => {
@@ -578,6 +686,11 @@ export const getLatestAvailableSlot = async (
       return bTime - aTime; // descending
     });
 
+  const slotDurations = Object.assign(
+    {},
+    ...upcomingAvailability.map((x) => x.slot_durations || {}),
+  );
+
   let latestAvailableSlot;
   for (let l = 0; l < allSlots.length; l++) {
     const slotObj = allSlots[l];
@@ -585,12 +698,20 @@ export const getLatestAvailableSlot = async (
     if (!slot) continue;
 
     const now = Date.now(); // ms since epoch
+    const slotSeconds = slot.getTime() / 1000;
+    const slotDuration = getSlotDuration(slotSeconds, slotDurations);
 
     if (
       slot.getTime() > now &&
-      !upcomingConsultations.find(
-        (consultation) =>
-          new Date(consultation.time).getTime() === slot.getTime()
+      // A consultation blocks the slot if it overlaps it at all, not only if it
+      // starts at the same instant.
+      !upcomingConsultations.find((consultation) =>
+        doSlotsOverlap(
+          slotSeconds,
+          slotDuration,
+          new Date(consultation.time).getTime() / 1000,
+          consultation.duration_minutes,
+        ),
       )
     ) {
       latestAvailableSlot = slot;
@@ -600,11 +721,19 @@ export const getLatestAvailableSlot = async (
   return latestAvailableSlot;
 };
 
-export const getEarliestAvailableSlot = async (
+/**
+ * Earliest bookable slot AND how long it is.
+ *
+ * `getEarliestAvailableSlot` below returns just the Date, which is what most
+ * callers want; this is for the ones that also have to render an end time.
+ *
+ * @returns {Promise<{slot: Date, durationMinutes: number}|undefined>}
+ */
+export const getEarliestAvailableSlotWithDuration = async (
   country,
   providerId,
   campaignId = null,
-  minLeadHours
+  minLeadHours,
 ) => {
   const upcomingAvailability = await getUpcomingAvailabilityByProviderIdQuery({
     poolCountry: country,
@@ -616,6 +745,7 @@ export const getEarliestAvailableSlot = async (
         slots: x.slots || [],
         organization_slots: x.organization_slots || [],
         campaign_slots: x.campaign_slots || [],
+        slot_durations: x.slot_durations || {},
       }));
     })
     .catch((err) => {
@@ -626,7 +756,7 @@ export const getEarliestAvailableSlot = async (
     {
       poolCountry: country,
       providerId: providerId,
-    }
+    },
   )
     .then((res) => {
       return res.rows;
@@ -658,34 +788,58 @@ export const getEarliestAvailableSlot = async (
       return aTime - bTime;
     });
 
+    const slotDurations = availability.slot_durations || {};
+
     for (let k = 0; k < availabilityToMap?.length; k++) {
       let slot = availabilityToMap[k].time
         ? new Date(availabilityToMap[k].time)
         : availabilityToMap[k];
-      const now = new Date().getTime() / 1000; // Clients cant book consultations in the past
-      const tomorrowTimestamp = now + getXDaysInSeconds(1);
-      const defaultTimeToCheck = country === "PL" ? tomorrowTimestamp : now;
-      const timeToCheck =
-        typeof minLeadHours === "number"
-          ? now + minLeadHours * 60 * 60
-          : defaultTimeToCheck;
+      const timeToCheck = getMinBookableTimestamp(country, minLeadHours);
+      const slotSeconds = new Date(slot).getTime() / 1000;
+      const slotDuration = getSlotDuration(slotSeconds, slotDurations);
       if (
         slot > new Date(timeToCheck * 1000) &&
-        !upcomingConsultations.find(
-          (consultation) =>
-            new Date(consultation.time).getTime() === new Date(slot).getTime()
+        !upcomingConsultations.find((consultation) =>
+          doSlotsOverlap(
+            slotSeconds,
+            slotDuration,
+            new Date(consultation.time).getTime() / 1000,
+            consultation.duration_minutes,
+          ),
         )
       ) {
         if (campaignId) {
           if (availabilityToMap[k].campaign_id === campaignId) {
-            return slot;
+            return { slot, durationMinutes: slotDuration };
           }
           continue;
         }
-        return slot;
+        return { slot, durationMinutes: slotDuration };
       }
     }
   }
+};
+
+/**
+ * Earliest bookable slot, as a Date.
+ *
+ * Kept as its own export because most callers only store the instant; changing
+ * the shape would ripple through every provider payload and the sorting in
+ * controllers/providers.js.
+ */
+export const getEarliestAvailableSlot = async (
+  country,
+  providerId,
+  campaignId = null,
+  minLeadHours,
+) => {
+  const earliest = await getEarliestAvailableSlotWithDuration(
+    country,
+    providerId,
+    campaignId,
+    minLeadHours,
+  );
+  return earliest?.slot;
 };
 
 export const getConsultationsForSingleDay = async ({
@@ -1042,7 +1196,7 @@ export const checkCanClientUseCoupon = async ({
         "x-country-alpha-2": country,
         "x-language-alpha-2": language,
       },
-    }
+    },
   ).catch((err) => {
     throw err;
   });

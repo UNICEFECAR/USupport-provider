@@ -17,7 +17,7 @@ import {
   updateConsultationStatusAsFinishedQuery,
   getAllUpcomingConsultationsByProviderIdQuery,
   getConsultationTimeQuerry,
-  getClientConsultationsForSpecificTime,
+  getClientConsultationsOverlapping,
   getAllConsultationsByProviderIdQuery,
 } from "#queries/consultation";
 
@@ -42,6 +42,12 @@ import {
 } from "#queries/sponsors";
 
 import { produceRaiseNotification } from "#utils/kafkaProducers";
+
+import {
+  DEFAULT_SLOT_MINUTES,
+  getSlotTimestamp,
+  hasConsultationEnded,
+} from "#utils/slotDuration";
 
 import {
   checkIsSlotAvailable,
@@ -155,10 +161,7 @@ export const getAllPastConsultationsByClientId = async ({
     const couponPrice = campaignData?.price_per_coupon;
     const sponsorImage = campaignData?.image;
 
-    const oneHourBeforeNow = new Date();
-    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
-
-    if (consultation.time < oneHourBeforeNow) {
+    if (hasConsultationEnded(consultation)) {
       response.push({
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
@@ -168,6 +171,8 @@ export const getAllPastConsultationsByClientId = async ({
           : clientNickname,
         client_image: clientDetails.image,
         time: consultation.time,
+        // These responses are explicit whitelists, so the column is invisible to provider-ui until it is named here.
+        duration_minutes: consultation.duration_minutes,
         status: consultation.status,
         price: consultation.price,
         coupon_price: couponPrice,
@@ -260,6 +265,7 @@ export const getAllConsultationsSingleWeek = async ({
         : clientNickname,
       client_image: client.image,
       time: consultation.time,
+      duration_minutes: consultation.duration_minutes,
       status: consultation.status,
       price: consultation.price,
       coupon_price: couponPrice,
@@ -354,6 +360,7 @@ export const getAllConsultationsSingleDay = async ({
         : clientNickname,
       client_image: client.image,
       time: consultation.time,
+      duration_minutes: consultation.duration_minutes,
       status: consultation.status,
       price: consultation.price,
       organization_id: consultation.organization_id,
@@ -463,11 +470,8 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
     const sponsorImage = campaignData?.image;
     const organizationName = organizationData?.name;
 
-    const oneHourBeforeNow = new Date();
-    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
-
     if (
-      (consultation.time < oneHourBeforeNow &&
+      (hasConsultationEnded(consultation) &&
         consultation.status !== "suggested") ||
       consultation.status === "canceled"
     ) {
@@ -480,6 +484,7 @@ export const getAllPastConsultations = async ({ country, providerId }) => {
           : clientNickname,
         client_image: client.image,
         time: consultation.time,
+        duration_minutes: consultation.duration_minutes,
         status: consultation.status,
         price: consultation.price,
         organization_name: organizationName,
@@ -579,10 +584,7 @@ export const getAllUpcomingConsultations = async ({
     const sponsorImage = campaignData?.image;
     const sponsorName = campaignData?.name;
 
-    const oneHourBeforeNow = new Date();
-    oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
-
-    if (consultation.time > oneHourBeforeNow) {
+    if (!hasConsultationEnded(consultation)) {
       const res = {
         consultation_id: consultation.consultation_id,
         chat_id: consultation.chat_id,
@@ -592,6 +594,7 @@ export const getAllUpcomingConsultations = async ({
           : clientNickname,
         client_image: client.image,
         time: consultation.time,
+        duration_minutes: consultation.duration_minutes,
         status: consultation.status,
         price: consultation.price,
         organization_id: consultation.organization_id,
@@ -621,15 +624,27 @@ export const addConsultationAsPending = async ({
   rescheduleCampaignSlot = false,
   requestedBy,
   bookedFrom,
+  durationMinutes: requestedDurationMinutes,
 }) => {
-  const isSlotAvailable = await checkIsSlotAvailable(country, providerId, time);
+  const isSlotAvailable = await checkIsSlotAvailable(
+    country,
+    providerId,
+    time,
+    requestedDurationMinutes,
+  );
   if (!isSlotAvailable) throw slotNotAvailable(language);
 
-  // Check if the client is free at the time of the consultation
-  const isClientFree = await getClientConsultationsForSpecificTime({
+  // checkIsSlotAvailable has confirmed the provider's own slots tile this
+  // length exactly, so it is safe to book even though the client asked for it.
+  const durationMinutes =
+    isSlotAvailable.duration_minutes || DEFAULT_SLOT_MINUTES;
+
+  // Check if the client is free for the whole consultation, not just its start
+  const isClientFree = await getClientConsultationsOverlapping({
     poolCountry: country,
     clientId,
-    time,
+    time: getSlotTimestamp(time),
+    durationMinutes,
   })
     .then((res) => {
       if (res.rowCount === 0) return true;
@@ -706,6 +721,7 @@ export const addConsultationAsPending = async ({
     campaignId,
     organizationId: isSlotAvailable?.organization_id || null,
     bookedFrom,
+    durationMinutes,
   })
     .then((raw) => {
       if (raw.rowCount === 0) {
@@ -758,10 +774,14 @@ export const scheduleConsultation = async ({
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
     // Check if slot is still available
+    // Re-check at the length this consultation was actually booked at. Without
+    // it, an hour assembled from two half-hour slots would be re-validated as a
+    // single half hour and silently recreated at 30 minutes.
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,
       consultationTime,
+      consultation.duration_minutes,
     );
     if (!isSlotAvailable) throw slotNotAvailable(language);
 
@@ -780,12 +800,17 @@ export const scheduleConsultation = async ({
       throw providerInactive(language);
     }
 
-    // Add consultation as scheduled
+    // Add consultation as scheduled.
+    // Also a brand new row - carry the length across explicitly.
     await addConsultationAsScheduledQuery({
       poolCountry: country,
       client_id: consultation.client_detail_id,
       provider_id: consultation.provider_detail_id,
       time: consultationTime,
+      durationMinutes:
+        isSlotAvailable.duration_minutes ||
+        consultation.duration_minutes ||
+        DEFAULT_SLOT_MINUTES,
     }).catch((err) => {
       throw err;
     });
@@ -878,6 +903,9 @@ export const scheduleConsultation = async ({
     const countryLabel = getCountryLabelFromAlpha2(country);
     const baseArgsData = {
       time: new Date(consultation.time).getTime() / 1000,
+      // The notification menus render a real end time from this. Leave it out
+      // and a 30-minute consultation is announced as an hour long.
+      duration_minutes: consultation.duration_minutes,
       consultationPrice: consultation.price,
       countryLabel,
     };
@@ -892,6 +920,7 @@ export const scheduleConsultation = async ({
         data: {
           countryLabel,
           time: new Date(consultation.time).getTime() / 1000,
+          durationMinutes: consultation.duration_minutes,
         },
       },
       inPlatformArgs: {
@@ -924,6 +953,7 @@ export const scheduleConsultation = async ({
         data: {
           countryLabel,
           time: new Date(consultation.time).getTime() / 1000,
+          durationMinutes: consultation.duration_minutes,
         },
       },
       inPlatformArgs: {
@@ -1009,11 +1039,12 @@ export const suggestConsultation = async ({
       throw err;
     });
 
-  // Check if the client is free at the time of the consultation
-  const isClientFree = await getClientConsultationsForSpecificTime({
+  // Check if the client is free for the whole consultation, not just its start
+  const isClientFree = await getClientConsultationsOverlapping({
     poolCountry: country,
     clientId: consultation.client_detail_id,
     time: new Date(consultation.time).getTime() / 1000,
+    durationMinutes: consultation.duration_minutes || DEFAULT_SLOT_MINUTES,
   })
     .then((res) => {
       if (res.rowCount === 0) return true;
@@ -1043,19 +1074,29 @@ export const suggestConsultation = async ({
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
     // Check if slot is still available
+    // Re-check at the length this consultation was actually booked at. Without
+    // it, an hour assembled from two half-hour slots would be re-validated as a
+    // single half hour and silently recreated at 30 minutes.
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,
       consultationTime,
+      consultation.duration_minutes,
     );
     if (!isSlotAvailable) throw slotNotAvailable(language);
 
-    // Add consultation as suggested
+    // Add consultation as suggested.
+    // This creates a brand new row, so the length has to be carried over
+    // explicitly - otherwise it silently falls back to the 60-minute default.
     await addConsultationAsSuggestedQuery({
       poolCountry: country,
       client_id: consultation.client_detail_id,
       provider_id: consultation.provider_detail_id,
       time: consultationTime,
+      durationMinutes:
+        isSlotAvailable.duration_minutes ||
+        consultation.duration_minutes ||
+        DEFAULT_SLOT_MINUTES,
     }).catch((err) => {
       throw err;
     });
@@ -1097,6 +1138,7 @@ export const suggestConsultation = async ({
 
   const baseDataArgs = {
     time: new Date(consultation.time).getTime() / 1000,
+    duration_minutes: consultation.duration_minutes,
     consultation_id: consultation.consultation_id,
     consultationPrice: consultation.price,
   };
@@ -1155,6 +1197,7 @@ export const suggestConsultation = async ({
       data: {
         client_detail_id: consultation.client_detail_id,
         time: new Date(consultation.time).getTime() / 1000,
+        duration_minutes: consultation.duration_minutes,
         consultationPrice: consultation.price,
       },
     },
@@ -1182,11 +1225,12 @@ export const acceptSuggestedConsultation = async ({
     }
   });
 
-  // Check if the client is free at the time of the consultation
-  const isClientFree = await getClientConsultationsForSpecificTime({
+  // Check if the client is free for the whole consultation, not just its start
+  const isClientFree = await getClientConsultationsOverlapping({
     poolCountry: country,
     clientId: consultation.client_detail_id,
     time: new Date(consultation.time).getTime() / 1000,
+    durationMinutes: consultation.duration_minutes || DEFAULT_SLOT_MINUTES,
   })
     .then((res) => {
       if (res.rowCount === 0) return true;
@@ -1262,6 +1306,7 @@ export const acceptSuggestedConsultation = async ({
 
         const baseDataArgs = {
           time: new Date(consultation.time).getTime() / 1000,
+          duration_minutes: consultation.duration_minutes,
         };
 
         const countryLabel = getCountryLabelFromAlpha2(country);
@@ -1377,6 +1422,7 @@ export const rejectSuggestedConsultation = async ({
 
         const baseDataArgs = {
           time: new Date(consultation.time).getTime() / 1000,
+          duration_minutes: consultation.duration_minutes,
           consultation_id: consultation.consultation_id,
         };
 
@@ -1575,7 +1621,11 @@ export const rescheduleConsultation = async ({
 
       const baseDataArgs = {
         time: new Date(consultation.time).getTime() / 1000,
+        duration_minutes: consultation.duration_minutes,
         new_consultation_time: newConsultationTime,
+        // A reschedule can move a 60-minute consultation onto a 30-minute slot,
+        // so the two ends of this notification need their own lengths.
+        new_consultation_duration_minutes: newConsultation.duration_minutes,
       };
 
       const countryLabel = getCountryLabelFromAlpha2(country);
@@ -1873,6 +1923,7 @@ export const cancelConsultation = async ({
               data: {
                 provider_detail_id: consultation.provider_detail_id,
                 time: new Date(consultation.time).getTime() / 1000,
+                duration_minutes: consultation.duration_minutes,
               },
             },
             pushArgs: {
@@ -1881,6 +1932,7 @@ export const cancelConsultation = async ({
               data: {
                 providerName,
                 time: new Date(consultation.time).getTime() / 1000,
+                duration_minutes: consultation.duration_minutes,
                 canceledBy,
               },
             },
@@ -1911,6 +1963,7 @@ export const cancelConsultation = async ({
               data: {
                 client_detail_id: consultation.client_detail_id,
                 time: new Date(consultation.time).getTime() / 1000,
+                duration_minutes: consultation.duration_minutes,
               },
             },
             language: providerLanguage,

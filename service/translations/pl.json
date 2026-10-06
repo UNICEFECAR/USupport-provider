@@ -21,5 +21,9 @@
   "campaign_or_organization_required_error": "Należy podać co najmniej jedną kampanię lub organizację",
   "country_not_found_error": "Nie znaleziono kraju",
   "consultation_already_started_error": "Konsultacja już się rozpoczęła",
-  "cannot_reschedule_less_than_24_hours_error": "Nie możesz przełożyć konsultacji mniej niż 24 godziny przed jej rozpoczęciem"
+  "cannot_reschedule_less_than_24_hours_error": "Nie możesz przełożyć konsultacji mniej niż 24 godziny przed jej rozpoczęciem",
+  "slot_overlaps_existing_slot_error": "This slot overlaps another slot you have already opened",
+  "invalid_slot_duration_error": "A slot must be either 30 or 60 minutes long",
+  "slot_duration_conflicts_with_consultation_error": "This slot cannot be shortened because a longer consultation is already booked in it",
+  "slot_duration_not_enabled_for_country_error": "30-minute slots are not enabled for this country"
 }

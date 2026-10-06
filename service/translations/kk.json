@@ -21,5 +21,9 @@
   "campaign_or_organization_required_error": "Кем дегенде бір науқан немесе ұйым көрсетілуі тиіс",
   "country_not_found_error": "Ел табылмады",
   "consultation_already_started_error": "Консультация басталған",
-  "cannot_reschedule_less_than_24_hours_error": "Сіз консультацияны оның басталуына 24 сағаттан аз қалғанда қайта жоспарлай алмайсыз"
+  "cannot_reschedule_less_than_24_hours_error": "Сіз консультацияны оның басталуына 24 сағаттан аз қалғанда қайта жоспарлай алмайсыз",
+  "slot_overlaps_existing_slot_error": "This slot overlaps another slot you have already opened",
+  "invalid_slot_duration_error": "A slot must be either 30 or 60 minutes long",
+  "slot_duration_conflicts_with_consultation_error": "This slot cannot be shortened because a longer consultation is already booked in it",
+  "slot_duration_not_enabled_for_country_error": "30-minute slots are not enabled for this country"
 }

@@ -10,6 +10,8 @@ import {
   updateAvailabilityByTemplateSchema,
   getAvailabilitySingleDaySchema,
   clearAvailabilitySlotSchema,
+  updateSlotDurationSchema,
+  clearAvailabilityDaySchema,
 } from "#schemas/availabilitySchemas";
 
 import {
@@ -20,6 +22,8 @@ import {
   updateAvailabilityByTemplate,
   getAvailabilitySingleDay,
   clearAvailabilitySlot,
+  updateSlotDuration,
+  clearAvailabilityDay,
 } from "#controllers/availability";
 
 const router = express.Router();
@@ -120,6 +124,49 @@ router.route("/clear-slot").delete(populateUser, async (req, res, next) => {
     .strict()
     .validate({ ...payload, country, provider_id })
     .then(clearAvailabilitySlot)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/slot-duration").put(populateUser, async (req, res, next) => {
+  /**
+   * #route   PUT /provider/v1/availability/slot-duration
+   * #desc    Change how long an already-open availability slot is
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const provider_id = req.user.provider_detail_id;
+
+  const payload = req.body;
+
+  return await updateSlotDurationSchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, provider_id, ...payload })
+    .then(updateSlotDuration)
+    .then((result) => res.status(200).send(result))
+    .catch(next);
+});
+
+router.route("/day").delete(populateUser, async (req, res, next) => {
+  /**
+   * #route   DELETE /provider/v1/availability/day
+   * #desc    Clear many slots at once, across normal, campaign and organization
+   *          availability - one request instead of one per slot
+   */
+  const country = req.header("x-country-alpha-2");
+  const language = req.header("x-language-alpha-2");
+
+  const provider_id = req.user.provider_detail_id;
+
+  const payload = req.body;
+
+  return await clearAvailabilityDaySchema
+    .noUnknown(true)
+    .strict()
+    .validate({ country, language, provider_id, ...payload })
+    .then(clearAvailabilityDay)
     .then((result) => res.status(200).send(result))
     .catch(next);
 });
