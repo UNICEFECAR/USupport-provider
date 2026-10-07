@@ -53,13 +53,14 @@ import {
   providerHasFutureConsultations,
 } from "#utils/errors";
 import {
-  getEarliestAvailableSlot,
+  getEarliestAvailableSlotWithDuration,
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
   shuffleArray,
   getLatestAvailableSlot,
 } from "#utils/helperFunctions";
 import { deleteCacheItemsByPattern } from "#utils/cache";
+import { hasConsultationEnded } from "#utils/slotDuration";
 import {
   assignOrganizationsToProviderQuery,
   removeOrganizationsFromProviderQuery,
@@ -204,12 +205,15 @@ export const getAllProviders = async ({
         .catch((err) => {
           throw err;
         });
-      providers[i].earliest_available_slot = await getEarliestAvailableSlot(
+      const earliestSlot = await getEarliestAvailableSlotWithDuration(
         country,
         providers[i].provider_detail_id,
         providers[i].campaign_id,
         24, // Minimum 24 hours lead time for slots
       );
+      providers[i].earliest_available_slot = earliestSlot?.slot;
+      providers[i].earliest_available_slot_duration_minutes =
+        earliestSlot?.durationMinutes;
 
       providers[i].latest_available_slot = await getLatestAvailableSlot(
         country,
@@ -326,12 +330,15 @@ export const getProviderById = async ({
       provider.organizations =
         provider.organizations?.filter((x) => !!x.organization_id) || [];
 
-      provider.earliest_available_slot = await getEarliestAvailableSlot(
+      const earliestSlot = await getEarliestAvailableSlotWithDuration(
         country,
         provider_id,
         campaignId,
         24,
       );
+      provider.earliest_available_slot = earliestSlot?.slot;
+      provider.earliest_available_slot_duration_minutes =
+        earliestSlot?.durationMinutes;
       if (!isRequestedByAdmin) {
         delete provider.street;
         delete provider.city;
@@ -817,9 +824,6 @@ export const getAllClients = async ({ country, providerId }) => {
         });
       }
 
-      const oneHourBeforeNow = new Date();
-      oneHourBeforeNow.setHours(oneHourBeforeNow.getHours() - 1);
-
       // For each consultation, add it to the clients array in the right place
       for (let i = 0; i < consultations.length; i++) {
         if (consultations[i].status === "canceled") {
@@ -841,7 +845,7 @@ export const getAllClients = async ({ country, providerId }) => {
         const couponPrice = campaignData?.price_per_coupon;
 
         if (clientIndex !== -1) {
-          if (consultationTime > oneHourBeforeNow) {
+          if (!hasConsultationEnded(consultation)) {
             if (
               clients[clientIndex].next_consultation === null ||
               consultationTime < clients[clientIndex].next_consultation

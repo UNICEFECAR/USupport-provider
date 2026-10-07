@@ -1,21 +1,35 @@
 import { getDBPool } from "#utils/dbConfig";
+import { DEFAULT_SLOT_MINUTES, MAX_SLOT_MINUTES } from "#utils/slotDuration";
 
-export const getConsultationByTimeAndProviderIdQuery = async ({
+/**
+ * Any consultation of this provider that overlaps [time, time + durationMinutes).
+ *
+ * The `time > start - MAX_SLOT_MINUTES` bound is what keeps this a range scan:
+ * `time + (duration_minutes * interval)` is not sargable on its own, and no
+ * consultation can start more than MAX_SLOT_MINUTES before the slot and still
+ * reach into it.
+ */
+export const getOverlappingConsultationByProviderIdQuery = async ({
   poolCountry,
   providerId,
   time,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
       SELECT * 
       FROM consultation
-      WHERE provider_detail_id = $1 AND time = to_timestamp($2) AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+      WHERE provider_detail_id = $1
+        AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled' OR status = 'finished')
+        AND time > to_timestamp($2) - ($4 * INTERVAL '1 minute')
+        AND time < to_timestamp($2) + ($3 * INTERVAL '1 minute')
+        AND time + (duration_minutes * INTERVAL '1 minute') > to_timestamp($2)
       ORDER BY created_at DESC
       LIMIT 1;
 
     `,
-    [providerId, time]
+    [providerId, time, durationMinutes, MAX_SLOT_MINUTES],
   );
 
 export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
@@ -26,14 +40,14 @@ export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, consultation.duration_minutes, status, price, transaction_log.campaign_id
       FROM consultation
         LEFT JOIN transaction_log ON transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND client_detail_id = $2 AND (status = 'scheduled' OR status = 'finished')
       ORDER BY time DESC;
 
     `,
-    [providerId, clientId]
+    [providerId, clientId],
   );
 
 export const updateStatusOfAllPendingConsultationsToTimeoutQuery = async ({
@@ -46,7 +60,7 @@ export const updateStatusOfAllPendingConsultationsToTimeoutQuery = async ({
         SET status = 'timeout'
         WHERE status = 'pending' AND created_at < (NOW() - $1 * INTERVAL '1 MINUTE');
       `,
-    [minToTimeout]
+    [minToTimeout],
   );
 
 export const addConsultationAsPendingQuery = async ({
@@ -58,16 +72,26 @@ export const addConsultationAsPendingQuery = async ({
   campaignId,
   organizationId,
   bookedFrom,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price, campaign_id, organization_id, booked_from)
-      VALUES ($1, $2, to_timestamp($3), 'pending', $4, $5, $6, $7)
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, price, campaign_id, organization_id, booked_from, duration_minutes)
+      VALUES ($1, $2, to_timestamp($3), 'pending', $4, $5, $6, $7, $8)
       RETURNING *;
 
     `,
-    [clientId, providerId, time, price, campaignId, organizationId, bookedFrom]
+    [
+      clientId,
+      providerId,
+      time,
+      price,
+      campaignId,
+      organizationId,
+      bookedFrom,
+      durationMinutes,
+    ],
   );
 };
 
@@ -76,6 +100,7 @@ export const addConsultationAsScheduledQuery = async ({
   client_id,
   provider_id,
   time,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -86,11 +111,11 @@ export const addConsultationAsScheduledQuery = async ({
         RETURNING chat_id
       )
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, chat_id, time, status)
-      VALUES ($1, $2, (SELECT chat_id FROM chatData), to_timestamp($3), 'scheduled');
+      INSERT INTO consultation (client_detail_id, provider_detail_id, chat_id, time, status, duration_minutes)
+      VALUES ($1, $2, (SELECT chat_id FROM chatData), to_timestamp($3), 'scheduled', $4);
 
     `,
-    [client_id, provider_id, time]
+    [client_id, provider_id, time, durationMinutes],
   );
 
 export const addConsultationAsSuggestedQuery = async ({
@@ -98,16 +123,17 @@ export const addConsultationAsSuggestedQuery = async ({
   client_id,
   provider_id,
   time,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
 
-      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status)
-      VALUES ($1, $2, to_timestamp($3), 'suggested');
+      INSERT INTO consultation (client_detail_id, provider_detail_id, time, status, duration_minutes)
+      VALUES ($1, $2, to_timestamp($3), 'suggested', $4);
       RETURNING *;
   
     `,
-    [client_id, provider_id, time]
+    [client_id, provider_id, time, durationMinutes],
   );
 
 export const getConsultationByIdQuery = async ({
@@ -124,7 +150,7 @@ export const getConsultationByIdQuery = async ({
       LIMIT 1;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const updateConsultationStatusAsScheduledQuery = async ({
@@ -148,7 +174,7 @@ export const updateConsultationStatusAsScheduledQuery = async ({
       WHERE consultation_id = $1
       RETURNING *;
     `,
-    [consultationId, bookedFrom]
+    [consultationId, bookedFrom],
   );
 
 export const updateConsultationStatusAsSuggestedQuery = async ({
@@ -163,7 +189,7 @@ export const updateConsultationStatusAsSuggestedQuery = async ({
       WHERE consultation_id = $1;
   
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const updateConsultationStatusAsRejectedQuery = async ({
@@ -179,7 +205,7 @@ export const updateConsultationStatusAsRejectedQuery = async ({
       RETURNING *;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const rescheduleConsultationQuery = async ({
@@ -195,7 +221,7 @@ export const rescheduleConsultationQuery = async ({
         RETURNING *;
   
       `,
-    [consultationId]
+    [consultationId],
   );
 
 export const cancelConsultationQuery = async ({
@@ -217,7 +243,7 @@ export const cancelConsultationQuery = async ({
       RETURNING *;
 
     `,
-    [consultationId, canceledBy]
+    [consultationId, canceledBy],
   );
 
 export const joinConsultationClientQuery = async ({
@@ -232,7 +258,7 @@ export const joinConsultationClientQuery = async ({
       WHERE consultation_id = $1 AND client_join_time IS NULL;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const joinConsultationProviderQuery = async ({
@@ -247,7 +273,7 @@ export const joinConsultationProviderQuery = async ({
       WHERE consultation_id = $1 AND provider_join_time IS NULL;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const leaveConsultationClientQuery = async ({
@@ -263,7 +289,7 @@ export const leaveConsultationClientQuery = async ({
       RETURNING *;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const leaveConsultationProviderQuery = async ({
@@ -279,7 +305,7 @@ export const leaveConsultationProviderQuery = async ({
       RETURNING *;
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const updateConsultationStatusAsFinishedQuery = async ({
@@ -294,7 +320,7 @@ export const updateConsultationStatusAsFinishedQuery = async ({
       WHERE consultation_id = $1
 
     `,
-    [consultationId]
+    [consultationId],
   );
 
 export const getConsultationsForDayQuery = async ({
@@ -312,7 +338,7 @@ export const getConsultationsForDayQuery = async ({
       ORDER BY time DESC;
 
     `,
-    [providerId, previousDayTimestamp, nextDayTimestamp]
+    [providerId, previousDayTimestamp, nextDayTimestamp],
   );
 
 export const getAllConsultationsByProviderIdQuery = async ({
@@ -321,13 +347,13 @@ export const getAllConsultationsByProviderIdQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, consultation.organization_id
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, consultation.duration_minutes, status, price, transaction_log.campaign_id, consultation.organization_id
       FROM consultation
         LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished' OR status = 'canceled')
       ORDER BY time DESC;
     `,
-    [providerId]
+    [providerId],
   );
 
 export const getAllUpcomingConsultationsByProviderIdQuery = async ({
@@ -337,15 +363,17 @@ export const getAllUpcomingConsultationsByProviderIdQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, COUNT(*) OVER() AS total_count, consultation.organization_id
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, consultation.duration_minutes, status, price, transaction_log.campaign_id, COUNT(*) OVER() AS total_count, consultation.organization_id
       FROM consultation
         LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
+      -- NOTE: this hour is a lead-time rule ("don't list what starts within the hour"),
+      -- not the consultation's length, so it is deliberately left as a fixed interval.
       WHERE provider_detail_id = $1 AND time >= now() + interval '1 hour' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time ASC
       LIMIT 6
       OFFSET $2;
     `,
-    [providerId, (pageNo - 1) * 6]
+    [providerId, (pageNo - 1) * 6],
   );
 
 export const getAllConsultationsCountQuery = async ({
@@ -358,7 +386,7 @@ export const getAllConsultationsCountQuery = async ({
       FROM consultation
       WHERE provider_detail_id = $1 AND (status = 'scheduled' OR status = 'finished') AND time < now();
     `,
-    [providerId]
+    [providerId],
   );
 
 export const getUpcomingConsultationsByProviderIdQuery = async ({
@@ -374,7 +402,7 @@ export const getUpcomingConsultationsByProviderIdQuery = async ({
         ORDER BY time ASC;
   
       `,
-    [providerId]
+    [providerId],
   );
 
 export const getConsultationsSingleWeekQuery = async ({
@@ -384,13 +412,13 @@ export const getConsultationsSingleWeekQuery = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, consultation.organization_id
+      SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, consultation.duration_minutes, status, price, transaction_log.campaign_id, consultation.organization_id
       FROM consultation
         LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
       WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '7 days' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
       ORDER BY time ASC;
     `,
-    [providerId, startDate]
+    [providerId, startDate],
   );
 
 export const getConsultationsSingleDayQuery = async ({
@@ -401,14 +429,14 @@ export const getConsultationsSingleDayQuery = async ({
   await getDBPool("clinicalDb", poolCountry).query(
     `
     
-        SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, status, price, transaction_log.campaign_id, consultation.organization_id
+        SELECT consultation.client_detail_id, consultation.consultation_id, chat_id, time, consultation.duration_minutes, status, price, transaction_log.campaign_id, consultation.organization_id
         FROM consultation
           LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id
         WHERE provider_detail_id = $1 AND time >= to_timestamp($2) AND time < to_timestamp($2) + interval '1 day' AND (status = 'suggested' OR status = 'scheduled' OR status = 'finished')
         ORDER BY time ASC;
   
       `,
-    [providerId, date]
+    [providerId, date],
   );
 
 export const getFutureConsultationsCountQuery = async ({
@@ -423,7 +451,7 @@ export const getFutureConsultationsCountQuery = async ({
       WHERE provider_detail_id = $1 AND time >= now() AND (status = 'pending' OR status = 'suggested' OR status = 'scheduled');
 
     `,
-    [providerId]
+    [providerId],
   );
 
 export const getConsultationTimeQuerry = async ({
@@ -432,11 +460,11 @@ export const getConsultationTimeQuerry = async ({
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
-        SELECT time
+        SELECT time, duration_minutes
         FROM consultation
         WHERE consultation_id = $1
       `,
-    [consultationId]
+    [consultationId],
   );
 
 export const getProviderConsultationsForCampaign = async ({
@@ -446,30 +474,40 @@ export const getProviderConsultationsForCampaign = async ({
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
-          SELECT consultation.consultation_id, consultation.provider_detail_id, consultation.price, consultation.client_detail_id, chat_id, status, time
+          SELECT consultation.consultation_id, consultation.provider_detail_id, consultation.price, consultation.client_detail_id, chat_id, status, time, consultation.duration_minutes
           FROM consultation
             LEFT JOIN transaction_log on transaction_log.consultation_id = consultation.consultation_id AND transaction_log.campaign_id = $2
             WHERE provider_detail_id = $1 AND transaction_log.consultation_id = consultation.consultation_id AND (status = 'finished' OR status = 'scheduled')
           GROUP BY consultation.consultation_id
         `,
-    [providerId, campaignId]
+    [providerId, campaignId],
   );
 };
 
-export const getClientConsultationsForSpecificTime = async ({
+/**
+ * Any scheduled consultation of this client that overlaps
+ * [time, time + durationMinutes) - i.e. "is the client already busy then?".
+ *
+ * `time` is unix seconds. Callers unwrap campaign/organization slot objects
+ * before calling; this no longer guesses from the argument's shape.
+ */
+export const getClientConsultationsOverlapping = async ({
   poolCountry,
   clientId,
-  time: slotTime,
+  time,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) => {
-  const isWithCoupon = typeof slotTime === "object";
-  const time = isWithCoupon ? slotTime.time : slotTime;
   return await getDBPool("clinicalDb", poolCountry).query(
     `
         SELECT *
         FROM consultation
-        WHERE client_detail_id = $1 AND time = to_timestamp($2) AND status = 'scheduled'
+        WHERE client_detail_id = $1
+          AND status = 'scheduled'
+          AND time > to_timestamp($2) - ($4 * INTERVAL '1 minute')
+          AND time < to_timestamp($2) + ($3 * INTERVAL '1 minute')
+          AND time + (duration_minutes * INTERVAL '1 minute') > to_timestamp($2)
       `,
-    [clientId, time]
+    [clientId, time, durationMinutes, MAX_SLOT_MINUTES],
   );
 };
 
@@ -481,5 +519,5 @@ export const cancelNotAcceptedSuggestedConsultationsQuery = async ({
       UPDATE consultation
       SET status = 'canceled'
       WHERE status = 'suggested' AND time < NOW() + INTERVAL '24 hours';
-    `
+    `,
   );

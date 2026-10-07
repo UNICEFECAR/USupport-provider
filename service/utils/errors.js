@@ -191,3 +191,37 @@ export const cannotRescheduleLessThan24Hours = (language) => {
   error.status = 400;
   return error;
 };
+export const slotOverlapsExistingSlot = (language) => {
+  const error = new Error();
+  error.message = t("slot_overlaps_existing_slot_error", language);
+  error.name = "SLOT OVERLAPS EXISTING SLOT";
+  error.status = 400;
+  return error;
+};
+
+export const invalidSlotDuration = (language) => {
+  const error = new Error();
+  error.message = t("invalid_slot_duration_error", language);
+  error.name = "INVALID SLOT DURATION";
+  error.status = 400;
+  return error;
+};
+
+export const slotDurationConflictsWithConsultation = (language) => {
+  const error = new Error();
+  error.message = t(
+    "slot_duration_conflicts_with_consultation_error",
+    language,
+  );
+  error.name = "SLOT DURATION CONFLICTS WITH CONSULTATION";
+  error.status = 400;
+  return error;
+};
+
+export const slotDurationNotEnabledForCountry = (language) => {
+  const error = new Error();
+  error.message = t("slot_duration_not_enabled_for_country_error", language);
+  error.name = "SLOT DURATION NOT ENABLED FOR COUNTRY";
+  error.status = 400;
+  return error;
+};

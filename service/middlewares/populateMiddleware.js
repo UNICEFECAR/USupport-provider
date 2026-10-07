@@ -9,7 +9,7 @@ import { providerNotFound } from "#utils/errors";
 import { getCacheItem, setCacheItem } from "#utils/cache";
 
 import {
-  getEarliestAvailableSlot,
+  getEarliestAvailableSlotWithDuration,
   formatSpecializations,
   getProviderLanguagesAndWorkWith,
 } from "#utils/helperFunctions";
@@ -58,12 +58,16 @@ export const populateProvider = async (req, res, next) => {
         throw err;
       });
 
-    provider.earliest_available_slot = await getEarliestAvailableSlot(
+    const earliestSlot = await getEarliestAvailableSlotWithDuration(
       country,
       provider.provider_detail_id,
       null,
       24,
     );
+    provider.earliest_available_slot = earliestSlot?.slot;
+    // The UI renders this slot as a time range, so it needs the length too.
+    provider.earliest_available_slot_duration_minutes =
+      earliestSlot?.durationMinutes;
 
     provider = {
       ...provider,

@@ -5,9 +5,14 @@ import {
   deleteAvailabilitySingleWeekQuery,
   deleteAvailabilitySingleWeekAllCampaignsQuery,
   deleteAvailabilitySingleWeekAllOrganizationsQuery,
+  updateSlotDurationQuery,
+  clearAvailabilitySlotsBulkQuery,
 } from "#queries/availability";
 
-import { getConsultationsForDayQuery } from "#queries/consultation";
+import {
+  getConsultationsForDayQuery,
+  getOverlappingConsultationByProviderIdQuery,
+} from "#queries/consultation";
 
 import { getCountryDetailsByAlpha2Query } from "#queries/users";
 
@@ -20,6 +25,11 @@ import {
   expiredCampaign,
   campaignOrOrganizationRequired,
   countryNotFound,
+  slotOverlapsExistingSlot,
+  invalidSlotDuration,
+  slotDurationConflictsWithConsultation,
+  slotDurationNotEnabledForCountry,
+  slotNotAvailable,
 } from "#utils/errors";
 
 import {
@@ -28,7 +38,96 @@ import {
   getXDaysInSeconds,
   getSlotsForThreeWeeks,
   getSlotsForCalendarPeriod,
+  getMinBookableTimestamp,
 } from "#utils/helperFunctions";
+
+import {
+  DEFAULT_SLOT_MINUTES,
+  doSlotsOverlap,
+  getSlotDuration,
+  getSlotTimestamp,
+  isAllowedSlotDuration,
+  indexSlotsByStart,
+  getBookableDurations,
+} from "#utils/slotDuration";
+
+/**
+ * Every slot the provider has open in the given three-week window, as
+ * `{ time, duration }` in unix seconds / minutes, across all three pools.
+ *
+ * Overlap has to be judged against the union: a 60-minute normal slot at 16:00
+ * conflicts with a 30-minute organization slot at 16:30 just as much as with
+ * another normal one.
+ */
+/**
+ * Is this country allowed to use the given slot length?
+ *
+ * 30-minute slots are switched on per country with `country.has_30_min_slots`.
+ * The check lives server-side as well as in the UI so that turning the flag off
+ * actually prevents half-hour slots being created, rather than only hiding the
+ * control.
+ *
+ * Note this gates *creating* slots, not booking them: slots opened while the
+ * flag was on stay bookable and keep their length if it is later switched off.
+ *
+ * Returns the effective length so callers write a real number rather than
+ * whatever the request happened to contain.
+ *
+ * @param {string} country alpha-2 code
+ * @param {string} language
+ * @param {number|null|undefined} durationMinutes
+ * @returns {Promise<number>}
+ */
+const assertDurationAllowedForCountry = async (
+  country,
+  language,
+  durationMinutes,
+) => {
+  // A missing length means the caller does not care, which has always meant an
+  // hour. An explicitly wrong one (45) is still an error - null is absence, 45
+  // is a mistake.
+  const minutes = durationMinutes ?? DEFAULT_SLOT_MINUTES;
+
+  if (!isAllowedSlotDuration(minutes)) throw invalidSlotDuration(language);
+
+  // An hour is always allowed - it is what every country had before this flag.
+  if (Number(minutes) === DEFAULT_SLOT_MINUTES) return DEFAULT_SLOT_MINUTES;
+
+  const countryDetails = await getCountryDetailsByAlpha2Query(country)
+    .then((res) => {
+      if (res.rowCount === 0) throw countryNotFound(language);
+      return res.rows[0];
+    })
+    .catch((err) => {
+      throw err;
+    });
+
+  if (!countryDetails.has_30_min_slots) {
+    throw slotDurationNotEnabledForCountry(language);
+  }
+
+  return Number(minutes);
+};
+
+const collectOpenSlots = (slotsData) => {
+  const durations = slotsData.slot_durations || {};
+  const seen = new Map();
+
+  [
+    ...(slotsData.slots || []),
+    ...(slotsData.campaign_slots || []),
+    ...(slotsData.organization_slots || []),
+  ].forEach((slot) => {
+    const time = getSlotTimestamp(slot);
+    if (Number.isNaN(time)) return;
+    // One entry per instant: the duration is shared across pools anyway.
+    if (!seen.has(time)) {
+      seen.set(time, { time, duration: getSlotDuration(time, durations) });
+    }
+  });
+
+  return Array.from(seen.values());
+};
 
 export const getAvailabilityForPeriod = async ({
   country,
@@ -68,9 +167,41 @@ export const updateAvailabilitySingleWeek = async ({
   slot,
   campaignId,
   organizationId,
+  durationMinutes = DEFAULT_SLOT_MINUTES,
 }) => {
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
+
+  const effectiveDuration = await assertDurationAllowedForCountry(
+    country,
+    language,
+    durationMinutes,
+  );
+
+  // A slot may not overlap another slot this provider already has open, in any
+  // pool. Checked over three weeks, not one: a 60-minute slot at Sunday 23:30
+  // runs into the next week's availability row.
+  const surroundingSlots = await getSlotsForThreeWeeks({
+    country,
+    provider_id,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const slotSeconds = Number(slot);
+  const overlapping = collectOpenSlots(surroundingSlots).find(
+    (existing) =>
+      existing.time !== slotSeconds &&
+      doSlotsOverlap(
+        slotSeconds,
+        effectiveDuration,
+        existing.time,
+        existing.duration,
+      ),
+  );
+
+  if (overlapping) throw slotOverlapsExistingSlot(language);
 
   let campaignStartDate;
   let campaignEndDate;
@@ -174,6 +305,7 @@ export const updateAvailabilitySingleWeek = async ({
         slot,
         campaignId,
         organizationId,
+        durationMinutes: effectiveDuration,
       }).catch((err) => {
         throw err;
       });
@@ -237,7 +369,7 @@ export const updateAvailabilityByTemplate = async ({
   const hasAnySlotsInTemplate =
     Array.isArray(template) &&
     template.some(
-      (t) => Array.isArray(t.slots) && t.slots.filter(Boolean).length > 0
+      (t) => Array.isArray(t.slots) && t.slots.filter(Boolean).length > 0,
     );
 
   if (
@@ -269,10 +401,10 @@ export const updateAvailabilityByTemplate = async ({
           throw err;
         });
       const campaignStartDate = new Date(
-        campaignData.campaign_start_date
+        campaignData.campaign_start_date,
       ).getTime();
       const campaignEndDate = new Date(
-        campaignData.campaign_end_date
+        campaignData.campaign_end_date,
       ).getTime();
       campaignRanges.set(campaignId, {
         startMs: campaignStartDate,
@@ -287,6 +419,32 @@ export const updateAvailabilityByTemplate = async ({
   for (const { startDate, slots } of template) {
     if (!checkSlotsWithinWeek(startDate, slots))
       throw slotsNotWithinWeek(language);
+
+    // A template slot is either a bare timestamp (the old, hour-long shape) or
+    // { time, duration_minutes }. Normalise once, here.
+    const normalizedSlots = slots.map((rawSlot) => {
+      const seconds = Number(getSlotTimestamp(rawSlot));
+      const duration = Number(
+        rawSlot?.duration_minutes ?? DEFAULT_SLOT_MINUTES,
+      );
+      if (!isAllowedSlotDuration(duration)) throw invalidSlotDuration(language);
+      // The template already loaded the country, so gate against that rather
+      // than re-querying once per slot.
+      if (
+        Number(duration) !== DEFAULT_SLOT_MINUTES &&
+        !countryDetails.has_30_min_slots
+      ) {
+        throw slotDurationNotEnabledForCountry(language);
+      }
+      return { seconds, duration };
+    });
+
+    // The bulk write takes one length per call, so send one call per distinct
+    // length - at most two, since a slot is 30 or 60 minutes.
+    const slotsByDuration = normalizedSlots.reduce((acc, slot) => {
+      (acc[slot.duration] = acc[slot.duration] || []).push(slot.seconds);
+      return acc;
+    }, {});
 
     // Check if start date already exists in the database
     // If it does, update the slots
@@ -308,8 +466,8 @@ export const updateAvailabilityByTemplate = async ({
         }
 
         if (hasCampaigns) {
-          const campaignFormattedSlots = slots.map(
-            (element) => new Date(element * 1000)
+          const campaignFormattedSlots = normalizedSlots.map(
+            (slot) => new Date(slot.seconds * 1000),
           );
           for (const campaignId of campaignIds) {
             if (campaignRanges && campaignRanges.has(campaignId)) {
@@ -322,22 +480,25 @@ export const updateAvailabilityByTemplate = async ({
                 throw expiredCampaign(language);
               }
             }
-            await updateAvailabilityMultipleSlotsQuery({
-              poolCountry: country,
-              provider_id,
-              startDate,
-              slots: campaignFormattedSlots,
-              countryId,
-              campaignId,
-            }).catch((err) => {
-              throw err;
-            });
+            for (const [duration, seconds] of Object.entries(slotsByDuration)) {
+              await updateAvailabilityMultipleSlotsQuery({
+                poolCountry: country,
+                provider_id,
+                startDate,
+                slots: seconds.map((s) => new Date(s * 1000)),
+                countryId,
+                campaignId,
+                durationMinutes: Number(duration),
+                slotSeconds: seconds,
+              }).catch((err) => {
+                throw err;
+              });
+            }
           }
         }
 
         if (hasOrganizations) {
-          for (const rawSlot of slots) {
-            const slotSeconds = Number(rawSlot);
+          for (const { seconds: slotSeconds, duration } of normalizedSlots) {
             // If the slot is already available for another organization, delete it
             const occupiedSlot =
               res.organization_slots &&
@@ -372,6 +533,7 @@ export const updateAvailabilityByTemplate = async ({
               startDate,
               slot: slotSeconds,
               organizationId: targetOrganizationId,
+              durationMinutes: duration,
             }).catch((err) => {
               throw err;
             });
@@ -384,17 +546,18 @@ export const updateAvailabilityByTemplate = async ({
           hasNormalSlots && !hasCampaigns && !hasOrganizations;
 
         if (isNormalSlotsMode) {
-          const normalFormattedSlots = slots.map(
-            (element) => new Date(element * 1000)
-          );
-          await updateAvailabilityMultipleSlotsQuery({
-            poolCountry: country,
-            provider_id,
-            startDate,
-            slots: normalFormattedSlots,
-          }).catch((err) => {
-            throw err;
-          });
+          for (const [duration, seconds] of Object.entries(slotsByDuration)) {
+            await updateAvailabilityMultipleSlotsQuery({
+              poolCountry: country,
+              provider_id,
+              startDate,
+              slots: seconds.map((s) => new Date(s * 1000)),
+              durationMinutes: Number(duration),
+              slotSeconds: seconds,
+            }).catch((err) => {
+              throw err;
+            });
+          }
         }
 
         return;
@@ -413,10 +576,9 @@ export const getAvailabilitySingleDay = async ({
   day,
   campaignId,
 }) => {
-  const now = new Date().getTime() / 1000;
-  const tomorrowTimestamp = now + getXDaysInSeconds(1);
-  // const timeToCheck = country === "PL" ? tomorrowTimestamp : now;
-  const timeToCheck = tomorrowTimestamp;
+  // Same lead-time rule getEarliestAvailableSlot uses, so the two cannot disagree
+  // and point clients at a day whose slot list comes back empty.
+  const timeToCheck = getMinBookableTimestamp(country);
 
   let slots = [];
   // let campaignData;
@@ -461,40 +623,80 @@ export const getAvailabilitySingleDay = async ({
   // Exclude slots that are in the past
   // Exlude slots that are less than 24 hours from now
   // Exclude slots that are pending, scheduled, or suggested
+  const slotDurations = threeWeeksSlots.slot_durations || {};
+
   slotsToLoopThrough.forEach((slot) => {
-    let slotTimestamp;
-    if (slot.time) {
-      slotTimestamp = new Date(slot.time).getTime() / 1000;
-    } else {
-      slotTimestamp = new Date(slot).getTime() / 1000;
-    }
+    const slotTimestamp = getSlotTimestamp(slot);
+    const slotDuration = getSlotDuration(slotTimestamp, slotDurations);
+
     if (
       slotTimestamp > timeToCheck &&
       slotTimestamp >= previousDayTimestamp &&
       slotTimestamp < nextDayTimestamp &&
-      !allConsultationsForDay.some(
-        (consultation) => new Date(consultation.time) / 1000 === slotTimestamp
+      // A consultation takes the slot out if it overlaps it at all - a 60-minute
+      // consultation at 16:00 also hides the 30-minute slot at 16:30.
+      !allConsultationsForDay.some((consultation) =>
+        doSlotsOverlap(
+          slotTimestamp,
+          slotDuration,
+          new Date(consultation.time).getTime() / 1000,
+          consultation.duration_minutes,
+        ),
       )
     ) {
-      slots.push(slot);
+      slots.push({
+        time: slotTimestamp * 1000,
+        duration_minutes: slotDuration,
+        campaign_id: slot?.campaign_id || null,
+        organization_id: slot?.organization_id || null,
+      });
     }
   });
 
   // Sort slots in ascending order
-  slots.sort((a, b) => {
-    // sort by time asc
-    if (a.time && b.time) {
-      return new Date(a.time) - new Date(b.time);
-    } else if (a.time && !b.time) {
-      return new Date(a.time) - new Date(b);
-    } else if (!a.time && b.time) {
-      return new Date(a) - new Date(b.time);
+  slots.sort((a, b) => a.time - b.time);
+
+  // Drop slots that overlap one we have already offered. The write path stops
+  // overlapping slots being created, but legacy rows and slots written before
+  // that guard shipped can still overlap. Earlier start wins; on an equal start
+  // a campaign/organization slot wins over a plain one, because that is what the
+  // client used to do in the browser (SelectConsultation) and it has to agree.
+  const offered = [];
+  slots.forEach((slot) => {
+    const clashIndex = offered.findIndex((taken) =>
+      doSlotsOverlap(
+        slot.time / 1000,
+        slot.duration_minutes,
+        taken.time / 1000,
+        taken.duration_minutes,
+      ),
+    );
+
+    if (clashIndex === -1) {
+      offered.push(slot);
+      return;
     }
 
-    return new Date(a) - new Date(b);
+    const taken = offered[clashIndex];
+    const slotIsSponsored = !!(slot.campaign_id || slot.organization_id);
+    const takenIsSponsored = !!(taken.campaign_id || taken.organization_id);
+
+    if (slot.time === taken.time && slotIsSponsored && !takenIsSponsored) {
+      offered[clashIndex] = slot;
+    }
   });
 
-  return slots;
+  // Tell the client which consultation lengths each start time can actually
+  // support. Two adjacent 30-minute slots can be booked as one hour, so the
+  // booking UI needs more than each slot's own length to build its options.
+  const slotsByStart = indexSlotsByStart(
+    offered.map((slot) => ({ ...slot, time: slot.time / 1000 })),
+  );
+
+  return offered.map((slot) => ({
+    ...slot,
+    available_durations: getBookableDurations(slot.time / 1000, slotsByStart),
+  }));
 };
 
 export const clearAvailabilitySlot = async ({
@@ -527,7 +729,7 @@ export const clearAvailabilitySlot = async ({
         deleteAvailabilitySingleWeekQuery({
           ...args,
           campaignId,
-        })
+        }),
       );
     });
   } else {
@@ -543,7 +745,7 @@ export const clearAvailabilitySlot = async ({
       deleteAvailabilitySingleWeekQuery({
         ...args,
         organizationId,
-      })
+      }),
     );
   } else if (organizationId && Array.isArray(organizationId)) {
     organizationId.forEach((id) => {
@@ -551,7 +753,7 @@ export const clearAvailabilitySlot = async ({
         deleteAvailabilitySingleWeekQuery({
           ...args,
           organizationId: id,
-        })
+        }),
       );
     });
   } else {
@@ -559,5 +761,116 @@ export const clearAvailabilitySlot = async ({
   }
 
   await Promise.all(queries);
+  return { success: true };
+};
+
+/**
+ * Change how long an already-open slot is.
+ *
+ * This has to exist as its own operation rather than "delete then re-add": with
+ * the overlap guard in place, a provider holding 16:00/60 who wants
+ * 16:00/30 + 16:30/30 cannot add 16:30 until 16:00 has been shortened.
+ */
+export const updateSlotDuration = async ({
+  country,
+  language,
+  provider_id,
+  startDate,
+  slot,
+  durationMinutes,
+}) => {
+  const effectiveDuration = await assertDurationAllowedForCountry(
+    country,
+    language,
+    durationMinutes,
+  );
+
+  const slotSeconds = Number(slot);
+
+  const surroundingSlots = await getSlotsForThreeWeeks({
+    country,
+    provider_id,
+    startDate,
+  }).catch((err) => {
+    throw err;
+  });
+
+  const openSlots = collectOpenSlots(surroundingSlots);
+  const existing = openSlots.find((x) => x.time === slotSeconds);
+  if (!existing) throw slotNotAvailable(language);
+
+  // Growing a slot can run it into the next one.
+  const overlapping = openSlots.find(
+    (other) =>
+      other.time !== slotSeconds &&
+      doSlotsOverlap(
+        slotSeconds,
+        effectiveDuration,
+        other.time,
+        other.duration,
+      ),
+  );
+  if (overlapping) throw slotOverlapsExistingSlot(language);
+
+  // Shrinking a slot must not cut a consultation that is already booked in it.
+  const bookedConsultation = await getOverlappingConsultationByProviderIdQuery({
+    poolCountry: country,
+    providerId: provider_id,
+    time: slotSeconds,
+    durationMinutes: existing.duration,
+  })
+    .then((res) => res.rows[0])
+    .catch((err) => {
+      throw err;
+    });
+
+  if (
+    bookedConsultation &&
+    (bookedConsultation.duration_minutes || DEFAULT_SLOT_MINUTES) >
+      effectiveDuration
+  ) {
+    throw slotDurationConflictsWithConsultation(language);
+  }
+
+  await updateSlotDurationQuery({
+    poolCountry: country,
+    provider_id,
+    startDate,
+    slot,
+    durationMinutes: effectiveDuration,
+  }).catch((err) => {
+    throw err;
+  });
+
+  return { success: true };
+};
+
+/**
+ * Clear many slots at once, across all three pools.
+ *
+ * The scheduler template's "this day is unavailable" path used to issue one
+ * request per slot. On a 30-minute grid that is 48 round trips per day per week.
+ */
+export const clearAvailabilityDay = async ({
+  country,
+  provider_id,
+  startDate,
+  slots,
+}) => {
+  const slotSeconds = slots
+    .map((slot) => Number(slot))
+    .filter((n) => !Number.isNaN(n));
+
+  if (slotSeconds.length === 0) return { success: true };
+
+  await clearAvailabilitySlotsBulkQuery({
+    poolCountry: country,
+    provider_id,
+    startDate,
+    slotSeconds,
+  }).catch((err) => {
+    throw err;
+  });
+
   return { success: true };
 };

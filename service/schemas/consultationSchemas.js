@@ -23,6 +23,9 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   }),
   userId: yup.string().uuid().notRequired(),
   requestedBy: yup.string().oneOf(["client", "provider"]).required(),
+  // How long the client asked for. Validated against the provider's contiguous
+  // open slots; omitted means "whatever this slot is".
+  durationMinutes: yup.number().oneOf([30, 60]).notRequired(),
 });
 
 export const scheduleConsultationSchema = yup.object().shape({
