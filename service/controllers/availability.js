@@ -687,9 +687,12 @@ export const getAvailabilitySingleDay = async ({
     }
   });
 
-  // Each slot is offered at its own length only. Clients do not choose a
-  // duration, so there is nothing to combine across adjacent slots.
-  return offered;
+  // `time` goes out as an ISO string, not epoch ms: installed mobile builds
+  // parse it with their own date parser and crash on a number.
+  return offered.map((slot) => ({
+    ...slot,
+    time: new Date(slot.time).toISOString(),
+  }));
 };
 
 export const clearAvailabilitySlot = async ({
