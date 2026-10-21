@@ -774,9 +774,8 @@ export const scheduleConsultation = async ({
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
     // Check if slot is still available
-    // Re-check at the length this consultation was actually booked at. Without
-    // it, an hour assembled from two half-hour slots would be re-validated as a
-    // single half hour and silently recreated at 30 minutes.
+    // Re-check at the length this consultation was booked at, so the slot is
+    // only reused if it still has that same length.
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,
@@ -1074,9 +1073,8 @@ export const suggestConsultation = async ({
     const consultationTime = new Date(consultation.time).getTime() / 1000;
 
     // Check if slot is still available
-    // Re-check at the length this consultation was actually booked at. Without
-    // it, an hour assembled from two half-hour slots would be re-validated as a
-    // single half hour and silently recreated at 30 minutes.
+    // Re-check at the length this consultation was booked at, so the slot is
+    // only reused if it still has that same length.
     const isSlotAvailable = await checkIsSlotAvailable(
       country,
       consultation.provider_detail_id,

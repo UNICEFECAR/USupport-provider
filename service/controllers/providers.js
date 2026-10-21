@@ -121,7 +121,7 @@ export const getAllProviders = async ({
     console.log(language, "language");
     const languageId = headerLanguage
       ? await getLanguageIdByAlpha2Query(headerLanguage).then(
-          (res) => res.rows[0]?.language_id ?? null,
+          (res) => res.rows[0]?.language_id ?? null
         )
       : null;
 
@@ -176,7 +176,7 @@ export const getAllProviders = async ({
       const languageIds = provider.languages;
 
       const languages = activeLanguages.filter((x) =>
-        languageIds.includes(x.language_id),
+        languageIds.includes(x.language_id)
       );
 
       if (language && !languages.some((x) => x.alpha2 === language)) {
@@ -184,7 +184,7 @@ export const getAllProviders = async ({
       }
 
       providers[i].specializations = formatSpecializations(
-        providers[i].specializations,
+        providers[i].specializations
       );
 
       if (sex) {
@@ -209,7 +209,7 @@ export const getAllProviders = async ({
         country,
         providers[i].provider_detail_id,
         providers[i].campaign_id,
-        24, // Minimum 24 hours lead time for slots
+        24 // Minimum 24 hours lead time for slots
       );
       providers[i].earliest_available_slot = earliestSlot?.slot;
       providers[i].earliest_available_slot_duration_minutes =
@@ -218,7 +218,7 @@ export const getAllProviders = async ({
       providers[i].latest_available_slot = await getLatestAvailableSlot(
         country,
         providers[i].provider_detail_id,
-        providers[i].campaign_id,
+        providers[i].campaign_id
       );
 
       if (
@@ -226,11 +226,11 @@ export const getAllProviders = async ({
         providers[i].latest_available_slot
       ) {
         const providerEarliestAvailable = new Date(
-          providers[i].earliest_available_slot,
+          providers[i].earliest_available_slot
         );
 
         const providerLatestAvailable = new Date(
-          providers[i].latest_available_slot,
+          providers[i].latest_available_slot
         );
 
         if (availableAfter) {
@@ -291,7 +291,7 @@ export const getProviderById = async ({
 }) => {
   const languageId = language
     ? await getLanguageIdByAlpha2Query(language).then(
-        (res) => res.rows[0]?.language_id ?? null,
+        (res) => res.rows[0]?.language_id ?? null
       )
     : null;
 
@@ -313,7 +313,7 @@ export const getProviderById = async ({
       });
 
       provider.specializations = formatSpecializations(
-        provider.specializations,
+        provider.specializations
       );
 
       provider.total_consultations = await getAllConsultationsCountQuery({
@@ -334,7 +334,7 @@ export const getProviderById = async ({
         country,
         provider_id,
         campaignId,
-        24,
+        24
       );
       provider.earliest_available_slot = earliestSlot?.slot;
       provider.earliest_available_slot_duration_minutes =
@@ -387,21 +387,14 @@ export const updateProviderData = async ({
   language,
   provider_id,
   user_id,
-  name,
-  patronym,
-  surname,
-  nickname,
+  isRequestedByAdmin = false,
   email,
   currentEmail,
   phone,
   specializations,
-  street,
-  city,
   postcode,
-  education,
   sex,
   consultationPrice,
-  description,
   workWithIds,
   currentWorkWithIds,
   languageIds,
@@ -455,7 +448,8 @@ export const updateProviderData = async ({
     provider_id,
     email,
     phone,
-    specializations,
+    // Only an admin may change specializations; null leaves them untouched.
+    specializations: isRequestedByAdmin ? specializations ?? null : null,
     postcode,
     sex,
     consultationPrice,
@@ -468,10 +462,10 @@ export const updateProviderData = async ({
         // Compare workWithIds and currentWorkWithIds arrays
         // and delete or insert new workWithIds
         const workWithIdsToDelete = currentWorkWithIds?.filter(
-          (id) => !workWithIds.includes(id), // id is not in workWithIds array
+          (id) => !workWithIds.includes(id) // id is not in workWithIds array
         );
         const workWithIdsToInsert = workWithIds?.filter(
-          (id) => !currentWorkWithIds.includes(id), // id is not in currentWorkWithIds array
+          (id) => !currentWorkWithIds.includes(id) // id is not in currentWorkWithIds array
         );
 
         // For each workWithId to insert, insert it
@@ -499,10 +493,10 @@ export const updateProviderData = async ({
         // Compare languageIds and currentLanguageIds arrays
         // and delete or insert new languageIds
         const languageIdsToDelete = currentLanguageIds?.filter(
-          (id) => !languageIds.includes(id), // id is not in languageIds array
+          (id) => !languageIds.includes(id) // id is not in languageIds array
         );
         const languageIdsToInsert = languageIds?.filter(
-          (id) => !currentLanguageIds.includes(id), // id is not in currentLanguageIds array
+          (id) => !currentLanguageIds.includes(id) // id is not in currentLanguageIds array
         );
 
         // For each languageId to insert, insert it
@@ -530,11 +524,11 @@ export const updateProviderData = async ({
         // Insert new organizations and delete missing ones if there are any provided
         if (organizationIds) {
           const organizationsToInsert = organizationIds?.filter(
-            (id) => !currentOrganizationIds.includes(id),
+            (id) => !currentOrganizationIds.includes(id)
           );
 
           const organizationsToDelete = currentOrganizationIds?.filter(
-            (id) => !organizationIds.includes(id),
+            (id) => !organizationIds.includes(id)
           );
 
           // Check for future consultations and slots before removing organizations
@@ -757,8 +751,8 @@ export const getAllClients = async ({ country, providerId }) => {
       // Get all clients ids
       const clientDetailIds = Array.from(
         new Set(
-          consultations.map((consultation) => consultation.client_detail_id),
-        ),
+          consultations.map((consultation) => consultation.client_detail_id)
+        )
       );
 
       let clientsDetails = await getMultipleClientsDataByIDs({
@@ -778,7 +772,7 @@ export const getAllClients = async ({ country, providerId }) => {
 
       // Get all campaign ids
       const campaignIds = Array.from(
-        new Set(consultations.map((consultation) => consultation.campaign_id)),
+        new Set(consultations.map((consultation) => consultation.campaign_id))
       );
 
       // Get the data for each campaign
@@ -802,7 +796,7 @@ export const getAllClients = async ({ country, providerId }) => {
 
       for (let i = 0; i < clientDetailIds.length; i++) {
         const client = clientsDetails.find(
-          (x) => x.client_detail_id === clientDetailIds[i],
+          (x) => x.client_detail_id === clientDetailIds[i]
         );
         const clientName = client.name;
         const clientSurname = client.surname;
@@ -835,11 +829,11 @@ export const getAllClients = async ({ country, providerId }) => {
         const campaignId = consultation.campaign_id;
 
         const clientIndex = clients.findIndex(
-          (client) => client.client_detail_id === clientDetailId,
+          (client) => client.client_detail_id === clientDetailId
         );
 
         const campaignData = campaignCouponPrices.find(
-          (x) => x.campaign_id === campaignId,
+          (x) => x.campaign_id === campaignId
         );
 
         const couponPrice = campaignData?.price_per_coupon;
@@ -896,7 +890,7 @@ export const getActivities = async ({ country, providerId }) => {
 
   // Make sure there are no duplicate client id's
   const clientDetailIds = Array.from(
-    new Set(activities.map((x) => x.client_detail_id)),
+    new Set(activities.map((x) => x.client_detail_id))
   );
 
   const clientDetails = await getMultipleClientsDataByIDs({
@@ -933,11 +927,11 @@ export const getActivities = async ({ country, providerId }) => {
 
   activities.forEach((consultation, index) => {
     const clientData = clientDetails.find(
-      (x) => x.client_detail_id === consultation.client_detail_id,
+      (x) => x.client_detail_id === consultation.client_detail_id
     );
 
     const campaignName = campaignNames.find(
-      (x) => x.campaign_id === consultation.campaign_id,
+      (x) => x.campaign_id === consultation.campaign_id
     )?.name;
 
     activities[index].campaign_name = campaignName;
@@ -968,7 +962,7 @@ export const getRandomProviders = async ({ country, numberOfProviders }) => {
 
   for (let i = 0; i < providers.length; i++) {
     providers[i].specializations = formatSpecializations(
-      providers[i].specializations,
+      providers[i].specializations
     );
 
     delete providers[i].street;
@@ -1028,7 +1022,7 @@ export const getCampaigns = async ({ country, providerId }) => {
   for (let i = 0; i < data.length; i++) {
     const campaignId = data[i].campaign_id;
     const conductedConsultations = conductedConsultationsForCampaign.find(
-      (x) => x.campaign_id === campaignId,
+      (x) => x.campaign_id === campaignId
     );
     data[i].conducted_consultations = conductedConsultations
       ? Number(conductedConsultations.count)
@@ -1087,7 +1081,7 @@ export const getConsultationsForCampaign = async ({
     });
 
   const clientDetailIds = Array.from(
-    new Set(consultations.map((x) => x.client_detail_id)),
+    new Set(consultations.map((x) => x.client_detail_id))
   );
   const clientsData = await getMultipleClientsDataByIDs({
     poolCountry: country,
@@ -1106,7 +1100,7 @@ export const getConsultationsForCampaign = async ({
 
   consultations.forEach((consultation, index) => {
     const clientData = clientsData.find(
-      (x) => x.client_detail_id === consultation.client_detail_id,
+      (x) => x.client_detail_id === consultation.client_detail_id
     );
     const clientName = clientData.name;
     const clientSurname = clientData.surname;
@@ -1217,9 +1211,7 @@ export const removeProvidersCache = async ({ country, providerIds }) => {
   });
 
   userIds.forEach((userId) => {
-    promises.push(
-      deleteCacheItemsByPattern(`provider_${country}_${userId}_*`),
-    );
+    promises.push(deleteCacheItemsByPattern(`provider_${country}_${userId}_*`));
   });
 
   await Promise.all(promises);

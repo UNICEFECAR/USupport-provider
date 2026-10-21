@@ -171,6 +171,10 @@ router.put("/", populateProvider, async (req, res, next) => {
   const { translations } = req.body;
   const payload = { ...req.body };
   delete payload.translations;
+  // A provider may not change their own specializations - only an admin can.
+  // Dropped here as well as in the controller so a crafted request cannot even
+  // reach the validator with them.
+  delete payload.specializations;
 
   return await updateProviderDataSchema
     .noUnknown(true)
@@ -185,6 +189,8 @@ router.put("/", populateProvider, async (req, res, next) => {
       currentWorkWithIds,
       currentOrganizationIds,
       ...payload,
+      // After the spread: the request body must never be able to set this.
+      isRequestedByAdmin: false,
     })
     .then((validated) => updateProviderData({ ...validated, translations }))
     .then((result) => res.status(200).send(result))
@@ -265,6 +271,8 @@ router.put("/by-id/admin", async (req, res, next) => {
       currentWorkWithIds,
       currentOrganizationIds,
       ...payload,
+      // After the spread, for the same reason as the self-service route.
+      isRequestedByAdmin: true,
     })
     .then((validated) => updateProviderData({ ...validated, translations }))
     .catch(next);

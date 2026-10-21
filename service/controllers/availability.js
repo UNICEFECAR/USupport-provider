@@ -16,6 +16,8 @@ import {
 
 import { getCountryDetailsByAlpha2Query } from "#queries/users";
 
+import { getProviderSpecializationsQuery } from "#queries/providers";
+
 import { getCampaignDataByIdQuery } from "#queries/sponsors";
 
 import {
@@ -29,6 +31,7 @@ import {
   invalidSlotDuration,
   slotDurationConflictsWithConsultation,
   slotDurationNotEnabledForCountry,
+  slotDurationNotEnabledForProvider,
   slotNotAvailable,
 } from "#utils/errors";
 
@@ -47,50 +50,24 @@ import {
   getSlotDuration,
   getSlotTimestamp,
   isAllowedSlotDuration,
-  indexSlotsByStart,
-  getBookableDurations,
 } from "#utils/slotDuration";
 
+import { PEER_SUPPORT } from "#utils/specializations";
+
 /**
- * Every slot the provider has open in the given three-week window, as
- * `{ time, duration }` in unix seconds / minutes, across all three pools.
- *
- * Overlap has to be judged against the union: a 60-minute normal slot at 16:00
- * conflicts with a 30-minute organization slot at 16:30 just as much as with
- * another normal one.
+ * 30-minute slots need the country flag and the peer_support specialization.
+ * An hour is always allowed. Returns the effective duration.
  */
-/**
- * Is this country allowed to use the given slot length?
- *
- * 30-minute slots are switched on per country with `country.has_30_min_slots`.
- * The check lives server-side as well as in the UI so that turning the flag off
- * actually prevents half-hour slots being created, rather than only hiding the
- * control.
- *
- * Note this gates *creating* slots, not booking them: slots opened while the
- * flag was on stay bookable and keep their length if it is later switched off.
- *
- * Returns the effective length so callers write a real number rather than
- * whatever the request happened to contain.
- *
- * @param {string} country alpha-2 code
- * @param {string} language
- * @param {number|null|undefined} durationMinutes
- * @returns {Promise<number>}
- */
-const assertDurationAllowedForCountry = async (
+const assertDurationAllowed = async (
   country,
   language,
+  providerId,
   durationMinutes,
 ) => {
-  // A missing length means the caller does not care, which has always meant an
-  // hour. An explicitly wrong one (45) is still an error - null is absence, 45
-  // is a mistake.
   const minutes = durationMinutes ?? DEFAULT_SLOT_MINUTES;
 
   if (!isAllowedSlotDuration(minutes)) throw invalidSlotDuration(language);
 
-  // An hour is always allowed - it is what every country had before this flag.
   if (Number(minutes) === DEFAULT_SLOT_MINUTES) return DEFAULT_SLOT_MINUTES;
 
   const countryDetails = await getCountryDetailsByAlpha2Query(country)
@@ -106,9 +83,27 @@ const assertDurationAllowedForCountry = async (
     throw slotDurationNotEnabledForCountry(language);
   }
 
+  if (!(await isPeerSupportProvider({ country, providerId }))) {
+    throw slotDurationNotEnabledForProvider(language);
+  }
+
   return Number(minutes);
 };
 
+export const isPeerSupportProvider = async ({ country, providerId }) => {
+  const specializations = await getProviderSpecializationsQuery({
+    poolCountry: country,
+    providerDetailId: providerId,
+  })
+    .then((res) => res.rows[0]?.specializations || [])
+    .catch((err) => {
+      throw err;
+    });
+
+  return (specializations || []).includes(PEER_SUPPORT);
+};
+
+// All open slots across the three pools, one per start time.
 const collectOpenSlots = (slotsData) => {
   const durations = slotsData.slot_durations || {};
   const seen = new Map();
@@ -172,9 +167,10 @@ export const updateAvailabilitySingleWeek = async ({
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
 
-  const effectiveDuration = await assertDurationAllowedForCountry(
+  const effectiveDuration = await assertDurationAllowed(
     country,
     language,
+    provider_id,
     durationMinutes,
   );
 
@@ -361,6 +357,13 @@ export const updateAvailabilityByTemplate = async ({
     });
 
   const hasNormalSlots = !!countryDetails.has_normal_slots;
+
+  // A template can carry hundreds of slots, so resolve "may this provider open
+  // half-hour slots at all?" once here rather than per slot in the loop below.
+  const canUseShortSlots =
+    !!countryDetails.has_30_min_slots &&
+    (await isPeerSupportProvider({ country, providerId: provider_id }));
+
   const hasCampaigns =
     Array.isArray(campaignIds) && campaignIds.filter(Boolean).length > 0;
   const hasOrganizations =
@@ -428,13 +431,11 @@ export const updateAvailabilityByTemplate = async ({
         rawSlot?.duration_minutes ?? DEFAULT_SLOT_MINUTES,
       );
       if (!isAllowedSlotDuration(duration)) throw invalidSlotDuration(language);
-      // The template already loaded the country, so gate against that rather
-      // than re-querying once per slot.
-      if (
-        Number(duration) !== DEFAULT_SLOT_MINUTES &&
-        !countryDetails.has_30_min_slots
-      ) {
-        throw slotDurationNotEnabledForCountry(language);
+      // Eligibility was resolved once above, so this is a plain check.
+      if (Number(duration) !== DEFAULT_SLOT_MINUTES && !canUseShortSlots) {
+        throw countryDetails.has_30_min_slots
+          ? slotDurationNotEnabledForProvider(language)
+          : slotDurationNotEnabledForCountry(language);
       }
       return { seconds, duration };
     });
@@ -686,17 +687,9 @@ export const getAvailabilitySingleDay = async ({
     }
   });
 
-  // Tell the client which consultation lengths each start time can actually
-  // support. Two adjacent 30-minute slots can be booked as one hour, so the
-  // booking UI needs more than each slot's own length to build its options.
-  const slotsByStart = indexSlotsByStart(
-    offered.map((slot) => ({ ...slot, time: slot.time / 1000 })),
-  );
-
-  return offered.map((slot) => ({
-    ...slot,
-    available_durations: getBookableDurations(slot.time / 1000, slotsByStart),
-  }));
+  // Each slot is offered at its own length only. Clients do not choose a
+  // duration, so there is nothing to combine across adjacent slots.
+  return offered;
 };
 
 export const clearAvailabilitySlot = async ({
@@ -779,9 +772,10 @@ export const updateSlotDuration = async ({
   slot,
   durationMinutes,
 }) => {
-  const effectiveDuration = await assertDurationAllowedForCountry(
+  const effectiveDuration = await assertDurationAllowed(
     country,
     language,
+    provider_id,
     durationMinutes,
   );
 

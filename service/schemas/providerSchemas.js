@@ -100,6 +100,9 @@ export const getProviderByIdSchema = yup.object().shape({
 
 export const updateProviderDataSchema = yup.object().shape({
   provider_id: yup.string().uuid().required(),
+  // Set by the route, never by the request body: only the admin route passes
+  // true, and only then may `specializations` be written.
+  isRequestedByAdmin: yup.boolean().notRequired().default(false),
   user_id: yup.string().uuid().required(),
   country: yup.string().required(),
   language: yup.string().required(),

@@ -25,8 +25,6 @@ import {
   doSlotsOverlap,
   getSlotDuration,
   getSlotTimestamp,
-  indexSlotsByStart,
-  getBookableDurations,
 } from "#utils/slotDuration";
 
 import {
@@ -519,16 +517,11 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
  * Returns the matching slot (annotated with the length actually booked) or
  * `false`.
  *
- * A client may ask for a length via `requestedDurationMinutes` - that is how
- * booking 01:00-02:00 works when the provider opened 01:00 and 01:30 as two
- * separate half-hour slots. The request is validated, never trusted: the length
- * has to be tiled exactly by the provider's own contiguous open slots in the
- * same pool. Ask for nothing and you get the slot's own length, which is what
- * every caller did before combining was possible.
+ * A slot is bookable at its own length only. `requestedDurationMinutes`, when
+ * given, must equal that length - it is how the pending -> scheduled re-checks
+ * confirm a consultation still fits; clients do not choose a duration.
  *
- * Which pool a slot belongs to is decided by `campaign_id` / `organization_id`,
- * not by whether the payload happens to be an object: slot payloads are objects
- * for every pool now.
+ * Which pool the request points at is resolved by `findRequestedSlot`.
  *
  * @param {string} country
  * @param {string} providerId
@@ -536,16 +529,35 @@ export const checkSlotsWithinWeek = (startDate, slots) => {
  * @param {number} [requestedDurationMinutes]
  * @returns {Promise<false|object>}
  */
+/**
+ * The stored slot a booking request points at. An object with no ids is an
+ * organization slot - installed mobile builds send it that way - falling back
+ * to normal.
+ */
+export const findRequestedSlot = (slotTime, time, slotsData) => {
+  const at = (pool) =>
+    (pool || []).find((slot) => getSlotTimestamp(slot) === time);
+
+  const isObject = typeof slotTime === "object" && slotTime !== null;
+
+  if (!isObject) return at(slotsData.slots);
+  if (slotTime.campaign_id) return at(slotsData.campaign_slots);
+  if (slotTime.organization_id) {
+    return (slotsData.organization_slots || []).find(
+      (slot) =>
+        getSlotTimestamp(slot) === time &&
+        slot.organization_id === slotTime.organization_id,
+    );
+  }
+  return at(slotsData.organization_slots) ?? at(slotsData.slots);
+};
+
 export const checkIsSlotAvailable = async (
   country,
   providerId,
   slotTime,
   requestedDurationMinutes,
 ) => {
-  const isWithCoupon = !!slotTime?.campaign_id;
-  const isOrganizationSlot = !!slotTime?.organization_id;
-  const isNormalSlot = !isWithCoupon && !isOrganizationSlot;
-
   const time = Number(getSlotTimestamp(slotTime));
   // Check if provider is available at the time.
   // Three weeks rather than one: an hour starting at 23:30 on a Sunday is tiled
@@ -560,38 +572,21 @@ export const checkIsSlotAvailable = async (
     throw err;
   });
 
-  const slotsToLoopThrough = isNormalSlot
-    ? slotsData.slots
-    : isWithCoupon
-    ? slotsData.campaign_slots
-    : slotsData.organization_slots;
-
-  const slot = slotsToLoopThrough.find(
-    (slot) => getSlotTimestamp(slot) === time,
-  );
+  const slot = findRequestedSlot(slotTime, time, slotsData);
 
   if (!slot) return false;
 
-  // Which lengths this start time can support, given what the provider has open.
-  const slotsByStart = indexSlotsByStart(
-    slotsToLoopThrough.map((entry) => {
-      const entryTime = getSlotTimestamp(entry);
-      return {
-        time: entryTime,
-        duration_minutes: getSlotDuration(entryTime, slotsData.slot_durations),
-        campaign_id: entry?.campaign_id || null,
-        organization_id: entry?.organization_id || null,
-      };
-    }),
-  );
-  const bookableDurations = getBookableDurations(time, slotsByStart);
+  // A slot is bookable at its own length and nothing else. Clients do not pick
+  // a duration, so two adjacent 30-minute slots are two bookings, never one
+  // 60-minute booking tiled across both.
+  const slotDuration = getSlotDuration(time, slotsData.slot_durations);
 
   const durationMinutes =
     requestedDurationMinutes == null
-      ? getSlotDuration(time, slotsData.slot_durations)
+      ? slotDuration
       : Number(requestedDurationMinutes);
 
-  if (!bookableDurations.includes(durationMinutes)) return false;
+  if (durationMinutes !== slotDuration) return false;
 
   // Check that no consultation of this provider overlaps the slot. Not just one
   // starting at the same instant: a 60-minute consultation at 16:00 also blocks

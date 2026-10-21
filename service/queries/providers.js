@@ -311,7 +311,10 @@ export const updateProviderDataQuery = async ({
       UPDATE provider_detail
       SET email = $1,
           phone = $2,
-          specializations = $3,
+          -- A null means "leave as is". Only an admin may change a provider's
+          -- specializations, so the self-service path sends null here and the
+          -- column keeps whatever the admin last set.
+          specializations = COALESCE($3, specializations),
           postcode = $4,
           sex = $5,
           consultation_price = $6,
@@ -752,6 +755,20 @@ export const getProviderStatusQuery = async ({
   return await getDBPool("piiDb", poolCountry).query(
     `
         SELECT status
+        FROM provider_detail
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
+  );
+};
+
+export const getProviderSpecializationsQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT specializations
         FROM provider_detail
         WHERE provider_detail_id = $1
       `,

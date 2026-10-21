@@ -1,9 +1,10 @@
 import * as yup from "yup";
 
+// The availability API returns these as null when unset, and clients echo the slot back.
 const timeCampaignSchema = yup.object().shape({
   time: yup.string().required(),
-  campaign_id: yup.string().uuid().notRequired(),
-  organization_id: yup.string().uuid().notRequired(),
+  campaign_id: yup.string().uuid().nullable().notRequired(),
+  organization_id: yup.string().uuid().nullable().notRequired(),
 });
 
 const timeSchema = yup.string().required();
