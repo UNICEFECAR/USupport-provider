@@ -218,6 +218,14 @@ export const slotDurationConflictsWithConsultation = (language) => {
   return error;
 };
 
+export const slotDurationMustBeThirtyMinutes = (language) => {
+  const error = new Error();
+  error.message = t("slot_duration_must_be_30_error", language);
+  error.name = "SLOT DURATION MUST BE 30 MINUTES";
+  error.status = 400;
+  return error;
+};
+
 export const slotDurationNotEnabledForProvider = (language) => {
   const error = new Error();
   error.message = t("slot_duration_not_enabled_for_provider_error", language);

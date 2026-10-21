@@ -32,6 +32,7 @@ import {
   slotDurationConflictsWithConsultation,
   slotDurationNotEnabledForCountry,
   slotDurationNotEnabledForProvider,
+  slotDurationMustBeThirtyMinutes,
   slotNotAvailable,
 } from "#utils/errors";
 
@@ -46,6 +47,7 @@ import {
 
 import {
   DEFAULT_SLOT_MINUTES,
+  SLOT_STEP_MINUTES,
   doSlotsOverlap,
   getSlotDuration,
   getSlotTimestamp,
@@ -55,21 +57,22 @@ import {
 import { PEER_SUPPORT } from "#utils/specializations";
 
 /**
- * 30-minute slots need the country flag and the peer_support specialization.
- * An hour is always allowed. Returns the effective duration.
+ * The slot length is fixed per provider: 30 minutes for peer-support providers
+ * in countries with the flag on, 60 for everyone else. A missing duration gets
+ * that length; any other length is refused.
  */
-const assertDurationAllowed = async (
-  country,
-  language,
-  providerId,
-  durationMinutes,
-) => {
-  const minutes = durationMinutes ?? DEFAULT_SLOT_MINUTES;
+const checkSlotDuration = (requested, isShort, countryEnabled, language) => {
+  const required = isShort ? SLOT_STEP_MINUTES : DEFAULT_SLOT_MINUTES;
+  if (requested == null) return required;
+  if (!isAllowedSlotDuration(requested)) throw invalidSlotDuration(language);
+  if (Number(requested) === required) return required;
+  if (isShort) throw slotDurationMustBeThirtyMinutes(language);
+  throw countryEnabled
+    ? slotDurationNotEnabledForProvider(language)
+    : slotDurationNotEnabledForCountry(language);
+};
 
-  if (!isAllowedSlotDuration(minutes)) throw invalidSlotDuration(language);
-
-  if (Number(minutes) === DEFAULT_SLOT_MINUTES) return DEFAULT_SLOT_MINUTES;
-
+const resolveSlotDuration = async (country, language, providerId, requested) => {
   const countryDetails = await getCountryDetailsByAlpha2Query(country)
     .then((res) => {
       if (res.rowCount === 0) throw countryNotFound(language);
@@ -78,16 +81,10 @@ const assertDurationAllowed = async (
     .catch((err) => {
       throw err;
     });
-
-  if (!countryDetails.has_30_min_slots) {
-    throw slotDurationNotEnabledForCountry(language);
-  }
-
-  if (!(await isPeerSupportProvider({ country, providerId }))) {
-    throw slotDurationNotEnabledForProvider(language);
-  }
-
-  return Number(minutes);
+  const countryEnabled = !!countryDetails.has_30_min_slots;
+  const isShort =
+    countryEnabled && (await isPeerSupportProvider({ country, providerId }));
+  return checkSlotDuration(requested, isShort, countryEnabled, language);
 };
 
 export const isPeerSupportProvider = async ({ country, providerId }) => {
@@ -162,12 +159,12 @@ export const updateAvailabilitySingleWeek = async ({
   slot,
   campaignId,
   organizationId,
-  durationMinutes = DEFAULT_SLOT_MINUTES,
+  durationMinutes,
 }) => {
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
 
-  const effectiveDuration = await assertDurationAllowed(
+  const effectiveDuration = await resolveSlotDuration(
     country,
     language,
     provider_id,
@@ -198,6 +195,15 @@ export const updateAvailabilitySingleWeek = async ({
   );
 
   if (overlapping) throw slotOverlapsExistingSlot(language);
+
+  // The length is shared by every pool at one start time, so a slot of another
+  // length already open here (e.g. an older 60-minute one) must not be re-lengthed.
+  const sameStart = collectOpenSlots(surroundingSlots).find(
+    (existing) => existing.time === slotSeconds,
+  );
+  if (sameStart && sameStart.duration !== effectiveDuration) {
+    throw slotOverlapsExistingSlot(language);
+  }
 
   let campaignStartDate;
   let campaignEndDate;
@@ -423,20 +429,14 @@ export const updateAvailabilityByTemplate = async ({
     if (!checkSlotsWithinWeek(startDate, slots))
       throw slotsNotWithinWeek(language);
 
-    // A template slot is either a bare timestamp (the old, hour-long shape) or
-    // { time, duration_minutes }. Normalise once, here.
     const normalizedSlots = slots.map((rawSlot) => {
       const seconds = Number(getSlotTimestamp(rawSlot));
-      const duration = Number(
-        rawSlot?.duration_minutes ?? DEFAULT_SLOT_MINUTES,
+      const duration = checkSlotDuration(
+        rawSlot?.duration_minutes,
+        canUseShortSlots,
+        !!countryDetails.has_30_min_slots,
+        language,
       );
-      if (!isAllowedSlotDuration(duration)) throw invalidSlotDuration(language);
-      // Eligibility was resolved once above, so this is a plain check.
-      if (Number(duration) !== DEFAULT_SLOT_MINUTES && !canUseShortSlots) {
-        throw countryDetails.has_30_min_slots
-          ? slotDurationNotEnabledForProvider(language)
-          : slotDurationNotEnabledForCountry(language);
-      }
       return { seconds, duration };
     });
 
@@ -772,7 +772,7 @@ export const updateSlotDuration = async ({
   slot,
   durationMinutes,
 }) => {
-  const effectiveDuration = await assertDurationAllowed(
+  const effectiveDuration = await resolveSlotDuration(
     country,
     language,
     provider_id,
