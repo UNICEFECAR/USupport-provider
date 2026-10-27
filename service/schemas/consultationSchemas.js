@@ -1,9 +1,10 @@
 import * as yup from "yup";
 
+// The availability API returns these as null when unset, and clients echo the slot back.
 const timeCampaignSchema = yup.object().shape({
   time: yup.string().required(),
-  campaign_id: yup.string().uuid().notRequired(),
-  organization_id: yup.string().uuid().notRequired(),
+  campaign_id: yup.string().uuid().nullable().notRequired(),
+  organization_id: yup.string().uuid().nullable().notRequired(),
 });
 
 const timeSchema = yup.string().required();
@@ -23,6 +24,9 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   }),
   userId: yup.string().uuid().notRequired(),
   requestedBy: yup.string().oneOf(["client", "provider"]).required(),
+  // How long the client asked for. Validated against the provider's contiguous
+  // open slots; omitted means "whatever this slot is".
+  durationMinutes: yup.number().oneOf([30, 60]).notRequired(),
 });
 
 export const scheduleConsultationSchema = yup.object().shape({

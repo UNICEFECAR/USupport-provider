@@ -4,6 +4,7 @@ import {
 } from "#queries/consultation";
 
 import { getAllActiveCountries } from "#queries/countries";
+import { PROGRAM_COUNTRIES } from "#utils/programCountries";
 
 export const clearPendingConsultationsJob = async () => {
   const MIN_TO_TIMEOUT = 5;
@@ -18,6 +19,7 @@ export const clearPendingConsultationsJob = async () => {
   // Update all pending consultations for each country
   for (let i = 0; i < countries?.length; i++) {
     const country = countries[i];
+    if (PROGRAM_COUNTRIES.includes(country.alpha2)) continue;
     const poolCountry = country.alpha2;
 
     await updateStatusOfAllPendingConsultationsToTimeoutQuery({

@@ -311,7 +311,10 @@ export const updateProviderDataQuery = async ({
       UPDATE provider_detail
       SET email = $1,
           phone = $2,
-          specializations = $3,
+          -- A null means "leave as is". Only an admin may change a provider's
+          -- specializations, so the self-service path sends null here and the
+          -- column keeps whatever the admin last set.
+          specializations = COALESCE($3, specializations),
           postcode = $4,
           sex = $5,
           consultation_price = $6,
@@ -524,10 +527,10 @@ export const deleteProviderImageQuery = async ({ poolCountry, provider_id }) =>
 export const getActivitiesQuery = async ({ poolCountry, providerId }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
-      SELECT client_detail_id, provider_detail_id, time, status, price, type, transaction_log.campaign_id , consultation.created_at
+      SELECT client_detail_id, provider_detail_id, time, consultation.duration_minutes, status, price, type, transaction_log.campaign_id , consultation.created_at
       FROM consultation
         INNER JOIN transaction_log ON consultation.consultation_id = transaction_log.consultation_id
-      WHERE provider_detail_id = $1 AND (status = 'finished' OR (status = 'scheduled' AND now() > time + interval '1 hour'))
+      WHERE provider_detail_id = $1 AND (status = 'finished' OR (status = 'scheduled' AND now() > time + (duration_minutes * INTERVAL '1 minute')))
     `,
     [providerId]
   );
@@ -752,6 +755,20 @@ export const getProviderStatusQuery = async ({
   return await getDBPool("piiDb", poolCountry).query(
     `
         SELECT status
+        FROM provider_detail
+        WHERE provider_detail_id = $1
+      `,
+    [providerDetailId]
+  );
+};
+
+export const getProviderSpecializationsQuery = async ({
+  poolCountry,
+  providerDetailId,
+}) => {
+  return await getDBPool("piiDb", poolCountry).query(
+    `
+        SELECT specializations
         FROM provider_detail
         WHERE provider_detail_id = $1
       `,
