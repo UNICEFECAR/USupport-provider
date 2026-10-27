@@ -131,3 +131,72 @@ export const getConsultationTimeSchema = yup.object().shape({
   consultationId: yup.string().uuid().required(),
   userId: yup.string().uuid().required(),
 });
+
+const reportShortText = yup.string().max(100).nullable();
+const reportConnectionState = yup
+  .string()
+  .oneOf([
+    "online",
+    "reconnecting",
+    "restored",
+    "peer_lost",
+    "peer_poor",
+    "poor",
+    "peer_restored",
+    "connecting",
+    "connected",
+    "disconnected",
+    "unknown",
+  ])
+  .nullable();
+export const createProblemReportSchema = yup
+  .object({
+    consultationId: yup.string().uuid().required(),
+    idempotencyKey: yup.string().uuid().required(),
+    message: yup
+      .string()
+      .required()
+      .test(
+        "message-length",
+        "Message must contain between 1 and 2,000 characters",
+        (value) =>
+          typeof value === "string" &&
+          [...value.trim()].length >= 1 &&
+          [...value.trim()].length <= 2000
+      ),
+    source: yup
+      .string()
+      .oneOf(["web", "ios_app", "android_app", "unknown"])
+      .required(),
+    deviceType: yup
+      .string()
+      .oneOf(["phone", "tablet", "desktop", "unknown"])
+      .required(),
+    appVersion: reportShortText,
+    browserName: reportShortText,
+    browserVersion: reportShortText,
+    osName: reportShortText,
+    osVersion: reportShortText,
+    interfaceLanguage: yup.string().max(16).nullable(),
+    reporterTimezone: reportShortText,
+    callContext: yup
+      .object({
+        clientPresent: yup.boolean().nullable(),
+        providerPresent: yup.boolean().nullable(),
+        connectionState: reportConnectionState,
+        connectionQuality: yup
+          .string()
+          .oneOf(["good", "poor", "lost", "unknown"])
+          .nullable(),
+        cameraOn: yup.boolean().nullable(),
+        microphoneOn: yup.boolean().nullable(),
+        cameraDevice: reportShortText,
+        microphoneDevice: reportShortText,
+        speakerDevice: reportShortText,
+        cameraError: reportShortText,
+        microphoneError: reportShortText,
+      })
+      .noUnknown(true)
+      .nullable(),
+  })
+  .noUnknown(true);
