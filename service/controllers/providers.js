@@ -813,6 +813,7 @@ export const getAllClients = async ({ country, providerId }) => {
           next_consultation_status: null,
           next_consultation_price: null,
           next_consultation_coupon_price: null,
+          next_consultation_duration_minutes: null,
           chat_id: null,
           past_consultations: 0,
         });
@@ -851,6 +852,8 @@ export const getAllClients = async ({ country, providerId }) => {
                 consultation.status;
               clients[clientIndex].next_consultation_price = consultation.price;
               clients[clientIndex].next_consultation_coupon_price = couponPrice;
+              clients[clientIndex].next_consultation_duration_minutes =
+                consultation.duration_minutes;
               clients[clientIndex].next_consultation_campaign_id =
                 campaignData?.campaign_id || null;
               clients[clientIndex].next_consultation_sponsor_name =
