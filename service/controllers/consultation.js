@@ -17,6 +17,7 @@ import {
   updateConsultationStatusAsFinishedQuery,
   getAllUpcomingConsultationsByProviderIdQuery,
   getConsultationTimeQuerry,
+  addConsultationProblemReportQuery,
   getClientConsultationsOverlapping,
   getAllConsultationsByProviderIdQuery,
 } from "#queries/consultation";
@@ -1994,4 +1995,49 @@ export const getConsultationTime = async ({
     .catch((err) => {
       throw err;
     });
+};
+
+export const createProblemReport = async ({ country, user, data }) => {
+  const consultation = (
+    await getConsultationByIdQuery({
+      poolCountry: country,
+      consultationId: data.consultationId,
+    })
+  ).rows[0];
+  const reporterType = user?.type;
+  if (
+    !consultation ||
+    !["client", "provider"].includes(reporterType) ||
+    !user[`${reporterType}_detail_id`] ||
+    user[`${reporterType}_detail_id`] !==
+      consultation[`${reporterType}_detail_id`]
+  ) {
+    throw Object.assign(
+      new Error("You cannot report a consultation you do not participate in."),
+      { status: 403 }
+    );
+  }
+  const { report, created } = await addConsultationProblemReportQuery({
+    country,
+    reporterType,
+    data,
+  });
+  if (created) {
+    await produceRaiseNotification({
+      channels: ["email"],
+      language: data.interfaceLanguage || "en",
+      emailArgs: {
+        emailType: "admin-consultationProblemReport",
+        data: {
+          reportId: report.report_id,
+          reporterType,
+          submittedAt: report.submitted_at,
+          time: consultation.time,
+          countryLabel: getCountryLabelFromAlpha2(country),
+        },
+      },
+      inPlatformArgs: { country },
+    }).catch(console.log);
+  }
+  return report;
 };

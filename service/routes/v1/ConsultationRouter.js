@@ -22,6 +22,7 @@ import {
   joinConsultationSchema,
   leaveConsultationSchema,
   getConsultationTimeSchema,
+  createProblemReportSchema,
 } from "#schemas/consultationSchemas";
 
 import {
@@ -41,9 +42,26 @@ import {
   joinConsultation,
   leaveConsultation,
   getConsultationTime,
+  createProblemReport,
 } from "#controllers/consultation";
 
 const router = express.Router();
+router.route("/problem-reports").post(populateUser, async (req, res, next) => {
+  /**
+   * #route   POST /provider/v1/consultation/problem-reports
+   * #desc    Report a problem with a consultation as a client or provider
+   */
+  const country = req.header("x-country-alpha-2");
+  const user = req.user;
+
+  return await createProblemReportSchema
+    .noUnknown(true)
+    .strict(true)
+    .validate(req.body)
+    .then((data) => createProblemReport({ country, user, data }))
+    .then((result) => res.status(201).send(result))
+    .catch(next);
+});
 
 router.route("/single-day").get(populateUser, async (req, res, next) => {
   /**

@@ -521,3 +521,51 @@ export const cancelNotAcceptedSuggestedConsultationsQuery = async ({
       WHERE status = 'suggested' AND time < NOW() + INTERVAL '24 hours';
     `,
   );
+
+export const addConsultationProblemReportQuery = async ({ country, reporterType, data }) => {
+  const db = await getDBPool("clinicalDb", country).connect();
+  try {
+    await db.query("BEGIN");
+    const values = [
+      data.consultationId,
+      reporterType,
+      data.message.trim(),
+      data.idempotencyKey,
+      data.source,
+      data.appVersion,
+      data.browserName,
+      data.browserVersion,
+      data.osName,
+      data.osVersion,
+      data.deviceType,
+      data.interfaceLanguage,
+      data.reporterTimezone,
+      data.callContext,
+    ];
+    const result = await db.query(
+      `INSERT INTO consultation_problem_report
+      (consultation_id, reporter_type, message, idempotency_key, source, app_version, browser_name,
+       browser_version, os_name, os_version, device_type, interface_language, reporter_timezone, call_context)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      ON CONFLICT (consultation_id, reporter_type, idempotency_key) DO NOTHING
+      RETURNING report_id, submitted_at`,
+      values
+    );
+    const report =
+      result.rows[0] ||
+      (
+        await db.query(
+          `SELECT report_id, submitted_at
+      FROM consultation_problem_report WHERE consultation_id=$1 AND reporter_type=$2 AND idempotency_key=$3`,
+          [data.consultationId, reporterType, data.idempotencyKey]
+        )
+      ).rows[0];
+    await db.query("COMMIT");
+    return { report, created: result.rowCount > 0 };
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  } finally {
+    db.release();
+  }
+};
