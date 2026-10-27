@@ -1213,6 +1213,7 @@ const countriesMap = {
   cy: "cyprus",
   am: "armenia",
   ps: "playandheal",
+  xh: "hosnelhal",
 };
 
 export const getCountryLabelFromAlpha2 = (alpha2) => {

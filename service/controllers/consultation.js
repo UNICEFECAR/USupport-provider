@@ -2029,11 +2029,11 @@ export const createProblemReport = async ({ country, user, data }) => {
       emailArgs: {
         emailType: "admin-consultationProblemReport",
         data: {
-          report_id: report.report_id,
-          reporter_type: reporterType,
-          submitted_at: report.submitted_at,
+          reportId: report.report_id,
+          reporterType,
+          submittedAt: report.submitted_at,
           time: consultation.time,
-          interface_language: data.interfaceLanguage || "en",
+          countryLabel: getCountryLabelFromAlpha2(country),
         },
       },
       inPlatformArgs: { country },
