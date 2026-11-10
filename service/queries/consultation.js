@@ -14,6 +14,8 @@ export const getOverlappingConsultationByProviderIdQuery = async ({
   providerId,
   time,
   durationMinutes = DEFAULT_SLOT_MINUTES,
+  // The consultation being rescheduled, which is about to free its time.
+  excludeConsultationId = null,
 }) =>
   await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -25,11 +27,12 @@ export const getOverlappingConsultationByProviderIdQuery = async ({
         AND time > to_timestamp($2) - ($4 * INTERVAL '1 minute')
         AND time < to_timestamp($2) + ($3 * INTERVAL '1 minute')
         AND time + (duration_minutes * INTERVAL '1 minute') > to_timestamp($2)
+        AND ($5::uuid IS NULL OR consultation_id <> $5::uuid)
       ORDER BY created_at DESC
       LIMIT 1;
 
     `,
-    [providerId, time, durationMinutes, MAX_SLOT_MINUTES],
+    [providerId, time, durationMinutes, MAX_SLOT_MINUTES, excludeConsultationId],
   );
 
 export const getAllConsultationsByProviderIdAndClientIdQuery = async ({
@@ -496,6 +499,7 @@ export const getClientConsultationsOverlapping = async ({
   clientId,
   time,
   durationMinutes = DEFAULT_SLOT_MINUTES,
+  excludeConsultationId = null,
 }) => {
   return await getDBPool("clinicalDb", poolCountry).query(
     `
@@ -506,8 +510,9 @@ export const getClientConsultationsOverlapping = async ({
           AND time > to_timestamp($2) - ($4 * INTERVAL '1 minute')
           AND time < to_timestamp($2) + ($3 * INTERVAL '1 minute')
           AND time + (duration_minutes * INTERVAL '1 minute') > to_timestamp($2)
+          AND ($5::uuid IS NULL OR consultation_id <> $5::uuid)
       `,
-    [clientId, time, durationMinutes, MAX_SLOT_MINUTES],
+    [clientId, time, durationMinutes, MAX_SLOT_MINUTES, excludeConsultationId],
   );
 };
 
