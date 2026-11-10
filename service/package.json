@@ -37,5 +37,9 @@
     "#queries/*": "./queries/*.js",
     "#schemas/*": "./schemas/*.js",
     "#translations/*": "./translations/*.js"
+  },
+  "overrides": {
+    "deepmerge": "4.1.1",
+    "minimatch": "^11.0.1"
   }
 }
