@@ -84,8 +84,20 @@ const resolveSlotDuration = async (country, language, providerId, requested) => 
   const countryEnabled = !!countryDetails.has_30_min_slots;
   const isShort =
     countryEnabled && (await isPeerSupportProvider({ country, providerId }));
-  return checkSlotDuration(requested, isShort, countryEnabled, language);
+  return {
+    duration: checkSlotDuration(requested, isShort, countryEnabled, language),
+    countryEnabled,
+  };
 };
+
+// Only countries with `has_30_min_slots` may hold overlapping open slots (an
+// hour at 10:00 and another at 10:30); everywhere else they are refused.
+const findOverlappingSlot = (openSlots, seconds, duration) =>
+  openSlots.find(
+    (existing) =>
+      existing.time !== seconds &&
+      doSlotsOverlap(seconds, duration, existing.time, existing.duration),
+  );
 
 export const isPeerSupportProvider = async ({ country, providerId }) => {
   const specializations = await getProviderSpecializationsQuery({
@@ -164,16 +176,12 @@ export const updateAvailabilitySingleWeek = async ({
   if (!checkSlotsWithinWeek(startDate, [slot]))
     throw slotsNotWithinWeek(language);
 
-  const effectiveDuration = await resolveSlotDuration(
-    country,
-    language,
-    provider_id,
-    durationMinutes,
-  );
+  const { duration: effectiveDuration, countryEnabled } =
+    await resolveSlotDuration(country, language, provider_id, durationMinutes);
 
-  // Open slots may overlap (10:00 and 10:30 can both be offered); booking one
-  // takes out the others, because a slot is only bookable while no consultation
-  // overlaps it.
+  // With `has_30_min_slots` open slots may overlap (10:00 and 10:30 can both be
+  // offered); booking one takes out the others, because a slot is only bookable
+  // while no consultation overlaps it.
   const surroundingSlots = await getSlotsForThreeWeeks({
     country,
     provider_id,
@@ -183,6 +191,17 @@ export const updateAvailabilitySingleWeek = async ({
   });
 
   const slotSeconds = Number(slot);
+
+  if (
+    !countryEnabled &&
+    findOverlappingSlot(
+      collectOpenSlots(surroundingSlots),
+      slotSeconds,
+      effectiveDuration,
+    )
+  ) {
+    throw slotOverlapsExistingSlot(language);
+  }
 
   // The length is shared by every pool at one start time, so a slot of another
   // length already open here (e.g. an older 60-minute one) must not be re-lengthed.
@@ -429,7 +448,8 @@ export const updateAvailabilityByTemplate = async ({
     });
 
     // A template slot that would re-length one already open at the same start
-    // is skipped; overlapping slots at other starts are allowed.
+    // is skipped. One overlapping a slot at another start is skipped too, unless
+    // the country has `has_30_min_slots`.
     const existingSlots = collectOpenSlots(
       await getSlotsForThreeWeeks({ country, provider_id, startDate }).catch(
         (err) => {
@@ -442,7 +462,9 @@ export const updateAvailabilityByTemplate = async ({
         !existingSlots.some(
           (existing) =>
             existing.time === seconds && existing.duration !== duration,
-        ),
+        ) &&
+        (!!countryDetails.has_30_min_slots ||
+          !findOverlappingSlot(existingSlots, seconds, duration)),
     );
     if (!normalizedSlots.length) continue;
 
@@ -663,13 +685,30 @@ export const getAvailabilitySingleDay = async ({
   // Sort slots in ascending order
   slots.sort((a, b) => a.time - b.time);
 
-  // Overlapping slots are all offered (10:00 and 10:30); whichever is booked
-  // first takes the others out. Only one slot per start time is offered, and a
-  // campaign/organization slot wins over a plain one, because that is what the
-  // client used to do in the browser (SelectConsultation) and it has to agree.
+  // With `has_30_min_slots`, overlapping slots are all offered (10:00 and
+  // 10:30) and whichever is booked first takes the others out. Elsewhere a slot
+  // overlapping one already offered is dropped (earlier start wins), which only
+  // legacy rows can still produce. On an equal start a campaign/organization
+  // slot wins over a plain one, because that is what the client used to do in
+  // the browser (SelectConsultation) and it has to agree.
+  const allowsOverlap = await getCountryDetailsByAlpha2Query(country)
+    .then((res) => !!res.rows[0]?.has_30_min_slots)
+    .catch((err) => {
+      throw err;
+    });
+
   const offered = [];
   slots.forEach((slot) => {
-    const clashIndex = offered.findIndex((taken) => taken.time === slot.time);
+    const clashIndex = offered.findIndex((taken) =>
+      allowsOverlap
+        ? taken.time === slot.time
+        : doSlotsOverlap(
+            slot.time / 1000,
+            slot.duration_minutes,
+            taken.time / 1000,
+            taken.duration_minutes,
+          ),
+    );
 
     if (clashIndex === -1) {
       offered.push(slot);
@@ -762,7 +801,8 @@ export const clearAvailabilitySlot = async ({
  * Change how long an already-open slot is.
  *
  * Its own operation rather than "delete then re-add", so the length can be
- * checked against a consultation already booked in the slot.
+ * checked against a consultation already booked in the slot (and, outside
+ * `has_30_min_slots` countries, against the neighbouring open slots).
  */
 export const updateSlotDuration = async ({
   country,
@@ -772,12 +812,8 @@ export const updateSlotDuration = async ({
   slot,
   durationMinutes,
 }) => {
-  const effectiveDuration = await resolveSlotDuration(
-    country,
-    language,
-    provider_id,
-    durationMinutes,
-  );
+  const { duration: effectiveDuration, countryEnabled } =
+    await resolveSlotDuration(country, language, provider_id, durationMinutes);
 
   const slotSeconds = Number(slot);
 
@@ -792,6 +828,14 @@ export const updateSlotDuration = async ({
   const openSlots = collectOpenSlots(surroundingSlots);
   const existing = openSlots.find((x) => x.time === slotSeconds);
   if (!existing) throw slotNotAvailable(language);
+
+  // Growing a slot can run it into the next one.
+  if (
+    !countryEnabled &&
+    findOverlappingSlot(openSlots, slotSeconds, effectiveDuration)
+  ) {
+    throw slotOverlapsExistingSlot(language);
+  }
 
   // Shrinking a slot must not cut a consultation that is already booked in it.
   const bookedConsultation = await getOverlappingConsultationByProviderIdQuery({
