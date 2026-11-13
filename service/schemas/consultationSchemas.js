@@ -27,6 +27,8 @@ export const addConsultationAsPendingSchema = yup.object().shape({
   // How long the client asked for. Validated against the provider's contiguous
   // open slots; omitted means "whatever this slot is".
   durationMinutes: yup.number().oneOf([30, 60]).notRequired(),
+  // The consultation this booking replaces, when the client is rescheduling.
+  rescheduledConsultationId: yup.string().uuid().notRequired(),
 });
 
 export const scheduleConsultationSchema = yup.object().shape({

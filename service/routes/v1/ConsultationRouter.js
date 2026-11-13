@@ -231,8 +231,13 @@ router.route("/block").post(populateUser, async (req, res, next) => {
     clientId = req.body.clientId;
   }
 
-  const { time, rescheduleCampaignSlot, bookedFrom, durationMinutes } =
-    req.body;
+  const {
+    time,
+    rescheduleCampaignSlot,
+    bookedFrom,
+    durationMinutes,
+    rescheduledConsultationId,
+  } = req.body;
 
   return await addConsultationAsPendingSchema
     .noUnknown(true)
@@ -248,6 +253,7 @@ router.route("/block").post(populateUser, async (req, res, next) => {
       requestedBy,
       bookedFrom: bookedFrom || null,
       ...(durationMinutes ? { durationMinutes: Number(durationMinutes) } : {}),
+      ...(rescheduledConsultationId ? { rescheduledConsultationId } : {}),
     })
     .then(addConsultationAsPending)
     .then((result) => res.status(200).send(result))

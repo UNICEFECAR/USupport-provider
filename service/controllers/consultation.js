@@ -626,12 +626,36 @@ export const addConsultationAsPending = async ({
   requestedBy,
   bookedFrom,
   durationMinutes: requestedDurationMinutes,
+  rescheduledConsultationId,
 }) => {
+  // When this booking replaces one of the client's consultations, that one must
+  // not block the new time (1:00-2:00 moved to 1:30-2:30). Only honoured for the
+  // client's own scheduled consultation with this provider.
+  let excludeConsultationId = null;
+  if (rescheduledConsultationId) {
+    const rescheduled = await getConsultationByIdQuery({
+      poolCountry: country,
+      consultationId: rescheduledConsultationId,
+    })
+      .then((res) => res.rows[0])
+      .catch((err) => {
+        throw err;
+      });
+    if (
+      rescheduled?.status === "scheduled" &&
+      rescheduled.client_detail_id === clientId &&
+      rescheduled.provider_detail_id === providerId
+    ) {
+      excludeConsultationId = rescheduledConsultationId;
+    }
+  }
+
   const isSlotAvailable = await checkIsSlotAvailable(
     country,
     providerId,
     time,
     requestedDurationMinutes,
+    excludeConsultationId,
   );
   if (!isSlotAvailable) throw slotNotAvailable(language);
 
@@ -646,6 +670,7 @@ export const addConsultationAsPending = async ({
     clientId,
     time: getSlotTimestamp(time),
     durationMinutes,
+    excludeConsultationId,
   })
     .then((res) => {
       if (res.rowCount === 0) return true;

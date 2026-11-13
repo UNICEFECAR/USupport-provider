@@ -562,6 +562,7 @@ export const checkIsSlotAvailable = async (
   providerId,
   slotTime,
   requestedDurationMinutes,
+  excludeConsultationId = null,
 ) => {
   const time = Number(getSlotTimestamp(slotTime));
   // Check if provider is available at the time.
@@ -601,6 +602,7 @@ export const checkIsSlotAvailable = async (
     providerId,
     time,
     durationMinutes,
+    excludeConsultationId,
   }).catch((err) => {
     throw err;
   });
